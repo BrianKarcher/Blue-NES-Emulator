@@ -14,7 +14,7 @@ namespace BlueNESTest
 		TEST_METHOD(TestADCImmediate1)
 		{
 			Processor_6502 processor;
-			uint8_t data[] = { 0x69, 0x20 };
+			uint8_t data[] = { ADC_IMMEDIATE, 0x20 };
 			uint8_t memory[2048];
 			processor.Initialize(data, memory);
 			processor.RunStep();
@@ -25,7 +25,7 @@ namespace BlueNESTest
 		TEST_METHOD(TestADCImmediateWithCarry)
 		{
 			Processor_6502 processor;
-			uint8_t data[] = { 0x69, 0x20 };
+			uint8_t data[] = { ADC_IMMEDIATE, 0x20 };
 			uint8_t memory[2048];
 			processor.Initialize(data, memory);
 			processor.SetA(0x11);
@@ -41,12 +41,41 @@ namespace BlueNESTest
 			Processor_6502 processor;
 			// $ef + $20 will result in overflow
 			processor.SetA(0xef);
-			uint8_t data[] = { 0x69, 0x20 };
+			uint8_t data[] = { ADC_IMMEDIATE, 0x20 };
 			uint8_t memory[2048];
 			processor.Initialize(data, memory);
 			processor.RunStep();
 			Assert::AreEqual((uint8_t)0xf, processor.GetA());
 			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+		}
+
+		TEST_METHOD(TestADCZeroPage)
+		{
+			Processor_6502 processor;
+			// Add what is at zero page 0x15 to A.
+			uint8_t data[] = { ADC_ZEROPAGE, 0x15 };
+			uint8_t memory[2048];
+			memory[0x15] = 0x69;
+			processor.Initialize(data, memory);
+			processor.SetA(0x18);
+			processor.RunStep();
+			Assert::AreEqual((uint8_t)0x81, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+
+		TEST_METHOD(TestADCZeroPage_X)
+		{
+			Processor_6502 processor;
+			// Add what is at zero page 0x15 to A.
+			uint8_t data[] = { ADC_ZEROPAGE_X, 0x15 };
+			uint8_t memory[2048];
+			memory[0x16] = 0x69;
+			processor.Initialize(data, memory);
+			processor.SetA(0x18);
+			processor.SetX(0x1);
+			processor.RunStep();
+			Assert::AreEqual((uint8_t)0x81, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 		}
 	};
 }

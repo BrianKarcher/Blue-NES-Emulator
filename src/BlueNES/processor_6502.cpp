@@ -15,16 +15,9 @@ uint8_t m_p;
 
 uint8_t* m_pRomData;
 uint8_t* m_pMemory;
+int m_cycle_count = 0;
 
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
-// op codes
-const uint8_t adc_immediate = 0x69;
-const uint8_t adc_zeropage = 0x65;
-
-//void Processor_6502::IncrementPC()
-//{
-//	m_pc++;
-//}
 
 void Processor_6502::Initialize(uint8_t* romData, uint8_t* memory)
 {
@@ -32,6 +25,7 @@ void Processor_6502::Initialize(uint8_t* romData, uint8_t* memory)
 	m_pMemory = memory;
 	m_pc = 0;
 	m_p = 0;
+	m_cycle_count = 0;
 }
 
 void Processor_6502::Run()
@@ -51,16 +45,40 @@ void Processor_6502::RunStep()
 {
 	switch (m_pRomData[m_pc])
 	{
-		case adc_immediate:
+		case ADC_IMMEDIATE:
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
 			adc(m_pRomData[m_pc + 1]);
 			m_pc += 2;
+			m_cycle_count += 2;
 			break;
-		case adc_zeropage:
-			// The byte after the op code is the zero page address.
-			adc(m_pMemory[m_pc + 1]);
+		case ADC_ZEROPAGE:
+			// An instruction using zero page addressing mode has only an 8 bit address operand.
+			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
+			// where the most significant byte of the address is always zero.
+			adc(m_pMemory[m_pRomData[m_pc + 1]]);
 			m_pc += 2;
+			m_cycle_count += 3;
 			break;
+		case ADC_ZEROPAGE_X:
+		{
+			// The address to be accessed by an instruction using indexed zero page
+			// addressing is calculated by taking the 8 bit zero page address from the
+			// instruction and adding the current value of the X register to it.
+			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
+			uint8_t offset = m_pMemory[m_pRomData[m_pc + 1] + m_x];
+			adc(offset);
+			m_pc += 2;
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_ABSOLUTE:
+		{
+			uint16_t memoryLocation = (static_cast<uint16_t>(m_pRomData[m_pc + 2] << 8) | m_pRomData[m_pc + 1]);
+			adc(m_pMemory[memoryLocation]);
+			m_pc += 3;
+			m_cycle_count += 4;
+			break;
+		}
 	}
 }
 
@@ -120,6 +138,11 @@ void Processor_6502::SetA(uint8_t a)
 uint8_t Processor_6502::GetX()
 {
 	return m_x;
+}
+
+void Processor_6502::SetX(uint8_t x)
+{
+	m_x = x;
 }
 
 uint8_t Processor_6502::GetY()
