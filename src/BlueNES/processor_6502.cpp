@@ -106,9 +106,8 @@ void Processor_6502::RunStep()
 			loByte += m_y;
 			if (loByte < m_y)
 			{
-				hiByte += 1;
-				// One more cycle if a page is crossed.
-				m_cycle_count++;
+				hiByte += 1; // Carryover
+				m_cycle_count++; // Extra cycle for page crossing
 			}
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			adc(m_pMemory[memoryLocation]);
@@ -121,12 +120,59 @@ void Processor_6502::RunStep()
 			// Add X register to base (with zp wraparound)
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
 			uint8_t addr_lo = m_pMemory[zp_addr];
-			uint8_t addr_hi = m_pMemory[zp_addr + 1] & 0xFF; // Wraparound for the high byte
+			uint8_t addr_hi = m_pMemory[(zp_addr + 1) & 0xFF]; // Wraparound for the high byte
 			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 
 			uint8_t operand = m_pMemory[target_addr];
 			adc(operand);
 			m_cycle_count += 6;
+		}
+		case ADC_INDIRECTINDEXED:
+		{
+			uint8_t zp_base = m_pRomData[m_pc++];
+			uint8_t addr_lo = m_pMemory[zp_base];
+			uint8_t addr_hi = m_pMemory[(zp_base + 1) & 0xFF]; // Wraparound for the high byte
+			uint16_t target_addr = (addr_hi << 8) | addr_lo;
+			// Add Y register to the low byte of the address
+			addr_lo += m_y;
+			if (addr_lo < m_y) {
+				addr_hi += 1; // Carryover
+				m_cycle_count++; // Extra cycle for page crossing
+			}
+			target_addr = (addr_hi << 8) | addr_lo;
+			uint8_t operand = m_pMemory[target_addr];
+			adc(operand);
+			m_cycle_count += 5;
+			break;
+		}
+		case AND_IMMEDIATE:
+		{
+			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
+			uint8_t operand = m_pRomData[m_pc++];
+			_and(operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case AND_ZEROPAGE:
+		{
+			// An instruction using zero page addressing mode has only an 8 bit address operand.
+			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
+			// where the most significant byte of the address is always zero.
+			uint8_t operand = m_pMemory[m_pRomData[m_pc++]];
+			_and(operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case AND_ZEROPAGE_X:
+		{
+			// The address to be accessed by an instruction using indexed zero page
+			// addressing is calculated by taking the 8 bit zero page address from the
+			// instruction and adding the current value of the X register to it.
+			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
+			uint8_t operand = m_pMemory[m_pRomData[m_pc++] + m_x];
+			_and(operand);
+			m_cycle_count += 4;
+			break;
 		}
 	}
 }
@@ -164,6 +210,26 @@ void Processor_6502::adc(uint8_t operand)
 		m_p &= ~FLAG_ZERO;
 	}
 
+	// Set/clear negative flag (bit 7 of result)
+	if (m_a & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
+}
+
+void _and(uint8_t operand)
+{
+	// AND operation with the accumulator
+	m_a &= operand;
+	// Set/clear zero flag
+	if (m_a == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
 	// Set/clear negative flag (bit 7 of result)
 	if (m_a & 0x80) {
 		m_p |= FLAG_NEGATIVE;

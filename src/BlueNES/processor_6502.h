@@ -18,11 +18,16 @@ const uint8_t ADC_ABSOLUTE = 0x6D;
 const uint8_t ADC_ABSOLUTE_X = 0x7D;
 const uint8_t ADC_ABSOLUTE_Y = 0x79;
 const uint8_t ADC_INDEXEDINDIRECT = 0x61;
+const uint8_t ADC_INDIRECTINDEXED = 0x71;
+const uint8_t AND_IMMEDIATE = 0x29;
+const uint8_t AND_ZEROPAGE = 0x25;
+const uint8_t AND_ZEROPAGE_X = 0x35;
 
 class Processor_6502
 {
 private:
 	void adc(uint8_t operand);
+	void _and(uint8_t operand);
 public:
 	void Initialize(uint8_t* romData, uint8_t* memory);
 	void Run();
