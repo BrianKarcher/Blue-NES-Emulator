@@ -15,6 +15,9 @@ const uint8_t ADC_IMMEDIATE = 0x69;
 const uint8_t ADC_ZEROPAGE = 0x65;
 const uint8_t ADC_ZEROPAGE_X = 0x75;
 const uint8_t ADC_ABSOLUTE = 0x6D;
+const uint8_t ADC_ABSOLUTE_X = 0x7D;
+const uint8_t ADC_ABSOLUTE_Y = 0x79;
+const uint8_t ADC_INDEXEDINDIRECT = 0x61;
 
 class Processor_6502
 {

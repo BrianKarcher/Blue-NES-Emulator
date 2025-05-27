@@ -43,20 +43,18 @@ void Processor_6502::Run()
 /// </summary>
 void Processor_6502::RunStep()
 {
-	switch (m_pRomData[m_pc])
+	switch (m_pRomData[m_pc++])
 	{
 		case ADC_IMMEDIATE:
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			adc(m_pRomData[m_pc + 1]);
-			m_pc += 2;
+			adc(m_pRomData[m_pc++]);
 			m_cycle_count += 2;
 			break;
 		case ADC_ZEROPAGE:
 			// An instruction using zero page addressing mode has only an 8 bit address operand.
 			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
 			// where the most significant byte of the address is always zero.
-			adc(m_pMemory[m_pRomData[m_pc + 1]]);
-			m_pc += 2;
+			adc(m_pMemory[m_pRomData[m_pc++]]);
 			m_cycle_count += 3;
 			break;
 		case ADC_ZEROPAGE_X:
@@ -65,19 +63,70 @@ void Processor_6502::RunStep()
 			// addressing is calculated by taking the 8 bit zero page address from the
 			// instruction and adding the current value of the X register to it.
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t offset = m_pMemory[m_pRomData[m_pc + 1] + m_x];
+			uint8_t offset = m_pMemory[m_pRomData[m_pc++] + m_x];
 			adc(offset);
-			m_pc += 2;
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE:
 		{
-			uint16_t memoryLocation = (static_cast<uint16_t>(m_pRomData[m_pc + 2] << 8) | m_pRomData[m_pc + 1]);
+			uint8_t loByte = m_pRomData[m_pc++];
+			uint8_t hiByte = m_pRomData[m_pc++];
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			adc(m_pMemory[memoryLocation]);
-			m_pc += 3;
 			m_cycle_count += 4;
 			break;
+		}
+		case ADC_ABSOLUTE_X:
+		{
+			// I'm doing the addition in 8-bit mostly because it makes the page crossing easier
+			// to check to increment the cycle count.
+			// I THINK this is less cycles than if I recorded the bytes in a 16-bit value.
+			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
+			// CPU specific.
+			uint8_t loByte = m_pRomData[m_pc++];
+			uint8_t hiByte = m_pRomData[m_pc++];
+			loByte += m_x;
+			// Carryover?
+			if (loByte < m_x)
+			{
+				hiByte += 1;
+				// One more cycle if a page is crossed.
+				m_cycle_count++;
+			}
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			adc(m_pMemory[memoryLocation]);
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_ABSOLUTE_Y:
+		{
+			uint8_t loByte = m_pRomData[m_pc++];
+			uint8_t hiByte = m_pRomData[m_pc++];
+			loByte += m_y;
+			if (loByte < m_y)
+			{
+				hiByte += 1;
+				// One more cycle if a page is crossed.
+				m_cycle_count++;
+			}
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			adc(m_pMemory[memoryLocation]);
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_INDEXEDINDIRECT:
+		{
+			uint8_t zp_base = m_pRomData[m_pc++];
+			// Add X register to base (with zp wraparound)
+			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
+			uint8_t addr_lo = m_pMemory[zp_addr];
+			uint8_t addr_hi = m_pMemory[zp_addr + 1] & 0xFF; // Wraparound for the high byte
+			uint16_t target_addr = (addr_hi << 8) | addr_lo;
+
+			uint8_t operand = m_pMemory[target_addr];
+			adc(operand);
+			m_cycle_count += 6;
 		}
 	}
 }

@@ -70,3 +70,22 @@ We also want to match the CPU cycles. The NES CPU is ~ 1.79 Mhz. Per frame, the 
 
 For information on how many cycles each instruction takes, reference https://www.nesdev.org/obelisk-6502-guide/reference.html. This link also includes the opcode for each instruction as well as the bytes which will obviously be very important to us :)
 
+***
+Memory
+***
+
+The 6502 has an address size of 65K. Please reference https://www.nesdev.org/wiki/CPU_memory_map.
+
+I won't list everything here. Of note are various mirrors. I will need to replicate that in case a mirrored address gets accessed for whatever reason.
+
+Also of note are the address range $6000-$7FFF. This is the address range that will get saved to disk. Note that this address range is huge compared to the NES's paltry 2KB of built-in memory. This SRAM adds an additional 8KB. This large amount of extra memory can be used as save data as well as work data. The Legend of Zelda is an example of a game that uses it for both. We have no idea what parts of this memory span are "save" data - it varies per game, so the entire 8 KB will need to be saved. With today's massive hard drives 8KB per game isn't much.
+
+One issue to note is that of save states. Save states need to record all working RAM. They do not care about "save" RAM. Well, they shouldn't. However, as noted above, the SRAM can be used for either and we will never know how it is structured. We will need to record the entire 8KB of SRAM along with the 2KB of NES RAM to the save state. A downside to this is loading a save state will revert your save data to that point in time. I have done this myself accidently on many occasions in other emulators. One solution to this potential issue is to create a backup when loading or saving states. FCEUX does this and is the best solution I know of for this glaring problem.
+
+Another thing to consider is how mapper chips work. I'll use the MMC1 as an example. Your game ROM is stored in address space $8000-$FFFF. The MMC1 splits this up into 8 banks. The game can swap the first seven of those banks for another bank on the cartridge. On the NES this is handled in hardware on the NES in the MMC1 chip. I'll have to mimick it in software. CHR-ROM banks can also be swapped.
+
+Given that the memory mappers sit between the CPU and the program data, this emulator will need to spend a few extra cycles routing it. Hope your machine can handle it!
+
+Annoyingly, the MMC 1 is a serial chip. It takes five instructions to change a bank and led to the slowdown in many NES games like Zelda 2.
+
+It was done for cost purposes. Less pins. We... have to deal with it.

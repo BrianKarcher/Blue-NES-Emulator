@@ -77,5 +77,19 @@ namespace BlueNESTest
 			Assert::AreEqual((uint8_t)0x81, processor.GetA());
 			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 		}
+
+		TEST_METHOD(TestADCAbsolute)
+		{
+			Processor_6502 processor;
+			// I think the 6502 stores in little endian, need to double check
+			uint8_t data[] = { ADC_ABSOLUTE, 0x23, 0x3 };
+			uint8_t memory[2048];
+			memory[0x323] = 0x40;
+			processor.Initialize(data, memory);
+			processor.SetA(0x20);
+			processor.RunStep();
+			Assert::AreEqual((uint8_t)0x60, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
 	};
 }
