@@ -126,20 +126,20 @@ void Processor_6502::RunStep()
 			uint8_t operand = m_pMemory[target_addr];
 			adc(operand);
 			m_cycle_count += 6;
+			break;
 		}
 		case ADC_INDIRECTINDEXED:
 		{
 			uint8_t zp_base = m_pRomData[m_pc++];
 			uint8_t addr_lo = m_pMemory[zp_base];
 			uint8_t addr_hi = m_pMemory[(zp_base + 1) & 0xFF]; // Wraparound for the high byte
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 			// Add Y register to the low byte of the address
 			addr_lo += m_y;
 			if (addr_lo < m_y) {
 				addr_hi += 1; // Carryover
 				m_cycle_count++; // Extra cycle for page crossing
 			}
-			target_addr = (addr_hi << 8) | addr_lo;
+			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 			uint8_t operand = m_pMemory[target_addr];
 			adc(operand);
 			m_cycle_count += 5;
