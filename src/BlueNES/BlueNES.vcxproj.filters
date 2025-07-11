@@ -17,12 +17,18 @@
     <ClCompile Include="processor_6502.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ines.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="processor_6502.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

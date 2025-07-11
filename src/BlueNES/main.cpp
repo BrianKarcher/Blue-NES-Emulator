@@ -9,7 +9,8 @@ Main::Main() :
     m_pDirect2dFactory(NULL),
     m_pRenderTarget(NULL),
     m_pLightSlateGrayBrush(NULL),
-    m_pCornflowerBlueBrush(NULL)
+    m_pCornflowerBlueBrush(NULL),
+	m_pBitmap(NULL)
 { }
 
 Main::~Main()
@@ -91,6 +92,11 @@ HRESULT Main::Initialize()
             UpdateWindow(m_hwnd);
         }
 
+        m_pBitmap->CopyFromMemory(
+            NULL,
+            m_pBitmapData.data(),
+            static_cast<UINT32>(m_pBitmapWidth * sizeof(uint32_t))
+		);
         return hr;
     }
 }
