@@ -27,7 +27,7 @@ class Processor_6502
 {
 private:
 	void adc(uint8_t operand);
-	void _and(uint8_t operand);
+	//void _and(uint8_t operand);
 public:
 	void Initialize(uint8_t* romData, uint8_t* memory);
 	void Run();

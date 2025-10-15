@@ -145,35 +145,35 @@ void Processor_6502::RunStep()
 			m_cycle_count += 5;
 			break;
 		}
-		case AND_IMMEDIATE:
-		{
-			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			uint8_t operand = m_pRomData[m_pc++];
-			_and(operand);
-			m_cycle_count += 2;
-			break;
-		}
-		case AND_ZEROPAGE:
-		{
-			// An instruction using zero page addressing mode has only an 8 bit address operand.
-			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
-			// where the most significant byte of the address is always zero.
-			uint8_t operand = m_pMemory[m_pRomData[m_pc++]];
-			_and(operand);
-			m_cycle_count += 3;
-			break;
-		}
-		case AND_ZEROPAGE_X:
-		{
-			// The address to be accessed by an instruction using indexed zero page
-			// addressing is calculated by taking the 8 bit zero page address from the
-			// instruction and adding the current value of the X register to it.
-			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t operand = m_pMemory[m_pRomData[m_pc++] + m_x];
-			_and(operand);
-			m_cycle_count += 4;
-			break;
-		}
+		//case AND_IMMEDIATE:
+		//{
+		//	// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
+		//	uint8_t operand = m_pRomData[m_pc++];
+		//	_and(operand);
+		//	m_cycle_count += 2;
+		//	break;
+		//}
+		//case AND_ZEROPAGE:
+		//{
+		//	// An instruction using zero page addressing mode has only an 8 bit address operand.
+		//	// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
+		//	// where the most significant byte of the address is always zero.
+		//	uint8_t operand = m_pMemory[m_pRomData[m_pc++]];
+		//	_and(operand);
+		//	m_cycle_count += 3;
+		//	break;
+		//}
+		//case AND_ZEROPAGE_X:
+		//{
+		//	// The address to be accessed by an instruction using indexed zero page
+		//	// addressing is calculated by taking the 8 bit zero page address from the
+		//	// instruction and adding the current value of the X register to it.
+		//	// The address calculation wraps around if the sum of the base address and the register exceed $FF.
+		//	uint8_t operand = m_pMemory[m_pRomData[m_pc++] + m_x];
+		//	_and(operand);
+		//	m_cycle_count += 4;
+		//	break;
+		//}
 	}
 }
 

@@ -8,10 +8,10 @@
 #include <wchar.h>
 #include <math.h>
 
-#include <d2d1.h>
-#include <d2d1helper.h>
-#include <dwrite.h>
-#include <wincodec.h>
+//#include <d2d1.h>
+//#include <d2d1helper.h>
+//#include <dwrite.h>
+//#include <wincodec.h>
 
 template<class Interface>
 inline void SafeRelease(
@@ -45,23 +45,17 @@ public:
 	~Main();
 
 	// Register the window class and call methods for instantiating drawing resources
-	HRESULT Initialize();
+	bool Initialize();
 
 	// Process and dispatch messages
 	void RunMessageLoop();
 
 private:
-	// Initialize device-independent resources.
-	HRESULT CreateDeviceIndependentResources();
-
-	// Initialize device-dependent resources.
-	HRESULT CreateDeviceResources();
-
-	// Release device-dependent resource.
-	void DiscardDeviceResources();
-
+	HDC hdcMem;
+	BITMAPINFO bmi;
+	HBITMAP hBitmap;
 	// Draw content.
-	HRESULT OnRender();
+	bool OnRender();
 
 	// Resize the render target.
 	void OnResize(
@@ -78,9 +72,9 @@ private:
 	);
 
 	HWND m_hwnd;
-	ID2D1Factory* m_pDirect2dFactory;
-	ID2D1HwndRenderTarget* m_pRenderTarget;
-	ID2D1SolidColorBrush* m_pLightSlateGrayBrush;
-	ID2D1SolidColorBrush* m_pCornflowerBlueBrush;
-	ID2D1Bitmap* m_pBitmap;
+	//ID2D1Factory* m_pDirect2dFactory;
+	//ID2D1HwndRenderTarget* m_pRenderTarget;
+	//ID2D1SolidColorBrush* m_pLightSlateGrayBrush;
+	//ID2D1SolidColorBrush* m_pCornflowerBlueBrush;
+	//ID2D1Bitmap* m_pBitmap;
 };
