@@ -7,6 +7,7 @@
 #include <memory.h>
 #include <wchar.h>
 #include <math.h>
+#include <array>
 
 //#include <d2d1.h>
 //#include <d2d1helper.h>
@@ -45,7 +46,7 @@ public:
 	~Main();
 
 	// Register the window class and call methods for instantiating drawing resources
-	bool Initialize();
+	HRESULT Initialize();
 
 	// Process and dispatch messages
 	void RunMessageLoop();
@@ -54,6 +55,8 @@ private:
 	HDC hdcMem;
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;
+	// Back buffer for rendering (256x240 pixels, RGBA)
+	std::array<uint32_t, 256 * 240> backBuffer;
 	// Draw content.
 	bool OnRender();
 

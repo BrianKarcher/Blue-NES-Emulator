@@ -5,7 +5,9 @@
 #include "main.h"
 
 Main::Main() :
-    m_hwnd(NULL)
+    m_hwnd(NULL),
+	hdcMem(NULL),
+	hBitmap(NULL)
 {
     ZeroMemory(&bmi, sizeof(BITMAPINFO));
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -32,7 +34,7 @@ void Main::RunMessageLoop()
     }
 }
 
-bool Main::Initialize()
+HRESULT Main::Initialize()
 {
     // Register the window class.
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
@@ -45,6 +47,10 @@ bool Main::Initialize()
     wcex.lpszMenuName = NULL;
     wcex.hCursor = LoadCursor(NULL, IDI_APPLICATION);
     wcex.lpszClassName = L"Blue NES Emulator";
+
+    for (int i = 0; i < 256 * 240; i++) {
+        backBuffer[i] = 0xFF000000; // Initialize to opaque black
+	}
     
     RegisterClassEx(&wcex);
 
@@ -53,6 +59,8 @@ bool Main::Initialize()
     // the actual DPI from the HWND (which will be assigned by whichever monitor
     // the window is created on). Then we use SetWindowPos to resize it to the
     // correct DPI-scaled size, then we use ShowWindow to show it.
+    RECT rect = { 0, 0, 256 * 3, 240 * 3 }; // 3x scale
+    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
     m_hwnd = CreateWindow(
         L"Blue NES Emulator",
@@ -60,15 +68,15 @@ bool Main::Initialize()
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        0,
-        0,
+        rect.right - rect.left,
+        rect.bottom - rect.top,
         NULL,
         NULL,
         HINST_THISCOMPONENT,
         this);
     
     if (!m_hwnd)
-        return false;
+        return S_FALSE;
 
 	HDC hdc = GetDC(m_hwnd);
 	hdcMem = CreateCompatibleDC(hdc);
@@ -76,23 +84,10 @@ bool Main::Initialize()
 	SelectObject(hdcMem, hBitmap);
 	ReleaseDC(m_hwnd, hdc);
 
-
-    // Because the SetWindowPos function takes its size in pixels, we
-    // obtain the window's DPI, and use it to scale the window size.
-    //float dpi = GetDpiForWindow(m_hwnd);
-
-    //SetWindowPos(
-    //    m_hwnd,
-    //    NULL,
-    //    NULL,
-    //    NULL,
-    //    static_cast<int>(ceil(640.f * dpi / 96.f)),
-    //    static_cast<int>(ceil(480.f * dpi / 96.f)),
-    //    SWP_NOMOVE);
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
     UpdateWindow(m_hwnd);
 
-    return true;
+    return S_OK;
 }
 
 LRESULT CALLBACK Main::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -179,7 +174,7 @@ bool Main::OnRender()
 {
     HDC hdc = GetDC(m_hwnd);
     // Copy back buffer to bitmap
-	SetDIBits(hdcMem, hBitmap, 0, 240, nullptr, &bmi, DIB_RGB_COLORS);
+	SetDIBits(hdcMem, hBitmap, 0, 240, backBuffer.data(), &bmi, DIB_RGB_COLORS);
     // Stretch blit to window (3x scale)
     RECT clientRect;
     GetClientRect(m_hwnd, &clientRect);
@@ -213,7 +208,7 @@ int WINAPI WinMain(
         {
             Main main;
 
-            if (!main.Initialize())
+            if (main.Initialize() == S_OK)
             {
                 main.RunMessageLoop();
             }
