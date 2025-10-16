@@ -47,10 +47,6 @@ HRESULT Main::Initialize()
     wcex.lpszMenuName = NULL;
     wcex.hCursor = LoadCursor(NULL, IDI_APPLICATION);
     wcex.lpszClassName = L"Blue NES Emulator";
-
-    for (int i = 0; i < 256 * 240; i++) {
-        backBuffer[i] = 0xFF000000; // Initialize to opaque black
-	}
     
     RegisterClassEx(&wcex);
 
@@ -174,7 +170,7 @@ bool Main::OnRender()
 {
     HDC hdc = GetDC(m_hwnd);
     // Copy back buffer to bitmap
-	SetDIBits(hdcMem, hBitmap, 0, 240, backBuffer.data(), &bmi, DIB_RGB_COLORS);
+	SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
     // Stretch blit to window (3x scale)
     RECT clientRect;
     GetClientRect(m_hwnd, &clientRect);

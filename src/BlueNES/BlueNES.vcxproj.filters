@@ -20,7 +20,7 @@
     <ClCompile Include="ines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NesPPU.cpp">
+    <ClCompile Include="nes_ppu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -34,7 +34,7 @@
     <ClInclude Include="ines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NesPPU.h">
+    <ClInclude Include="nes_ppu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

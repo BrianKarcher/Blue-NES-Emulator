@@ -8,6 +8,7 @@
 #include <wchar.h>
 #include <math.h>
 #include <array>
+#include "nes_ppu.h"
 
 //#include <d2d1.h>
 //#include <d2d1helper.h>
@@ -52,11 +53,10 @@ public:
 	void RunMessageLoop();
 
 private:
+	NesPPU ppu;
 	HDC hdcMem;
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;
-	// Back buffer for rendering (256x240 pixels, RGBA)
-	std::array<uint32_t, 256 * 240> backBuffer;
 	// Draw content.
 	bool OnRender();
 

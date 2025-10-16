@@ -1,5 +1,7 @@
 #pragma once
 #include <stdint.h>
+#include <array>
+
 class NesPPU
 {
 public:
@@ -11,9 +13,12 @@ public:
 	uint8_t read_register(uint16_t addr);
 	void render_scanline();
 	void render_frame();
+	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 private:
+	// Back buffer for rendering (256x240 pixels, RGBA)
+	std::array<uint32_t, 256 * 240> m_backBuffer;
 	// NES color palette (64 colors)
-	static constexpr uint32_t _nesPalette[64] = {
+	static constexpr uint32_t m_nesPalette[64] = {
 		0xFF666666, 0xFF002A88, 0xFF1412A7, 0xFF3B00A4, 0xFF5C007E, 0xFF6E0040, 0xFF6C0600, 0xFF561D00,
 		0xFF333500, 0xFF0B4800, 0xFF005200, 0xFF004F08, 0xFF00404D, 0xFF000000, 0xFF000000, 0xFF000000,
 		0xFFADADAD, 0xFF155FD9, 0xFF4240FF, 0xFF7527FE, 0xFFA01ACC, 0xFFB71E7B, 0xFFB53120, 0xFF994E00,

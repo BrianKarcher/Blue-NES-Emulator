@@ -126,13 +126,13 @@
   <ItemGroup>
     <ClCompile Include="ines.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="NesPPU.cpp" />
+    <ClCompile Include="nes_ppu.cpp" />
     <ClCompile Include="processor_6502.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ines.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="NesPPU.h" />
+    <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="processor_6502.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
