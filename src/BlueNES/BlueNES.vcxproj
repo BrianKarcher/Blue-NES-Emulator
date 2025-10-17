@@ -135,6 +135,13 @@
     <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="processor_6502.h" />
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="test-chr-rom.chr">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

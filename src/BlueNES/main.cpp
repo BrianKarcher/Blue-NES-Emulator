@@ -206,6 +206,7 @@ int WINAPI WinMain(
 
             if (main.Initialize() == S_OK)
             {
+				main.SetupTestData();
                 main.RunMessageLoop();
             }
         }
@@ -215,13 +216,34 @@ int WINAPI WinMain(
     return 0;
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+// TODO: Move this to the test project
+void Main::SetupTestData()
+{
+	// read CHR-ROM data from file and load into PPU for testing
+	const char* filename = "test-chr-rom-chr";
+    // read from file
+    FILE* file = nullptr;
+    errno_t err = fopen_s(&file, filename, "rb");
+    if (err != 0 || !file) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return;
+    }
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (fileSize <= 0) {
+        std::cerr << "File is empty or error reading size: " << filename << std::endl;
+        fclose(file);
+        return;
+    }
+    uint8_t* buffer = new uint8_t[fileSize];
+    size_t bytesRead = fread(buffer, 1, fileSize, file);
+    fclose(file);
+    if (bytesRead != fileSize) {
+        std::cerr << "Error reading file: " << filename << std::endl;
+        delete[] buffer;
+        return;
+    }
+    ppu.set_chr_rom(buffer, bytesRead);
+	delete[] buffer;
+}

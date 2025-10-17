@@ -52,6 +52,8 @@ public:
 	// Process and dispatch messages
 	void RunMessageLoop();
 
+	void SetupTestData();
+
 private:
 	NesPPU ppu;
 	HDC hdcMem;

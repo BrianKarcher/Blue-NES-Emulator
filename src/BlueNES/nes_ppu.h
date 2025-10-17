@@ -13,10 +13,15 @@ public:
 	uint8_t read_register(uint16_t addr);
 	void render_scanline();
 	void render_frame();
+	void set_chr_rom(uint8_t* chrData, size_t size);
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 private:
+	uint8_t* m_pchrRomData = nullptr;
+	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
+	size_t m_chrRomSize = 0;
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
+	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 	// NES color palette (64 colors)
 	static constexpr uint32_t m_nesPalette[64] = {
 		0xFF666666, 0xFF002A88, 0xFF1412A7, 0xFF3B00A4, 0xFF5C007E, 0xFF6E0040, 0xFF6C0600, 0xFF561D00,
