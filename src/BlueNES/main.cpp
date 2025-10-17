@@ -81,7 +81,7 @@ HRESULT Main::Initialize()
 	ReleaseDC(m_hwnd, hdc);
 
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
-    UpdateWindow(m_hwnd);
+    //UpdateWindow(m_hwnd);
 
     return S_OK;
 }
@@ -220,7 +220,7 @@ int WINAPI WinMain(
 void Main::SetupTestData()
 {
 	// read CHR-ROM data from file and load into PPU for testing
-	const char* filename = "test-chr-rom-chr";
+	const char* filename = "test-chr-rom.chr";
     // read from file
     FILE* file = nullptr;
     errno_t err = fopen_s(&file, filename, "rb");
@@ -246,4 +246,13 @@ void Main::SetupTestData()
     }
     ppu.set_chr_rom(buffer, bytesRead);
 	delete[] buffer;
+
+	ppu.write_register(0x2006, 0x20); // PPUADDR high byte
+	ppu.write_register(0x2006, 0x00); // PPUADDR low byte
+    for (int i = 0; i < 32 * 30; i++) {
+        // Write test pattern to VRAM
+        ppu.write_register(0x2007, i % 64); // Use color index from palette
+	}
+
+    ppu.render_frame();
 }

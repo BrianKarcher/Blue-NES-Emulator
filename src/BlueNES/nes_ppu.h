@@ -19,6 +19,8 @@ private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	size_t m_chrRomSize = 0;
+	// TODO: This can be optimized to use less memory if needed
+	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
@@ -33,5 +35,6 @@ private:
 		0xFFFFFEFF, 0xFFC0DFFF, 0xFFD3D2FF, 0xFFE8C8FF, 0xFFFBC2FF, 0xFFFEC4EA, 0xFFFECCC5, 0xFFF7D8A5,
 		0xFFE4E594, 0xFFCFEF96, 0xFFBDF4AB, 0xFFB3F3CC, 0xFFB5EBF2, 0xFFB8B8B8, 0xFF000000, 0xFF000000
 	};
-};
 
+	void write_vram(uint16_t addr, uint8_t value);
+};
