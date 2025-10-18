@@ -17,6 +17,9 @@ public:
 	void set_chr_rom(uint8_t* chrData, size_t size);
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void set_hwnd(HWND hwnd);
+	// For testing, may create a window and render CHR-ROM data
+	void render_chr_rom();
+	void render_tile(int pr, int pc, int tileIndex);
 private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)

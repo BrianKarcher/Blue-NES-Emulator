@@ -120,32 +120,54 @@ void NesPPU::render_scanline()
 	// Render a single scanline to the back buffer here
 }
 
+
 void NesPPU::render_frame()
+{
+	// Draw a whole pattern table for testing
+	for (int pr = 0; pr < 128; pr += 8) {
+		for (int pc = 0; pc < 128; pc += 8) {
+			int tileRow = pr / 8;
+			int tileCol = pc / 8;
+			int tileIndex = (tileRow * 16) + tileCol;
+			render_tile(pr, pc, tileIndex);
+		}
+	}
+}
+
+void NesPPU::render_chr_rom()
 {
     //m_backBuffer.fill(0xFF000000); // For testing, fill with opaque black
 	
 	// Draw a whole pattern table for testing
-	for (int tileRow = 0; tileRow < 16; tileRow++) {
-		for (int tileCol = 0; tileCol < 16; tileCol++) {
-			int tileIndex = tileRow * 16 + tileCol;
-			int tileBase = tileIndex * 16; // 16 bytes per tile
+	for (int pr = 0; pr < 128; pr += 8) {
+		for (int pc = 0; pc < 128; pc += 8) {
+			int tileRow = pr / 8;
+			int tileCol = pc / 8;
+			int tileIndex = (tileRow * 16) + tileCol;
+			render_tile(pr, pc, tileIndex);
+		}
+	}
+}
 
-			for (int y = 0; y < 8; y++) {
-				uint8_t byte1 = m_pchrRomData[tileBase + y];     // bitplane 0
-				uint8_t byte2 = m_pchrRomData[tileBase + y + 8]; // bitplane 1
+void NesPPU::render_tile(int pr, int pc, int tileIndex) {
+	int tileBase = tileIndex * 16; // 16 bytes per tile
+	int tileRow = tileIndex / 16;
+	int tileCol = tileIndex % 16;
 
-				for (int x = 0; x < 8; x++) {
-					uint8_t bit0 = (byte1 >> (7 - x)) & 1;
-					uint8_t bit1 = (byte2 >> (7 - x)) & 1;
-					uint8_t colorIndex = (bit1 << 1) | bit0;
+	for (int y = 0; y < 8; y++) {
+		uint8_t byte1 = m_pchrRomData[tileBase + y];     // bitplane 0
+		uint8_t byte2 = m_pchrRomData[tileBase + y + 8]; // bitplane 1
 
-					uint32_t color = m_nesPalette[colorIndex];
+		for (int x = 0; x < 8; x++) {
+			uint8_t bit0 = (byte1 >> (7 - x)) & 1;
+			uint8_t bit1 = (byte2 >> (7 - x)) & 1;
+			uint8_t colorIndex = (bit1 << 1) | bit0;
 
-					int pixelX = tileCol * 8 + x;
-					int pixelY = tileRow * 8 + y;
-					m_backBuffer[pixelY * 256 + pixelX] = color;
-				}
-			}
+			uint32_t color = m_nesPalette[colorIndex];
+
+			/* int pixelX = tileCol * 8 + x;
+			int pixelY = tileRow * 8 + y; */
+			m_backBuffer[((pr + y) * 256) + (pc + x)] = color;
 		}
 	}
 }
