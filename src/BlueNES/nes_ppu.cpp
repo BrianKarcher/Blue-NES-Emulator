@@ -1,6 +1,11 @@
 #include "nes_ppu.h"
+#include <string>
+#include <cstdint>
+#include <WinUser.h>
 
-NesPPU::NesPPU() :
+HWND m_hwnd;
+
+NesPPU::NesPPU():
 	m_vram()
 {
 	m_backBuffer.fill(0xFFFF00FF); // Initialize to opaque black
@@ -9,6 +14,10 @@ NesPPU::NesPPU() :
 NesPPU::~NesPPU()
 {
 
+}
+
+void NesPPU::set_hwnd(HWND hwnd) {
+	m_hwnd = hwnd;
 }
 
 void NesPPU::set_chr_rom(uint8_t* chrData, size_t size)
@@ -113,19 +122,30 @@ void NesPPU::render_scanline()
 
 void NesPPU::render_frame()
 {
-	//m_backBuffer.fill(0xFF000000); // For testing, fill with opaque black
-	for (int r = 0; r < 240; r++) {
-		for (int c = 0; c < 256; c++) {
-			// Simple test pattern: color based on position
-			uint8_t newr = r / 30;
-			uint8_t newc = c / 32;
-			// Simple test pattern: color based on nametable position
-			uint8_t colorIndex = m_vram[0x2000 + newr * 32 + newc]; // Cycle through palette
-			m_backBuffer[r * 256 + c] = m_nesPalette[colorIndex];
+    //m_backBuffer.fill(0xFF000000); // For testing, fill with opaque black
+	
+	// Draw a whole pattern table for testing
+	for (int tileRow = 0; tileRow < 16; tileRow++) {
+		for (int tileCol = 0; tileCol < 16; tileCol++) {
+			int tileIndex = tileRow * 16 + tileCol;
+			int tileBase = tileIndex * 16; // 16 bytes per tile
 
-			//uint8_t colorIndex = (r / 15 + c / 16) % 64; // Cycle through palette
-			//m_backBuffer[r * 256 + c] = m_nesPalette[colorIndex];
-			//m_backBuffer[r * 256 + c] = m_nesPalette[(r + c) % 64];
+			for (int y = 0; y < 8; y++) {
+				uint8_t byte1 = m_pchrRomData[tileBase + y];     // bitplane 0
+				uint8_t byte2 = m_pchrRomData[tileBase + y + 8]; // bitplane 1
+
+				for (int x = 0; x < 8; x++) {
+					uint8_t bit0 = (byte1 >> (7 - x)) & 1;
+					uint8_t bit1 = (byte2 >> (7 - x)) & 1;
+					uint8_t colorIndex = (bit1 << 1) | bit0;
+
+					uint32_t color = m_nesPalette[colorIndex];
+
+					int pixelX = tileCol * 8 + x;
+					int pixelY = tileRow * 8 + y;
+					m_backBuffer[pixelY * 256 + pixelX] = color;
+				}
+			}
 		}
 	}
 }

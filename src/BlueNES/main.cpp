@@ -74,6 +74,7 @@ HRESULT Main::Initialize()
     if (!m_hwnd)
         return S_FALSE;
 
+	ppu.set_hwnd(m_hwnd);
 	HDC hdc = GetDC(m_hwnd);
 	hdcMem = CreateCompatibleDC(hdc);
 	hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
@@ -245,7 +246,7 @@ void Main::SetupTestData()
         return;
     }
     ppu.set_chr_rom(buffer, bytesRead);
-	delete[] buffer;
+	//delete[] buffer;
 
 	ppu.write_register(0x2006, 0x20); // PPUADDR high byte
 	ppu.write_register(0x2006, 0x00); // PPUADDR low byte

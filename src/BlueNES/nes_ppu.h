@@ -1,4 +1,5 @@
 #pragma once
+#include <Windows.h>
 #include <stdint.h>
 #include <array>
 
@@ -15,6 +16,7 @@ public:
 	void render_frame();
 	void set_chr_rom(uint8_t* chrData, size_t size);
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
+	void set_hwnd(HWND hwnd);
 private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
