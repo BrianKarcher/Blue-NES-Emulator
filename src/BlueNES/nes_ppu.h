@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <array>
 
+#define NAMETABLE_WIDTH 32
+#define NAMETABLE_HEIGHT 30
+#define TILE_SIZE 8
+
 class NesPPU
 {
 public:
@@ -28,6 +32,8 @@ private:
 	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
+	uint8_t m_scrollX = 0;
+	uint8_t m_scrollY = 0;
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 	// NES color palette (64 colors)
 	static constexpr uint32_t m_nesPalette[64] = {
@@ -44,4 +50,6 @@ private:
 	void write_vram(uint16_t addr, uint8_t value);
 	void get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors);
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
+	void render_nametable();
+	uint32_t get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, std::array<uint16_t, 4>& palette);
 };
