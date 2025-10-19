@@ -61,6 +61,7 @@ private:
 	HBITMAP hBitmap;
 	// Draw content.
 	bool OnRender();
+	void Render();
 
 	// Resize the render target.
 	void OnResize(

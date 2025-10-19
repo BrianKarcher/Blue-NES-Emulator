@@ -26,12 +26,35 @@ Main::~Main()
 void Main::RunMessageLoop()
 {
     MSG msg;
+	bool running = true;
+    uint8_t scrollX = 0;
+    while (running) {
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) {
+                running = false;
+                break;
+            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+		}
+        if (!running) {
+            break;
+		}
 
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        ppu.write_register(0x2005, scrollX);
+        ppu.write_register(0x2005, 0x00);
+        scrollX++;
+        // Update();
+        Render();
+		Sleep(16); // ~60 FPS
     }
+}
+
+void Main::Render()
+{
+    ppu.render_frame();
+    OnRender();
 }
 
 HRESULT Main::Initialize()

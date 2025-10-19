@@ -91,6 +91,17 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			break;
 		case 0x05: // PPUSCROLL
 			// Handle PPUSCROLL write here
+			if (!writeToggle)
+			{
+				m_scrollX = value; // First write sets horizontal scroll
+			}
+			else
+			{
+				m_scrollY = value; // Second write sets vertical scroll
+			}
+			// Note that writeToggle is shared with PPUADDR
+			// I retain to mimic hardware behavior
+			writeToggle = !writeToggle;
 			break;
 		case 0x06: // PPUADDR
 			if (!writeToggle)
