@@ -250,10 +250,44 @@ void Main::SetupTestData()
 
 	ppu.write_register(0x2006, 0x20); // PPUADDR high byte
 	ppu.write_register(0x2006, 0x00); // PPUADDR low byte
-    for (int i = 0; i < 32 * 30; i++) {
-        // Write test pattern to VRAM
-        ppu.write_register(0x2007, i % 64); // Use color index from palette
-	}
+    for (int r = 0; r < 15; r++) {
+        for (int c = 0; c < 16; c++) {
+            int tileIndex = m_board[r * 16 + c];
+            ppu.write_register(0x2007, m_snakeMetatiles.TopLeft[tileIndex]);
+            ppu.write_register(0x2007, m_snakeMetatiles.TopRight[tileIndex]);
+		}
+        for (int c = 0; c < 16; c++) {
+            int tileIndex = m_board[r * 16 + c];
+            ppu.write_register(0x2007, m_snakeMetatiles.BottomLeft[tileIndex]);
+            ppu.write_register(0x2007, m_snakeMetatiles.BottomRight[tileIndex]);
+        }
+    }
 
+    ppu.write_register(0x2006, 0x23); // PPUADDR high byte
+    ppu.write_register(0x2006, 0xc0); // PPUADDR low byte
+	// Generate attribute bytes for the nametable
+    for (int r = 0; r < 15; r+= 2) {
+        for (int c = 0; c < 16; c+= 2) {
+            int tileIndex = r * 16 + c;
+            int topLeft = m_board[tileIndex];
+			int topRight = m_board[tileIndex + 1];
+			// The last row has no bottom tiles
+			int bottomLeft = r == 14 ? 0 : m_board[tileIndex + 16];
+			int bottomRight = r == 14 ? 0 : m_board[tileIndex + 17];
+			uint8_t attributeByte = 0;
+			attributeByte |= (m_snakeMetatiles.PaletteIndex[topLeft] & 0x03) << 0; // Top-left
+			attributeByte |= (m_snakeMetatiles.PaletteIndex[topRight] & 0x03) << 2; // Top-right
+			attributeByte |= (m_snakeMetatiles.PaletteIndex[bottomLeft] & 0x03) << 4; // Bottom-left
+			attributeByte |= (m_snakeMetatiles.PaletteIndex[bottomRight] & 0x03) << 6; // Bottom-right
+            ppu.write_register(0x2007, attributeByte);
+        }
+    }
+
+	// Load a simple palette (background + 4 colors)
+	ppu.write_register(0x2006, 0x3F); // PPUADDR high byte
+	ppu.write_register(0x2006, 0x00); // PPUADDR low byte
+    for (int i = 0; i < palette.size(); i++) {
+        ppu.write_register(0x2007, palette[i]);
+	}
     ppu.render_frame();
 }

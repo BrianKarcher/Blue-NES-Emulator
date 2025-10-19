@@ -19,7 +19,7 @@ public:
 	void set_hwnd(HWND hwnd);
 	// For testing, may create a window and render CHR-ROM data
 	void render_chr_rom();
-	void render_tile(int pr, int pc, int tileIndex);
+	void render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors);
 private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
@@ -42,4 +42,6 @@ private:
 	};
 
 	void write_vram(uint16_t addr, uint8_t value);
+	void get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors);
+	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 };

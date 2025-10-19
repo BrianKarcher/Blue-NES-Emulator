@@ -123,36 +123,96 @@ void NesPPU::render_scanline()
 
 void NesPPU::render_frame()
 {
-	// Draw a whole pattern table for testing
-	for (int pr = 0; pr < 128; pr += 8) {
-		for (int pc = 0; pc < 128; pc += 8) {
-			int tileRow = pr / 8;
-			int tileCol = pc / 8;
-			int tileIndex = (tileRow * 16) + tileCol;
-			render_tile(pr, pc, tileIndex);
-		}
+    // Clear back buffer
+    // m_backBuffer.fill(0xFF000000);
+    
+    // Nametable starts at 0x2000 in VRAM
+    const uint16_t nametableAddr = 0x2000;
+    
+	// TODO: For now, we just render the nametable directly without scrolling or attribute tables
+	std::array<uint16_t, 4> palette;
+	// Render the 32x30 tile nametable
+    for (int row = 0; row < 30; row++) {
+        for (int col = 0; col < 32; col++) {
+            // Get the tile index from the nametable in VRAM
+            uint8_t tileIndex = m_vram[nametableAddr + row * 32 + col];
+            
+            // Calculate pixel coordinates
+            int pixelX = col * 8;  // Each tile is 8x8 pixels
+            int pixelY = row * 8;
+
+			int attrRow = row / 4;
+			int attrCol = col / 4;
+			// Get attribute byte for the tile
+			uint8_t attributeByte = m_vram[0x23c0 + attrRow * 8 + attrCol];
+
+			uint8_t paletteIndex = 0;
+			get_palette_index_from_attribute(attributeByte, row, col, paletteIndex);
+			get_palette(paletteIndex, palette); // For now we don't use the colors
+            // Render the tile at the calculated position
+            render_tile(pixelY, pixelX, tileIndex, palette);
+        }
+    }
+}
+
+void NesPPU::get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex)
+{
+	// Each attribute byte covers a 4x4 tile area (32x32 pixels)
+	// Determine which quadrant of the attribute byte the tile is in
+	int quadrantRow = (tileRow % 4) / 2; // 0 or 1
+	int quadrantCol = (tileCol % 4) / 2; // 0 or 1
+	// Extract the corresponding 2 bits for the palette index
+	switch (quadrantRow) {
+		case 0:
+			switch (quadrantCol) {
+				case 0:
+					paletteIndex = attributeByte & 0x03; // Bits 0-1
+					break;
+				case 1:
+					paletteIndex = (attributeByte >> 2) & 0x03; // Bits 2-3
+					break;
+			}
+			break;
+		case 1:
+			switch (quadrantCol) {
+				case 0:
+					paletteIndex = (attributeByte >> 4) & 0x03; // Bits 4-5
+					break;
+				case 1:
+					paletteIndex = (attributeByte >> 6) & 0x03; // Bits 6-7
+					break;
+			}
+			break;
 	}
+}
+
+void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors)
+{
+	// Each palette consists of 4 colors, starting from 0x3F00 in VRAM
+	uint16_t paletteAddr = 0x3F00 + (paletteIndex * 4);
+	colors[0] = m_nesPalette[m_vram[paletteAddr] & 0x3F];
+	colors[1] = m_nesPalette[m_vram[paletteAddr + 1] & 0x3F];
+	colors[2] = m_nesPalette[m_vram[paletteAddr + 2] & 0x3F];
+	colors[3] = m_nesPalette[m_vram[paletteAddr + 3] & 0x3F];
 }
 
 void NesPPU::render_chr_rom()
 {
     //m_backBuffer.fill(0xFF000000); // For testing, fill with opaque black
-	
+	std::array<uint16_t, 4> palette;
 	// Draw a whole pattern table for testing
 	for (int pr = 0; pr < 128; pr += 8) {
 		for (int pc = 0; pc < 128; pc += 8) {
 			int tileRow = pr / 8;
 			int tileCol = pc / 8;
 			int tileIndex = (tileRow * 16) + tileCol;
-			render_tile(pr, pc, tileIndex);
+			render_tile(pr, pc, tileIndex, palette);
 		}
 	}
 }
 
-void NesPPU::render_tile(int pr, int pc, int tileIndex) {
+void NesPPU::render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors) {
 	int tileBase = tileIndex * 16; // 16 bytes per tile
-	int tileRow = tileIndex / 16;
-	int tileCol = tileIndex % 16;
 
 	for (int y = 0; y < 8; y++) {
 		uint8_t byte1 = m_pchrRomData[tileBase + y];     // bitplane 0
@@ -163,11 +223,9 @@ void NesPPU::render_tile(int pr, int pc, int tileIndex) {
 			uint8_t bit1 = (byte2 >> (7 - x)) & 1;
 			uint8_t colorIndex = (bit1 << 1) | bit0;
 
-			uint32_t color = m_nesPalette[colorIndex];
+			uint16_t actualColor = colors[colorIndex]; // Map to actual color from palette
 
-			/* int pixelX = tileCol * 8 + x;
-			int pixelY = tileRow * 8 + y; */
-			m_backBuffer[((pr + y) * 256) + (pc + x)] = color;
+			m_backBuffer[((pr + y) * 256) + (pc + x)] = actualColor;
 		}
 	}
 }
