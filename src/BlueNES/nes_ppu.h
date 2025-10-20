@@ -24,12 +24,23 @@ public:
 	// For testing, may create a window and render CHR-ROM data
 	void render_chr_rom();
 	void render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors);
+	// Mirroring mode
+	enum MirrorMode {
+		HORIZONTAL = 0,
+		VERTICAL = 1,
+		SINGLE_SCREEN_LOW = 2,
+		SINGLE_SCREEN_HIGH = 3,
+		FOUR_SCREEN = 4
+	};
+	void SetMirrorMode(MirrorMode mode);
+	void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	size_t m_chrRomSize = 0;
 	// TODO: This can be optimized to use less memory if needed
 	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
+	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
 	uint8_t m_scrollX = 0;
@@ -52,4 +63,8 @@ private:
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
 	uint32_t get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, std::array<uint16_t, 4>& palette);
+	uint16_t MirrorAddress(uint16_t addr);
+	MirrorMode mirrorMode = HORIZONTAL;
+
+	uint8_t oamAddr = 0;
 };

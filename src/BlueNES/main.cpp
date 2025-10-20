@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "main.h"
+#include <string>
 
 Main::Main() :
     m_hwnd(NULL),
@@ -28,6 +29,14 @@ void Main::RunMessageLoop()
     MSG msg;
 	bool running = true;
     uint8_t scrollX = 0;
+    // --- FPS tracking variables ---
+    LARGE_INTEGER freq, now, last;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&last);
+    double targetFrameTime = 1.0 / 60.0;
+    double elapsedTime = 0.0;
+    int frameCount = 0;
+
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -43,11 +52,35 @@ void Main::RunMessageLoop()
 		}
 
         ppu.write_register(0x2005, scrollX);
-        ppu.write_register(0x2005, 0x00);
+		ppu.write_register(0x2005, 0x00); // No vertical scroll
         scrollX++;
         // Update();
         Render();
-		Sleep(16); // ~60 FPS
+
+		// 60 FPS cap
+        // --- Frame timing ---
+        QueryPerformanceCounter(&now);
+        double frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
+
+        // Busy-wait (or Sleep) until 16.67 ms have passed
+        while (frameTime < targetFrameTime) {
+            Sleep(0); // yields CPU
+            QueryPerformanceCounter(&now);
+            frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
+        }
+
+        last = now;
+
+        // --- FPS calculation every second ---
+        frameCount++;
+        elapsedTime += frameTime;
+        if (elapsedTime >= 1.0) {
+            double fps = frameCount / elapsedTime;
+            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
+            SetWindowText(m_hwnd, title.c_str());
+            frameCount = 0;
+            elapsedTime = 0.0;
+        }
     }
 }
 

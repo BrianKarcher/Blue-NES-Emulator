@@ -8,7 +8,8 @@ HWND m_hwnd;
 NesPPU::NesPPU():
 	m_vram()
 {
-	m_backBuffer.fill(0xFFFF00FF); // Initialize to opaque black
+	m_backBuffer.fill(0xFF000000); // Initialize to opaque black
+	oam.fill(0xFF);
 	m_scrollX = 0;
 	m_scrollY = 0;
 }
@@ -26,6 +27,31 @@ void NesPPU::set_chr_rom(uint8_t* chrData, size_t size)
 {
 	m_pchrRomData = chrData;
 	m_chrRomSize = size;
+}
+
+void NesPPU::SetMirrorMode(MirrorMode mode) {
+	mirrorMode = mode;
+}
+
+// Convert nametable address to physical VRAM address
+uint16_t NesPPU::MirrorAddress(uint16_t addr) {
+	addr &= 0x2FFF; // Mirror to nametable range
+	uint16_t offset = addr & 0x3FF;
+	uint16_t table = (addr >> 10) & 0x03;
+
+	switch (mirrorMode) {
+	case HORIZONTAL:
+		return 0x2000 + ((table & 0x02) << 10) + offset;
+	case VERTICAL:
+		return 0x2000 + ((table & 0x01) << 10) + offset;
+	case SINGLE_SCREEN_LOW:
+		return 0x2000 + offset;
+	case SINGLE_SCREEN_HIGH:
+		return 0x2400 + offset;
+	case FOUR_SCREEN:
+		return 0x2000 + (table << 10) + offset;
+	}
+	return 0x2000 + offset;
 }
 
 void NesPPU::reset()
@@ -84,10 +110,10 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			// Ignore writes to PPUSTATUS
 			break;
 		case 0x03: // OAMADDR
-			// Handle OAMADDR write here
+			oamAddr = value;
 			break;
 		case 0x04: // OAMDATA
-			// Handle OAMDATA write here
+			oam[oamAddr++] = value;
 			break;
 		case 0x05: // PPUSCROLL
 			// Handle PPUSCROLL write here
@@ -136,6 +162,27 @@ void NesPPU::render_scanline()
 {
 	// Render a single scanline to the back buffer here
 }
+
+// OAM DMA - Direct Memory Access for sprites
+void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
+	uint16_t addr = page << 8;
+	for (int i = 0; i < 256; i++) {
+		oam[oamAddr++] = cpuMemory[addr + i];
+	}
+	// OAM DMA takes 513 or 514 CPU cycles depending on odd/even alignment
+	// OAMADDR wraps around automatically in hardware
+	oamAddr &= 0xFF;
+}
+
+// Sprite data for current scanline
+struct Sprite {
+	uint8_t x;
+	uint8_t y;
+	uint8_t tile;
+	uint8_t attr;
+	bool isSprite0;
+};
+std::array<Sprite, 8> secondaryOAM;
 
 void NesPPU::render_frame()
 {
