@@ -174,16 +174,6 @@ void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
 	oamAddr &= 0xFF;
 }
 
-// Sprite data for current scanline
-struct Sprite {
-	uint8_t x;
-	uint8_t y;
-	uint8_t tile;
-	uint8_t attr;
-	bool isSprite0;
-};
-std::array<Sprite, 8> secondaryOAM;
-
 void NesPPU::render_frame()
 {
 	// Clear back buffer
@@ -194,7 +184,10 @@ void NesPPU::render_frame()
 	const uint16_t nametableAddr = 0x2000;
 	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
 	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
-
+	std::array<Sprite, 8> secondaryOAM{};
+	for (int i = 0; i < 8; ++i) {
+		secondaryOAM[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
+	}
 	// Render the 256x240 visible area
 	for (int screenY = 0; screenY < 240; ++screenY)
 	{
@@ -220,16 +213,84 @@ void NesPPU::render_frame()
 			get_palette(paletteIndex, palette); // For now we don't use the colors
 
 			// Get the color of the specific pixel within the tile
-			int pixelInTileX = worldX % TILE_SIZE;
-			int pixelInTileY = worldY % TILE_SIZE;
-			uint32_t color = get_tile_pixel_color(tileIndex, pixelInTileX, pixelInTileY, palette);
+			int bgPixelInTileX = worldX % TILE_SIZE;
+			int bgPixelInTileY = worldY % TILE_SIZE;
+			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, palette);
+			// Handle both background and sprite color mapping here since we have to deal with
+			// transparency and priority
+			// Added bonus: Single draw call to set pixel in back buffer
+			uint32_t bgColor = 0;
+			if (bgColorIndex == 0) {
+				bgColor = m_nesPalette[m_vram[0x3F00]]; // Transparent color (background color)
+			}
+			else {
+				bgColor = palette[bgColorIndex]; // Map to actual color from palette
+			}
 			// Set pixel in back buffer
-			m_backBuffer[(screenY * 256) + screenX] = color;
+			m_backBuffer[(screenY * 256) + screenX] = bgColor;
+			bool foundSprite = false;
+			for (int i = 0; i < 8 && !foundSprite; ++i) {
+				Sprite& sprite = secondaryOAM[i];
+				if (sprite.y >= 0xF0) {
+					continue; // Empty sprite slot
+				}
+				int spriteY = sprite.y + 1; // Adjust for off-by-one
+				int spriteX = sprite.x;
+				if (screenX >= spriteX && screenX < (spriteX + 8)) {
+					// Sprite pixel coordinates
+					int spritePixelX = screenX - spriteX;
+					int spritePixelY = screenY - spriteY;
+					// Get sprite palette
+					uint8_t spritePaletteIndex = sprite.attributes & 0x03;
+					std::array<uint16_t, 4> spritePalette;
+					get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+					// Get color index from sprite tile
+					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, spritePalette);
+					if (spriteColorIndex != 0) { // Non-transparent pixel
+						uint16_t spriteColor = spritePalette[spriteColorIndex];
+						// Handle priority (not implemented yet, assuming sprites are always on top)
+						m_backBuffer[(screenY * 256) + screenX] = spriteColor;
+						foundSprite = true;
+					}
+				}
+			}
+		}
+		// Sprite evaluation for this scanline get rendered on the next scanline
+		// All sprites on the NES have an off-by-one error for the Y position
+		EvaluateSprites(screenY, secondaryOAM);
+	}
+}
+
+void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8> newOam)
+{
+	for (int i = 0; i < 8; ++i) {
+		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
+	}
+	// Evaluate sprites for this scanline
+	int spriteCount = 0;
+	for (int i = 0; i < 64; ++i) {
+		int spriteY = oam[i * 4]; // Y position of the sprite
+		int spriteHeight = 8; // For now, assume 8x8 sprites. TODO: Support 8x16 sprites.
+		if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
+			if (spriteCount < 8) {
+				// Copy sprite data to new OAM
+				newOam[spriteCount].y = oam[i * 4];
+				newOam[spriteCount].tileIndex = oam[i * 4 + 1];
+				newOam[spriteCount].attributes = oam[i * 4 + 2];
+				newOam[spriteCount].x = oam[i * 4 + 3];
+				spriteCount++;
+			}
+			else {
+				// Sprite overflow - more than 8 sprites on this scanline
+				// Set sprite overflow flag in PPUSTATUS (not implemented yet)
+				break;
+			}
 		}
 	}
 }
 
-uint32_t NesPPU::get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, std::array<uint16_t, 4>& palette)
+uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY,
+	std::array<uint16_t, 4>& palette)
 {
 	int tileBase = tileIndex * 16; // 16 bytes per tile
 
@@ -240,12 +301,7 @@ uint32_t NesPPU::get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, u
 	uint8_t bit1 = (byte2 >> (7 - pixelInTileX)) & 1;
 	uint8_t colorIndex = (bit1 << 1) | bit0;
 
-	if (colorIndex == 0) {
-		return m_nesPalette[m_vram[0x3F00]]; // Transparent color (background color)
-	}
-	else {
-		return palette[colorIndex]; // Map to actual color from palette
-	}
+	return colorIndex;
 }
 
 void NesPPU::render_nametable()

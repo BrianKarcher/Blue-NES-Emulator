@@ -46,6 +46,17 @@ public:
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr = 0;
 private:
+	// Sprite data for current scanline
+	struct Sprite {
+		uint8_t x;
+		uint8_t y;
+		uint8_t tileIndex;
+		uint8_t attributes;
+		bool isSprite0;
+	};
+	
+	void EvaluateSprites(int screenY, std::array<Sprite, 8> newOam);
+
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	size_t m_chrRomSize = 0;
@@ -73,7 +84,8 @@ private:
 	void get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors);
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
-	uint32_t get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, std::array<uint16_t, 4>& palette);
+	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY,
+		std::array<uint16_t, 4>& palette);
 	uint16_t MirrorAddress(uint16_t addr);
 	MirrorMode mirrorMode = HORIZONTAL;
 };
