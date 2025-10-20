@@ -215,7 +215,7 @@ void NesPPU::render_frame()
 			// Get the color of the specific pixel within the tile
 			int bgPixelInTileX = worldX % TILE_SIZE;
 			int bgPixelInTileY = worldY % TILE_SIZE;
-			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, palette);
+			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY);
 			// Handle both background and sprite color mapping here since we have to deal with
 			// transparency and priority
 			// Added bonus: Single draw call to set pixel in back buffer
@@ -245,7 +245,7 @@ void NesPPU::render_frame()
 					std::array<uint16_t, 4> spritePalette;
 					get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 					// Get color index from sprite tile
-					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, spritePalette);
+					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
 					if (spriteColorIndex != 0) { // Non-transparent pixel
 						uint16_t spriteColor = spritePalette[spriteColorIndex];
 						// Handle priority (not implemented yet, assuming sprites are always on top)
@@ -261,7 +261,7 @@ void NesPPU::render_frame()
 	}
 }
 
-void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8> newOam)
+void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
 {
 	for (int i = 0; i < 8; ++i) {
 		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
@@ -270,6 +270,9 @@ void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8> newOam)
 	int spriteCount = 0;
 	for (int i = 0; i < 64; ++i) {
 		int spriteY = oam[i * 4]; // Y position of the sprite
+		if (spriteY > 0xF0) {
+			continue; // Empty sprite slot
+		}
 		int spriteHeight = 8; // For now, assume 8x8 sprites. TODO: Support 8x16 sprites.
 		if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
 			if (spriteCount < 8) {
@@ -289,8 +292,7 @@ void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8> newOam)
 	}
 }
 
-uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY,
-	std::array<uint16_t, 4>& palette)
+uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY)
 {
 	int tileBase = tileIndex * 16; // 16 bytes per tile
 

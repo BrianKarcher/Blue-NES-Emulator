@@ -347,5 +347,15 @@ void Main::SetupTestData()
     for (int i = 0; i < palette.size(); i++) {
         bus.write(0x2007, palette[i]);
 	}
+    std::array<uint8_t, 0x100> oam = {};
+	oam.fill(0xFF); // Initialize all sprites as hidden
+	// Create a simple sprite for testing
+	oam[0] = 100; // Y position
+	oam[1] = 0x06;   // Tile index
+	oam[2] = 0;   // Attributes
+	oam[3] = 120; // X position
+	// Load OAM data into PPU
+    ppu.oam = oam;
+    //ppu.oam
     ppu.render_frame();
 }
