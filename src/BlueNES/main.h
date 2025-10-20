@@ -8,7 +8,9 @@
 #include <wchar.h>
 #include <math.h>
 #include <array>
+#include "bus.h"
 #include "nes_ppu.h"
+#include "processor_6502.h"
 
 //#include <d2d1.h>
 //#include <d2d1helper.h>
@@ -55,7 +57,9 @@ public:
 	void SetupTestData();
 
 private:
+	Bus bus;
 	NesPPU ppu;
+	Processor_6502 cpu;
 	HDC hdcMem;
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;

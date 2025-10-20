@@ -6,6 +6,15 @@
 #define NAMETABLE_WIDTH 32
 #define NAMETABLE_HEIGHT 30
 #define TILE_SIZE 8
+#define PPUCTRL 0x2000
+#define PPUMASK 0x2001
+#define PPUSTATUS 0x2002
+#define OAMADDR 0x2003
+#define OAMDATA 0x2004
+#define PPUSCROLL 0x2005
+#define PPUADDR 0x2006
+#define PPUDATA 0x2007
+
 
 class NesPPU
 {
@@ -34,13 +43,15 @@ public:
 	};
 	void SetMirrorMode(MirrorMode mode);
 	void OAMDMA(uint8_t* cpuMemory, uint16_t page);
+	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
+	uint8_t oamAddr = 0;
 private:
 	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	size_t m_chrRomSize = 0;
 	// TODO: This can be optimized to use less memory if needed
 	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
-	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
+
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
 	uint8_t m_scrollX = 0;
@@ -65,6 +76,4 @@ private:
 	uint32_t get_tile_pixel_color(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, std::array<uint16_t, 4>& palette);
 	uint16_t MirrorAddress(uint16_t addr);
 	MirrorMode mirrorMode = HORIZONTAL;
-
-	uint8_t oamAddr = 0;
 };

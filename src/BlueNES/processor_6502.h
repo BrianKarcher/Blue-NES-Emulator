@@ -28,6 +28,7 @@ class Processor_6502
 private:
 	void adc(uint8_t operand);
 	//void _and(uint8_t operand);
+	uint64_t m_cycle_count = 0;
 public:
 	void Initialize(uint8_t* romData, uint8_t* memory);
 	void Run();
@@ -39,4 +40,7 @@ public:
 	uint8_t GetY();
 	bool GetFlag(uint8_t flag);
 	void SetFlag(bool byte, uint8_t flag);
+	void Reset();
+	void AddCycles(int count);
+	uint64_t GetCycleCount();
 };

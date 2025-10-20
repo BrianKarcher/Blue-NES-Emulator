@@ -124,12 +124,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bus.cpp" />
     <ClCompile Include="ines.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
     <ClCompile Include="processor_6502.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bus.h" />
     <ClInclude Include="ines.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nes_ppu.h" />

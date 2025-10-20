@@ -15,7 +15,6 @@ uint8_t m_p;
 
 uint8_t* m_pRomData;
 uint8_t* m_pMemory;
-int m_cycle_count = 0;
 
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
 
@@ -28,12 +27,32 @@ void Processor_6502::Initialize(uint8_t* romData, uint8_t* memory)
 	m_cycle_count = 0;
 }
 
+void Processor_6502::Reset()
+{
+	m_pc = (static_cast<uint16_t>(m_pMemory[0xFFFD]) << 8) | m_pMemory[0xFFFC];
+	m_a = 0;
+	m_x = 0;
+	m_y = 0;
+	m_p = 0x24; // Set unused flag bit to 1, others to 0
+	m_cycle_count = 0;
+}
+
 void Processor_6502::Run()
 {
 	while (true)
 	{
 		RunStep();
 	}
+}
+
+void Processor_6502::AddCycles(int count)
+{
+	m_cycle_count += count;
+}
+
+uint64_t Processor_6502::GetCycleCount()
+{
+	return m_cycle_count;
 }
 
 /// <summary>

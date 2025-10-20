@@ -99,23 +99,23 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	// addr is in the range 0x2000 to 0x2007
 	// It is the CPU that writes to these registers
 	// addr is mirrored every 8 bytes up to 0x3FFF so we mask it
-	switch (addr & 0x07) {
-		case 0x00: // PPUCTRL
+	switch (addr) {
+		case PPUCTRL: // PPUCTRL
 		// Handle PPUCTRL write here
 			break;
-		case 0x01: // PPUMASK
+		case PPUMASK: // PPUMASK
 			// Handle PPUMASK write here
 			break;
-		case 0x02: // PPUSTATUS (read-only)
+		case PPUSTATUS: // PPUSTATUS (read-only)
 			// Ignore writes to PPUSTATUS
 			break;
-		case 0x03: // OAMADDR
+		case OAMADDR: // OAMADDR
 			oamAddr = value;
 			break;
-		case 0x04: // OAMDATA
+		case OAMDATA: // OAMDATA
 			oam[oamAddr++] = value;
 			break;
-		case 0x05: // PPUSCROLL
+		case PPUSCROLL: // PPUSCROLL
 			// Handle PPUSCROLL write here
 			if (!writeToggle)
 			{
@@ -129,7 +129,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			// I retain to mimic hardware behavior
 			writeToggle = !writeToggle;
 			break;
-		case 0x06: // PPUADDR
+		case PPUADDR: // PPUADDR
 			if (!writeToggle)
 			{
 				// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
@@ -144,7 +144,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			// It's their fault if their code is broken.
 			writeToggle = !writeToggle;
 			break;
-		case 0x07: // PPUDATA
+		case PPUDATA: // PPUDATA
 			write_vram(vramAddr, value);
 			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
 			vramAddr += 1;
