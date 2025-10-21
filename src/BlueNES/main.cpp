@@ -54,6 +54,12 @@ void Main::RunMessageLoop()
         ppu.write_register(0x2005, scrollX);
 		ppu.write_register(0x2005, 0x00); // No vertical scroll
         scrollX++;
+        // Move sprite
+        oam[3] += 1; // X position
+		oam[7] += 1; // X position of 2nd sprite
+		oam[11] += 1; // X position of 3rd sprite
+		oam[15] += 1; // X position of 4th sprite
+        PerformDMA();
         // Update();
         Render();
 
@@ -321,6 +327,21 @@ void Main::SetupTestData()
         }
     }
 
+    bus.write(0x2006, 0x24); // PPUADDR high byte
+    bus.write(0x2006, 0x00); // PPUADDR low byte
+    for (int r = 0; r < 15; r++) {
+        for (int c = 0; c < 16; c++) {
+            int tileIndex = m_board2[r * 16 + c];
+            bus.write(0x2007, m_snakeMetatiles.TopLeft[tileIndex]);
+            bus.write(0x2007, m_snakeMetatiles.TopRight[tileIndex]);
+        }
+        for (int c = 0; c < 16; c++) {
+            int tileIndex = m_board2[r * 16 + c];
+            bus.write(0x2007, m_snakeMetatiles.BottomLeft[tileIndex]);
+            bus.write(0x2007, m_snakeMetatiles.BottomRight[tileIndex]);
+        }
+    }
+
     bus.write(0x2006, 0x23); // PPUADDR high byte
     bus.write(0x2006, 0xc0); // PPUADDR low byte
 	// Generate attribute bytes for the nametable
@@ -341,21 +362,61 @@ void Main::SetupTestData()
         }
     }
 
+    bus.write(0x2006, 0x27); // PPUADDR high byte
+    bus.write(0x2006, 0xc0); // PPUADDR low byte
+    // Generate attribute bytes for the nametable
+    for (int r = 0; r < 15; r += 2) {
+        for (int c = 0; c < 16; c += 2) {
+            int tileIndex = r * 16 + c;
+            int topLeft = m_board2[tileIndex];
+            int topRight = m_board2[tileIndex + 1];
+            // The last row has no bottom tiles
+            int bottomLeft = r == 14 ? 0 : m_board2[tileIndex + 16];
+            int bottomRight = r == 14 ? 0 : m_board2[tileIndex + 17];
+            uint8_t attributeByte = 0;
+            attributeByte |= (m_snakeMetatiles.PaletteIndex[topLeft] & 0x03) << 0; // Top-left
+            attributeByte |= (m_snakeMetatiles.PaletteIndex[topRight] & 0x03) << 2; // Top-right
+            attributeByte |= (m_snakeMetatiles.PaletteIndex[bottomLeft] & 0x03) << 4; // Bottom-left
+            attributeByte |= (m_snakeMetatiles.PaletteIndex[bottomRight] & 0x03) << 6; // Bottom-right
+            bus.write(0x2007, attributeByte);
+        }
+    }
+
 	// Load a simple palette (background + 4 colors)
     bus.write(0x2006, 0x3F); // PPUADDR high byte
     bus.write(0x2006, 0x00); // PPUADDR low byte
     for (int i = 0; i < palette.size(); i++) {
         bus.write(0x2007, palette[i]);
 	}
-    std::array<uint8_t, 0x100> oam = {};
+    
 	oam.fill(0xFF); // Initialize all sprites as hidden
 	// Create a simple sprite for testing
 	oam[0] = 100; // Y position
 	oam[1] = 0x06;   // Tile index
-	oam[2] = 0;   // Attributes
+	oam[2] = 0x40;   // Attributes
 	oam[3] = 120; // X position
-	// Load OAM data into PPU
-    ppu.oam = oam;
+    oam[4] = 100; // Y position
+    oam[5] = 0x07;   // Tile index
+    oam[6] = 0;   // Attributes
+    oam[7] = 128; // X position
+    oam[8] = 108; // Y position
+    oam[9] = 0x16;   // Tile index
+    oam[10] = 0;   // Attributes
+    oam[11] = 120; // X position
+    oam[12] = 108; // Y position
+    oam[13] = 0x17;   // Tile index
+    oam[14] = 0;   // Attributes
+    oam[15] = 128; // X position
+    PerformDMA();
     //ppu.oam
     ppu.render_frame();
+}
+
+void Main::PerformDMA() {
+	// Load OAM data into CPU memory space 0x200-0x2FF
+    for (int i = 0; i < 0x100; i++) {
+        bus.write(0x200 + i, oam[i]);
+    }
+    // Then DMA to PPU
+    bus.performDMA(0x02);
 }

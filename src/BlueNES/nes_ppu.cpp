@@ -5,13 +5,13 @@
 
 HWND m_hwnd;
 
-NesPPU::NesPPU():
-	m_vram()
+NesPPU::NesPPU()
 {
 	m_backBuffer.fill(0xFF000000); // Initialize to opaque black
 	oam.fill(0xFF);
 	m_scrollX = 0;
 	m_scrollY = 0;
+	m_ppuCtrl = 0;
 }
 
 NesPPU::~NesPPU()
@@ -29,29 +29,43 @@ void NesPPU::set_chr_rom(uint8_t* chrData, size_t size)
 	m_chrRomSize = size;
 }
 
-void NesPPU::SetMirrorMode(MirrorMode mode) {
-	mirrorMode = mode;
-}
+// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
+uint16_t NesPPU::MirrorAddress(uint16_t addr)
+{
+	uint8_t mirrorMode = MirrorMode::VERTICAL; // m_ppuCtrl & 0x03; // Bits 0-1 of PPUCTRL determine nametable
+	addr = (addr - 0x2000) & 0x0FFF; // Normalize into 0x000–0xFFF (4KB range)
+	uint16_t table = addr / 0x400;   // Which of the 4 logical nametables
+	uint16_t offset = addr % 0x400;  // Offset within that table
 
-// Convert nametable address to physical VRAM address
-uint16_t NesPPU::MirrorAddress(uint16_t addr) {
-	addr &= 0x2FFF; // Mirror to nametable range
-	uint16_t offset = addr & 0x3FF;
-	uint16_t table = (addr >> 10) & 0x03;
+	switch (mirrorMode)
+	{
+	case MirrorMode::VERTICAL:
+		// NT0 and NT2 -> physical 0
+		// NT1 and NT3 -> physical 1
+		// pattern: 0,1,0,1
+		return (table % 2) * 0x400 + offset;
 
-	switch (mirrorMode) {
-	case HORIZONTAL:
-		return 0x2000 + ((table & 0x02) << 10) + offset;
-	case VERTICAL:
-		return 0x2000 + ((table & 0x01) << 10) + offset;
-	case SINGLE_SCREEN_LOW:
-		return 0x2000 + offset;
-	case SINGLE_SCREEN_HIGH:
-		return 0x2400 + offset;
-	case FOUR_SCREEN:
-		return 0x2000 + (table << 10) + offset;
+	case MirrorMode::HORIZONTAL:
+		// NT0 and NT1 -> physical 0
+		// NT2 and NT3 -> physical 1
+		// pattern: 0,0,1,1
+		return ((table / 2) * 0x400) + offset;
+
+	case MirrorMode::SINGLE_SCREEN:
+		// All nametables map to 0x000
+		return 0x000 + offset;
+
+	//case MirrorMode::SingleScreenUpper:
+	//	// All nametables map to 0x400
+	//	return 0x400 + offset;
+
+	case MirrorMode::FOUR_SCREEN:
+		// Cartridge provides 4KB VRAM, so direct mapping
+		return addr; // No mirroring
+
+	default:
+		return 0; // Safety
 	}
-	return 0x2000 + offset;
 }
 
 void NesPPU::reset()
@@ -178,33 +192,39 @@ void NesPPU::render_frame()
 {
 	// Clear back buffer
 	// m_backBuffer.fill(0xFF000000);
-
-	// Nametable starts at 0x2000 in VRAM
-	// TODO : Support multiple nametables and mirroring
-	const uint16_t nametableAddr = 0x2000;
 	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
 	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
 	std::array<Sprite, 8> secondaryOAM{};
 	for (int i = 0; i < 8; ++i) {
 		secondaryOAM[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
 	}
+	uint8_t baseNametableIndex = (m_ppuCtrl & 0x03); // Bits 0-1 of PPUCTRL determine nametable base
+	uint16_t baseNametableAddr = 0x2000 + (baseNametableIndex * 0x400);
 	// Render the 256x240 visible area
 	for (int screenY = 0; screenY < 240; ++screenY)
 	{
+		uint16_t currentNametableIndex = baseNametableAddr;
+		//bool flipped = false;
 		for (int screenX = 0; screenX < 256; ++screenX)
 		{
 			// Compute world coordinates with scrolling
 			int worldX = (screenX + scrollX) % (NAMETABLE_WIDTH * TILE_SIZE); // Wrap around horizontally
 			int worldY = (screenY + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
+			// Handle nametable wrap
+			if ((screenX + scrollX) / (NAMETABLE_WIDTH * TILE_SIZE) > 0) {
+				// worldX -= (NAMETABLE_WIDTH * TILE_SIZE);
+				//flipped = !flipped;
+				currentNametableIndex = 0x2000 + MirrorAddress(currentNametableIndex + 0x400);
+			}
 			// Convert to tile coordinates
 			int tileCol = worldX / TILE_SIZE;
 			int tileRow = worldY / TILE_SIZE;
-			int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
+			int tileIndex = m_vram[currentNametableIndex + tileRow * NAMETABLE_WIDTH + tileCol];
 
 			// Get attribute byte for the tile
 			int attrRow = tileRow / 4;
 			int attrCol = tileCol / 4;
-			uint8_t attributeByte = m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
+			uint8_t attributeByte = m_vram[(currentNametableIndex | 0x3c0) + attrRow * 8 + attrCol];
 
 			uint8_t paletteIndex = 0;
 			get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
@@ -240,6 +260,15 @@ void NesPPU::render_frame()
 					// Sprite pixel coordinates
 					int spritePixelX = screenX - spriteX;
 					int spritePixelY = screenY - spriteY;
+
+					bool flipHorizontal = sprite.attributes & 0x40;
+					bool flipVertical = sprite.attributes & 0x80;
+					if (flipHorizontal) {
+						spritePixelX = 7 - spritePixelX;
+					}
+					if (flipVertical) {
+						spritePixelY = 7 - spritePixelY;
+					}
 					// Get sprite palette
 					uint8_t spritePaletteIndex = sprite.attributes & 0x03;
 					std::array<uint16_t, 4> spritePalette;

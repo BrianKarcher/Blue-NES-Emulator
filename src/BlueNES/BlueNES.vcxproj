@@ -125,6 +125,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="ines.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
@@ -132,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.h" />
+    <ClInclude Include="Cartridge.h" />
     <ClInclude Include="ines.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nes_ppu.h" />

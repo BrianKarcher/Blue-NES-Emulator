@@ -15,6 +15,12 @@
 #define PPUADDR 0x2006
 #define PPUDATA 0x2007
 
+enum MirrorMode {
+	HORIZONTAL = 0,
+	VERTICAL = 1,
+	FOUR_SCREEN = 2,
+	SINGLE_SCREEN = 3
+};
 
 class NesPPU
 {
@@ -33,15 +39,7 @@ public:
 	// For testing, may create a window and render CHR-ROM data
 	void render_chr_rom();
 	void render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors);
-	// Mirroring mode
-	enum MirrorMode {
-		HORIZONTAL = 0,
-		VERTICAL = 1,
-		SINGLE_SCREEN_LOW = 2,
-		SINGLE_SCREEN_HIGH = 3,
-		FOUR_SCREEN = 4
-	};
-	void SetMirrorMode(MirrorMode mode);
+
 	void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr = 0;
@@ -67,6 +65,7 @@ private:
 	std::array<uint32_t, 256 * 240> m_backBuffer;
 	uint8_t m_scrollX = 0;
 	uint8_t m_scrollY = 0;
+	uint8_t m_ppuCtrl = 0;
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 	// NES color palette (64 colors)
 	static constexpr uint32_t m_nesPalette[64] = {
@@ -86,5 +85,4 @@ private:
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);
 	uint16_t MirrorAddress(uint16_t addr);
-	MirrorMode mirrorMode = HORIZONTAL;
 };
