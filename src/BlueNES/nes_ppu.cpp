@@ -203,28 +203,32 @@ void NesPPU::render_frame()
 	// Render the 256x240 visible area
 	for (int screenY = 0; screenY < 240; ++screenY)
 	{
-		uint16_t currentNametableIndex = baseNametableAddr;
+		// uint16_t currentNametableIndex = baseNametableAddr;
+		int fineY = (screenY + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
 		//bool flipped = false;
 		for (int screenX = 0; screenX < 256; ++screenX)
 		{
-			// Compute world coordinates with scrolling
-			int worldX = (screenX + scrollX) % (NAMETABLE_WIDTH * TILE_SIZE); // Wrap around horizontally
-			int worldY = (screenY + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
-			// Handle nametable wrap
-			if ((screenX + scrollX) / (NAMETABLE_WIDTH * TILE_SIZE) > 0) {
-				// worldX -= (NAMETABLE_WIDTH * TILE_SIZE);
-				//flipped = !flipped;
-				currentNametableIndex = 0x2000 + MirrorAddress(currentNametableIndex + 0x400);
-			}
+			int fineX = (scrollX + screenX) % (NAMETABLE_WIDTH * TILE_SIZE);
+			// Compute the base nametable index based on coarse scroll
+			uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
+			uint16_t coarseY = (scrollY + screenY) / (NAMETABLE_HEIGHT * TILE_SIZE);
+
+			// Determine which nametable we’re in (0–3)
+			uint8_t nametableSelect = (m_ppuCtrl & 0x03);
+			if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
+			if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
+
+			uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+
 			// Convert to tile coordinates
-			int tileCol = worldX / TILE_SIZE;
-			int tileRow = worldY / TILE_SIZE;
-			int tileIndex = m_vram[currentNametableIndex + tileRow * NAMETABLE_WIDTH + tileCol];
+			int tileCol = fineX / TILE_SIZE;
+			int tileRow = fineY / TILE_SIZE;
+			int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
 
 			// Get attribute byte for the tile
 			int attrRow = tileRow / 4;
 			int attrCol = tileCol / 4;
-			uint8_t attributeByte = m_vram[(currentNametableIndex | 0x3c0) + attrRow * 8 + attrCol];
+			uint8_t attributeByte = m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
 
 			uint8_t paletteIndex = 0;
 			get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
@@ -233,8 +237,8 @@ void NesPPU::render_frame()
 			get_palette(paletteIndex, palette); // For now we don't use the colors
 
 			// Get the color of the specific pixel within the tile
-			int bgPixelInTileX = worldX % TILE_SIZE;
-			int bgPixelInTileY = worldY % TILE_SIZE;
+			int bgPixelInTileX = fineX % TILE_SIZE;
+			int bgPixelInTileY = fineY % TILE_SIZE;
 			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY);
 			// Handle both background and sprite color mapping here since we have to deal with
 			// transparency and priority
