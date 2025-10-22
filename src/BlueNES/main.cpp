@@ -5,6 +5,8 @@
 #include "main.h"
 #include <string>
 
+uint8_t ppuCtrl = 0x00;
+
 Main::Main() :
     m_hwnd(NULL),
 	hdcMem(NULL),
@@ -28,7 +30,7 @@ void Main::RunMessageLoop()
 {
     MSG msg;
 	bool running = true;
-    uint8_t scrollX = 0;
+    int scrollX = 0;
     // --- FPS tracking variables ---
     LARGE_INTEGER freq, now, last;
     QueryPerformanceFrequency(&freq);
@@ -50,9 +52,13 @@ void Main::RunMessageLoop()
         if (!running) {
             break;
 		}
-
-        ppu.write_register(0x2005, scrollX);
-		ppu.write_register(0x2005, 0x00); // No vertical scroll
+        if (scrollX >= 256) {
+            scrollX -= 256;
+			ppuCtrl ^= 0x01; // Switch nametable
+            ppu.write_register(PPUCTRL, ppuCtrl); // Update PPUCTRL with current nametable
+        }
+        ppu.write_register(PPUSCROLL, scrollX);
+		ppu.write_register(PPUSCROLL, 0x00); // No vertical scroll
         scrollX++;
         // Move sprite
         oam[3] += 1; // X position

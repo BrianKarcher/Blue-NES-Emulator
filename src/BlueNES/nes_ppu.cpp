@@ -114,8 +114,8 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	// It is the CPU that writes to these registers
 	// addr is mirrored every 8 bytes up to 0x3FFF so we mask it
 	switch (addr) {
-		case PPUCTRL: // PPUCTRL
-		// Handle PPUCTRL write here
+		case PPUCTRL:
+			m_ppuCtrl = value;
 			break;
 		case PPUMASK: // PPUMASK
 			// Handle PPUMASK write here
