@@ -56,8 +56,7 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 			// Handle mirroring of the background color by setting the address to 0x3F00
 			paletteAddr = 0;
 		}
-		// TODO: Add support for the universal background color mirroring
-		m_vram[0x3F00 + paletteAddr] = value;
+		paletteTable[paletteAddr] = value;
 		return;
 	}
 }
@@ -199,7 +198,7 @@ void NesPPU::render_frame()
 			// Added bonus: Single draw call to set pixel in back buffer
 			uint32_t bgColor = 0;
 			if (bgColorIndex == 0) {
-				bgColor = m_nesPalette[m_vram[0x3F00]]; // Transparent color (background color)
+				bgColor = m_nesPalette[paletteTable[0]]; // Transparent color (background color)
 			}
 			else {
 				bgColor = palette[bgColorIndex]; // Map to actual color from palette
@@ -362,11 +361,11 @@ void NesPPU::get_palette_index_from_attribute(uint8_t attributeByte, int tileRow
 void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors)
 {
 	// Each palette consists of 4 colors, starting from 0x3F00 in VRAM
-	uint16_t paletteAddr = 0x3F00 + (paletteIndex * 4);
-	colors[0] = m_nesPalette[m_vram[paletteAddr] & 0x3F];
-	colors[1] = m_nesPalette[m_vram[paletteAddr + 1] & 0x3F];
-	colors[2] = m_nesPalette[m_vram[paletteAddr + 2] & 0x3F];
-	colors[3] = m_nesPalette[m_vram[paletteAddr + 3] & 0x3F];
+	uint16_t paletteAddr = paletteIndex * 4;
+	colors[0] = m_nesPalette[paletteTable[paletteAddr] & 0x3F];
+	colors[1] = m_nesPalette[paletteTable[paletteAddr + 1] & 0x3F];
+	colors[2] = m_nesPalette[paletteTable[paletteAddr + 2] & 0x3F];
+	colors[3] = m_nesPalette[paletteTable[paletteAddr + 3] & 0x3F];
 }
 
 void NesPPU::render_chr_rom()
@@ -398,7 +397,7 @@ void NesPPU::render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>&
 
 			uint16_t actualColor = 0;
 			if (colorIndex == 0) {
-				actualColor = m_nesPalette[m_vram[0x3F00]]; // Transparent color (background color)
+				actualColor = m_nesPalette[paletteTable[0]]; // Transparent color (background color)
 			}
 			else {
 				actualColor = colors[colorIndex]; // Map to actual color from palette

@@ -78,4 +78,5 @@ private:
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);
+	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
 };
