@@ -53,7 +53,7 @@ private:
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	// TODO: This can be optimized to use less memory if needed
 	// Change to 0x800 (2 KB)
-	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
+	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM
 
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;

@@ -47,6 +47,8 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 		return;
 	} else if (addr < 0x3F00) {
 		// Name tables and attribute tables
+		addr &= 0x2FFF; // Mirror nametables every 4KB
+		addr = bus->cart->MirrorNametable(addr);
 		m_vram[addr] = value;
 		return;
 	} else if (addr < 0x4000) {
@@ -171,7 +173,7 @@ void NesPPU::render_frame()
 			if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
 			if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
 
-			uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+			uint16_t nametableAddr = nametableSelect * 0x400;
 
 			// Convert to tile coordinates
 			int tileCol = fineX / TILE_SIZE;

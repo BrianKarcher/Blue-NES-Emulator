@@ -318,6 +318,7 @@ void Main::SetupTestData()
         delete[] buffer;
         return;
     }
+	bus.cart->SetMirrorMode(Cartridge::MirrorMode::VERTICAL);
     bus.cart->SetCHRRom(buffer, bytesRead);
 	delete[] buffer;
 

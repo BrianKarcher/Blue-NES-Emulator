@@ -11,45 +11,52 @@ Cartridge::Cartridge(const std::string& filePath) {
 }
 
 // Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
-uint16_t Cartridge::MirrorAddress(uint16_t addr)
-{
-	uint8_t mirrorMode = MirrorMode::VERTICAL; // m_ppuCtrl & 0x03; // Bits 0-1 of PPUCTRL determine nametable
-	addr = (addr - 0x2000) & 0x0FFF; // Normalize into 0x000–0xFFF (4KB range)
-	uint16_t table = addr / 0x400;   // Which of the 4 logical nametables
-	uint16_t offset = addr % 0x400;  // Offset within that table
+// Mirror nametable addresses based on mirroring mode
+uint16_t Cartridge::MirrorNametable(uint16_t addr) {
+    // Get nametable index (0-3) and offset within nametable
+    addr &= 0x2FFF;  // Mask to nametable range
+    uint16_t offset = addr & 0x03FF;  // Offset within 1KB nametable
+    uint16_t table = (addr >> 10) & 0x03;  // Which nametable (0-3)
 
-	switch (mirrorMode)
-	{
-	case MirrorMode::VERTICAL:
-		// NT0 and NT2 -> physical 0
-		// NT1 and NT3 -> physical 1
-		// pattern: 0,1,0,1
-		return (table % 2) * 0x400 + offset;
+    // Map logical nametable to physical VRAM based on mirror mode
+    switch (m_mirrorMode) {
+    case HORIZONTAL:
+        // $2000=$2400, $2800=$2C00
+        // Tables 0,1 map to first 1KB, tables 2,3 map to second 1KB
+        table = (table & 0x02) >> 1;
+        break;
 
-	case MirrorMode::HORIZONTAL:
-		// NT0 and NT1 -> physical 0
-		// NT2 and NT3 -> physical 1
-		// pattern: 0,0,1,1
-		return ((table / 2) * 0x400) + offset;
+    case VERTICAL:
+        // $2000=$2800, $2400=$2C00
+        // Tables 0,2 map to first 1KB, tables 1,3 map to second 1KB
+        table = table & 0x01;
+        break;
 
-	case MirrorMode::SINGLE_LOWER:
-		// All nametables map to 0x000
-		return 0x000 + offset;
+    case SINGLE_LOWER:
+        // All nametables map to first 1KB
+        table = 0;
+        break;
 
-	case MirrorMode::SINGLE_UPPER:
-		return 0x400 + offset;
+    case SINGLE_UPPER:
+        // All nametables map to second 1KB
+        table = 1;
+        break;
 
-	case MirrorMode::FOUR_SCREEN:
-		// Cartridge provides 4KB VRAM, so direct mapping
-		return addr; // No mirroring
+    case FOUR_SCREEN:
+        // No mirroring (requires 4KB of VRAM on cartridge)
+        // This would need external RAM on the cartridge
+        break;
+    }
 
-	default:
-		return 0; // Safety
-	}
+    return (table * 0x400) + offset;
 }
 
-MirrorMode Cartridge::GetMirrorMode() {
+Cartridge::MirrorMode Cartridge::GetMirrorMode() {
 	return m_mirrorMode;
+}
+
+void Cartridge::SetMirrorMode(MirrorMode mirrorMode) {
+    m_mirrorMode = mirrorMode;
 }
 
 void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
