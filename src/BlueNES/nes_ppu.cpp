@@ -173,7 +173,8 @@ void NesPPU::render_frame()
 			if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
 			if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
 
-			uint16_t nametableAddr = nametableSelect * 0x400;
+			uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+			nametableAddr = bus->cart->MirrorNametable(nametableAddr);
 
 			// Convert to tile coordinates
 			int tileCol = fineX / TILE_SIZE;

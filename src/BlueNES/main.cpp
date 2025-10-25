@@ -1,6 +1,3 @@
-// main.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include "main.h"
 #include <string>
@@ -31,7 +28,8 @@ void Main::RunMessageLoop()
 {
     MSG msg;
 	bool running = true;
-    int scrollX = 0;
+    //int scrollX = 0;
+	int scrollY = 0;
     // --- FPS tracking variables ---
     LARGE_INTEGER freq, now, last;
     QueryPerformanceFrequency(&freq);
@@ -53,14 +51,20 @@ void Main::RunMessageLoop()
         if (!running) {
             break;
 		}
-        if (scrollX >= 256) {
-            scrollX -= 256;
-			ppuCtrl ^= 0x01; // Switch nametable
+   //     if (scrollX >= 256) {
+   //         scrollX -= 256;
+			//ppuCtrl ^= 0x01; // Switch nametable
+   //         ppu.write_register(PPUCTRL, ppuCtrl); // Update PPUCTRL with current nametable
+   //     }
+        if (scrollY >= 240) {
+            scrollY -= 240;
+            ppuCtrl ^= 0x02; // Switch nametable
             ppu.write_register(PPUCTRL, ppuCtrl); // Update PPUCTRL with current nametable
         }
-        ppu.write_register(PPUSCROLL, scrollX);
-		ppu.write_register(PPUSCROLL, 0x00); // No vertical scroll
-        scrollX++;
+		ppu.write_register(PPUSCROLL, 0x00); // No horizontal scroll
+		ppu.write_register(PPUSCROLL, scrollY);
+        //scrollX++;
+        scrollY++;
         // Move sprite
         oam[3] += 1; // X position
 		oam[7] += 1; // X position of 2nd sprite
@@ -318,7 +322,7 @@ void Main::SetupTestData()
         delete[] buffer;
         return;
     }
-	bus.cart->SetMirrorMode(Cartridge::MirrorMode::VERTICAL);
+	bus.cart->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
     bus.cart->SetCHRRom(buffer, bytesRead);
 	delete[] buffer;
 
@@ -337,7 +341,7 @@ void Main::SetupTestData()
         }
     }
 
-    bus.write(0x2006, 0x24); // PPUADDR high byte
+    bus.write(0x2006, 0x28); // PPUADDR high byte
     bus.write(0x2006, 0x00); // PPUADDR low byte
     for (int r = 0; r < 15; r++) {
         for (int c = 0; c < 16; c++) {
@@ -372,8 +376,10 @@ void Main::SetupTestData()
         }
     }
 
-    bus.write(0x2006, 0x27); // PPUADDR high byte
-    bus.write(0x2006, 0xc0); // PPUADDR low byte
+	int secondNametableAddress = (bus.cart->GetMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) ? 0x2800 : 0x2400;
+    secondNametableAddress |= 0x3C0;
+    bus.write(0x2006, (secondNametableAddress >> 8) & 0xFF); // PPUADDR high byte
+    bus.write(0x2006, secondNametableAddress & 0xFF); // PPUADDR low byte
     // Generate attribute bytes for the nametable
     for (int r = 0; r < 15; r += 2) {
         for (int c = 0; c < 16; c += 2) {
