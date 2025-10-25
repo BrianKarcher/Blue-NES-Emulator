@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdint>
 #include <WinUser.h>
+#include "Bus.h"
 
 HWND m_hwnd;
 
@@ -12,6 +13,7 @@ NesPPU::NesPPU()
 	m_scrollX = 0;
 	m_scrollY = 0;
 	m_ppuCtrl = 0;
+	oamAddr = 0;
 }
 
 NesPPU::~NesPPU()
@@ -21,51 +23,6 @@ NesPPU::~NesPPU()
 
 void NesPPU::set_hwnd(HWND hwnd) {
 	m_hwnd = hwnd;
-}
-
-void NesPPU::set_chr_rom(uint8_t* chrData, size_t size)
-{
-	m_pchrRomData = chrData;
-	m_chrRomSize = size;
-}
-
-// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
-uint16_t NesPPU::MirrorAddress(uint16_t addr)
-{
-	uint8_t mirrorMode = MirrorMode::VERTICAL; // m_ppuCtrl & 0x03; // Bits 0-1 of PPUCTRL determine nametable
-	addr = (addr - 0x2000) & 0x0FFF; // Normalize into 0x000–0xFFF (4KB range)
-	uint16_t table = addr / 0x400;   // Which of the 4 logical nametables
-	uint16_t offset = addr % 0x400;  // Offset within that table
-
-	switch (mirrorMode)
-	{
-	case MirrorMode::VERTICAL:
-		// NT0 and NT2 -> physical 0
-		// NT1 and NT3 -> physical 1
-		// pattern: 0,1,0,1
-		return (table % 2) * 0x400 + offset;
-
-	case MirrorMode::HORIZONTAL:
-		// NT0 and NT1 -> physical 0
-		// NT2 and NT3 -> physical 1
-		// pattern: 0,0,1,1
-		return ((table / 2) * 0x400) + offset;
-
-	case MirrorMode::SINGLE_SCREEN:
-		// All nametables map to 0x000
-		return 0x000 + offset;
-
-	//case MirrorMode::SingleScreenUpper:
-	//	// All nametables map to 0x400
-	//	return 0x400 + offset;
-
-	case MirrorMode::FOUR_SCREEN:
-		// Cartridge provides 4KB VRAM, so direct mapping
-		return addr; // No mirroring
-
-	default:
-		return 0; // Safety
-	}
 }
 
 void NesPPU::reset()
@@ -85,10 +42,7 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 	addr &= 0x3FFF; // Mask to 14 bits
 	if (addr < 0x2000) {
 		// Write to CHR-RAM (if enabled)
-		// TODO: Support CHR-RAM vs CHR-ROM distinction
-		if (m_pchrRomData && addr < m_chrRomSize) {
-			m_pchrRomData[addr] = value;
-		}
+		bus->cart->WriteCHR(addr, value);
 		// Else ignore write (CHR-ROM is typically read-only)
 		return;
 	} else if (addr < 0x3F00) {
@@ -329,8 +283,8 @@ uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTil
 {
 	int tileBase = tileIndex * 16; // 16 bytes per tile
 
-	uint8_t byte1 = m_pchrRomData[tileBase + pixelInTileY];     // bitplane 0
-	uint8_t byte2 = m_pchrRomData[tileBase + pixelInTileY + 8]; // bitplane 1
+	uint8_t byte1 = bus->cart->ReadCHR(tileBase + pixelInTileY);     // bitplane 0
+	uint8_t byte2 = bus->cart->ReadCHR(tileBase + pixelInTileY + 8); // bitplane 1
 
 	uint8_t bit0 = (byte1 >> (7 - pixelInTileX)) & 1;
 	uint8_t bit1 = (byte2 >> (7 - pixelInTileX)) & 1;
@@ -434,8 +388,8 @@ void NesPPU::render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>&
 	int tileBase = tileIndex * 16; // 16 bytes per tile
 
 	for (int y = 0; y < 8; y++) {
-		uint8_t byte1 = m_pchrRomData[tileBase + y];     // bitplane 0
-		uint8_t byte2 = m_pchrRomData[tileBase + y + 8]; // bitplane 1
+		uint8_t byte1 = bus->cart->ReadCHR(tileBase + y);     // bitplane 0
+		uint8_t byte2 = bus->cart->ReadCHR(tileBase + y + 8); // bitplane 1
 
 		for (int x = 0; x < 8; x++) {
 			uint8_t bit0 = (byte1 >> (7 - x)) & 1;

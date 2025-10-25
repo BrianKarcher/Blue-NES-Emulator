@@ -3,7 +3,9 @@
 #include <stdint.h>
 #include <array>
 #include "processor_6502.h"
-#include "nes_ppu.h"
+#include "Cartridge.h"
+
+class NesPPU;
 
 class Bus
 {
@@ -14,6 +16,7 @@ public:
 	// Devices connected to the bus
 	Processor_6502* cpu = nullptr;
 	NesPPU* ppu = nullptr;
+	Cartridge* cart = nullptr;
 
 	// 2KB internal RAM (mirrored)
 	std::array<uint8_t, 2048> cpuRAM{};
@@ -25,6 +28,4 @@ public:
 	// DMA helper
 	void performDMA(uint8_t page);
 
-private:
-	
 };

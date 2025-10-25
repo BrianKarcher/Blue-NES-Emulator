@@ -17,6 +17,8 @@
 //#include <dwrite.h>
 //#include <wincodec.h>
 
+class Cartridge;
+
 template<class Interface>
 inline void SafeRelease(
 	Interface** ppInterfaceToRelease
@@ -58,6 +60,7 @@ public:
 
 private:
 	Bus bus;
+	Cartridge cart;
 	NesPPU ppu;
 	Processor_6502 cpu;
 	HDC hdcMem;

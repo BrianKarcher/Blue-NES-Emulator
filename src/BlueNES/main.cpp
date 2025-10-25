@@ -4,6 +4,7 @@
 #include <iostream>
 #include "main.h"
 #include <string>
+#include "Cartridge.h"
 
 uint8_t ppuCtrl = 0x00;
 
@@ -142,8 +143,10 @@ HRESULT Main::Initialize()
     if (!m_hwnd)
         return S_FALSE;
 
+    bus.cart = &cart;
 	bus.cpu = &cpu;
 	bus.ppu = &ppu;
+	ppu.bus = &bus;
 	ppu.set_hwnd(m_hwnd);
 	HDC hdc = GetDC(m_hwnd);
 	hdcMem = CreateCompatibleDC(hdc);
@@ -315,8 +318,8 @@ void Main::SetupTestData()
         delete[] buffer;
         return;
     }
-    ppu.set_chr_rom(buffer, bytesRead);
-	//delete[] buffer;
+    bus.cart->SetCHRRom(buffer, bytesRead);
+	delete[] buffer;
 
 	bus.write(0x2006, 0x20); // PPUADDR high byte
     bus.write(0x2006, 0x00); // PPUADDR low byte

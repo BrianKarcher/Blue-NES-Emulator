@@ -15,12 +15,7 @@
 #define PPUADDR 0x2006
 #define PPUDATA 0x2007
 
-enum MirrorMode {
-	HORIZONTAL = 0,
-	VERTICAL = 1,
-	FOUR_SCREEN = 2,
-	SINGLE_SCREEN = 3
-};
+class Bus;
 
 class NesPPU
 {
@@ -33,7 +28,6 @@ public:
 	uint8_t read_register(uint16_t addr);
 	void render_scanline();
 	void render_frame();
-	void set_chr_rom(uint8_t* chrData, size_t size);
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void set_hwnd(HWND hwnd);
 	// For testing, may create a window and render CHR-ROM data
@@ -42,7 +36,8 @@ public:
 
 	void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
-	uint8_t oamAddr = 0;
+	uint8_t oamAddr;
+	Bus* bus;
 private:
 	// Sprite data for current scanline
 	struct Sprite {
@@ -55,10 +50,9 @@ private:
 	
 	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 
-	uint8_t* m_pchrRomData = nullptr;
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
-	size_t m_chrRomSize = 0;
 	// TODO: This can be optimized to use less memory if needed
+	// Change to 0x800 (2 KB)
 	std::array<uint8_t, 0x4000> m_vram; // 16 KB VRAM
 
 	// Back buffer for rendering (256x240 pixels, RGBA)
@@ -84,5 +78,4 @@ private:
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);
-	uint16_t MirrorAddress(uint16_t addr);
 };

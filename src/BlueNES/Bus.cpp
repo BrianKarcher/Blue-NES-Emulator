@@ -1,4 +1,5 @@
 #include "Bus.h"
+#include "nes_ppu.h"
 
 Bus::Bus() {
 	// Constructor implementation (if needed)
