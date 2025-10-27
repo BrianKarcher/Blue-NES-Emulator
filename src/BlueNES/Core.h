@@ -50,8 +50,8 @@ public:
 	void (*Update)();
 private:
 	// Draw content.
-	bool OnRender();
-	void Render();
+	bool DrawToWindow();
+	void PPURenderToBackBuffer();
 	// The windows procedure.
 	static LRESULT CALLBACK WndProc(
 		HWND hWnd,

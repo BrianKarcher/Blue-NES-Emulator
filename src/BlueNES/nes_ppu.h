@@ -26,7 +26,7 @@ public:
 	void step();
 	void write_register(uint16_t addr, uint8_t value);
 	uint8_t read_register(uint16_t addr);
-	void render_scanline();
+	void RenderScanline();
 	void render_frame();
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void set_hwnd(HWND hwnd);
@@ -38,6 +38,9 @@ public:
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
 	Bus* bus;
+	bool NMI();
+	void Clock();
+	bool m_frameComplete = false;
 private:
 	// Sprite data for current scanline
 	struct Sprite {
@@ -57,9 +60,13 @@ private:
 
 	// Back buffer for rendering (256x240 pixels, RGBA)
 	std::array<uint32_t, 256 * 240> m_backBuffer;
+	int m_cycle = 0; // Current PPU cycle (0-340)
+	int m_scanline = 0; // Current PPU scanline (0-261)
 	uint8_t m_scrollX = 0;
 	uint8_t m_scrollY = 0;
 	uint8_t m_ppuCtrl = 0;
+	uint8_t m_ppuStatus = 0;
+	
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 	// NES color palette (64 colors)
 	static constexpr uint32_t m_nesPalette[64] = {
@@ -79,4 +86,5 @@ private:
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
+	std::array<Sprite, 8> secondaryOAM{};
 };

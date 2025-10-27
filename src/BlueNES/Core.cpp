@@ -14,10 +14,9 @@ Core::Core() :
     bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Core::Render()
+void Core::PPURenderToBackBuffer()
 {
     ppu.render_frame();
-    OnRender();
 }
 
 HRESULT Core::Initialize()
@@ -130,7 +129,7 @@ LRESULT CALLBACK Core::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->OnRender();
+                pMain->DrawToWindow();
                 EndPaint(hwnd, &ps);
                 ValidateRect(hwnd, NULL);
             }
@@ -157,7 +156,7 @@ LRESULT CALLBACK Core::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     return result;
 }
 
-bool Core::OnRender()
+bool Core::DrawToWindow()
 {
     HDC hdc = GetDC(m_hwnd);
     // Copy back buffer to bitmap
@@ -205,7 +204,7 @@ void Core::RunMessageLoop()
 			Update();
         }
 
-        Render();
+        PPURenderToBackBuffer();
 
         // 60 FPS cap
         // --- Frame timing ---
@@ -218,6 +217,7 @@ void Core::RunMessageLoop()
             QueryPerformanceCounter(&now);
             frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
         }
+        DrawToWindow();
 
         last = now;
 

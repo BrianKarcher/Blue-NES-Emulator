@@ -127,11 +127,6 @@ uint8_t NesPPU::read_register(uint16_t addr)
 	return 0;
 }
 
-void NesPPU::render_scanline()
-{
-	// Render a single scanline to the back buffer here
-}
-
 // OAM DMA - Direct Memory Access for sprites
 void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
 	uint16_t addr = page << 8;
@@ -143,13 +138,52 @@ void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
 	oamAddr &= 0xFF;
 }
 
+void NesPPU::RenderScanline()
+{
+	// Render a single scanline to the back buffer here
+}
+
+void NesPPU::Clock() {
+	// Emulate one PPU clock cycle here
+	if (m_scanline >= 0 && m_scanline < 240) {
+		if (m_cycle == 256) {
+			RenderScanline();
+		}
+	}
+
+	// VBlank scanlines (241-260)
+	if (m_scanline == 241 && m_cycle == 1) {
+		m_ppuStatus |= 0x80; // Set VBlank flag
+		m_frameComplete = true;
+	}
+
+	// Pre-render scanline (261)
+	if (m_scanline == 261 && m_cycle == 1) {
+		m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
+		m_frameComplete = false;
+	}
+
+	// Advance cycle and scanline counters
+	m_cycle++;
+	if (m_cycle > 340) {
+		// As per hardware behavior, evaluate sprites for the next scanline here
+		EvaluateSprites(m_scanline, secondaryOAM);
+		m_cycle = 0;
+		m_scanline++;
+		if (m_scanline > 261) {
+			m_scanline = 0;
+		}
+	}
+}
+
+// Render the entire frame (256x240 pixels). For testing purposes only.
 void NesPPU::render_frame()
 {
 	// Clear back buffer
 	// m_backBuffer.fill(0xFF000000);
 	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
 	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
-	std::array<Sprite, 8> secondaryOAM{};
+	
 	for (int i = 0; i < 8; ++i) {
 		secondaryOAM[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
 	}
@@ -248,6 +282,10 @@ void NesPPU::render_frame()
 		// All sprites on the NES have an off-by-one error for the Y position
 		EvaluateSprites(screenY, secondaryOAM);
 	}
+}
+
+bool NesPPU::NMI() {
+	return (m_ppuStatus & 0x80) && (m_ppuCtrl & 0x80);
 }
 
 void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
