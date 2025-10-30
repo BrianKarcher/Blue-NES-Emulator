@@ -7,7 +7,7 @@
 
 void Processor_6502::Initialize()
 {
-	m_pc = 0;
+	m_pc = 0x8000;
 	m_p = 0;
 	m_cycle_count = 0;
 }
@@ -51,7 +51,6 @@ void Processor_6502::NMI() {
 /// </summary>
 void Processor_6502::Clock()
 {
-	return;
 	switch (bus->read(m_pc++))
 	{
 		case ADC_IMMEDIATE:

@@ -64,6 +64,11 @@ void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
 	memcpy(m_chrData.data(), data, size);
 }
 
+void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
+    m_prgData.resize(size);
+    memcpy(m_prgData.data(), data, size);
+}
+
 uint8_t Cartridge::ReadPRG(uint16_t address) {
 	if (address >= 0x8000) {
 		return m_prgData[address - 0x8000];

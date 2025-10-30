@@ -1,5 +1,6 @@
 #include "Bus.h"
 #include "nes_ppu.h"
+#include "Cartridge.h"
 
 Bus::Bus() {
 	// Constructor implementation (if needed)
@@ -25,6 +26,11 @@ uint8_t Bus::read(uint16_t addr)
         // Controller ports (optional for now)
         // TODO: implement controller reads
     }
+    else if (addr >= 0x8000)
+    {
+        // Cartridge space (PRG ROM/RAM)
+        data = cart->ReadPRG(addr);
+	}
     else
     {
         // Cartridge, APU, etc. (not implemented yet)

@@ -21,6 +21,7 @@ public:
 	void SetMirrorMode(MirrorMode mirrorMode);
 	// Used for testing
 	void SetCHRRom(uint8_t* data, size_t size);
+	void SetPRGRom(uint8_t* data, size_t size);
 	uint8_t ReadPRG(uint16_t address);
 	uint8_t ReadCHR(uint16_t address);
 	// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
