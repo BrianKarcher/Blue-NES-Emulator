@@ -130,7 +130,7 @@
     <ClCompile Include="ines.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
-    <ClCompile Include="processor_6502.cpp" />
+    <ClCompile Include="CPU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.h" />
@@ -139,7 +139,7 @@
     <ClInclude Include="ines.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nes_ppu.h" />
-    <ClInclude Include="processor_6502.h" />
+    <ClInclude Include="CPU.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

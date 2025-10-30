@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <stdint.h>
 #include <array>
-#include "processor_6502.h"
+#include "cpu.h"
 #include "Cartridge.h"
 
 class NesPPU;

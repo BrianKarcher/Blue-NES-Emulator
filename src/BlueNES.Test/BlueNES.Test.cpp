@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "processor_6502.h"
+#include "cpu.h"
 #include "Cartridge.h"
 #include "Bus.h"
 

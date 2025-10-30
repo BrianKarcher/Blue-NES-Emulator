@@ -1,4 +1,4 @@
-#include "processor_6502.h"
+#include "CPU.h"
 #include "Bus.h"
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/

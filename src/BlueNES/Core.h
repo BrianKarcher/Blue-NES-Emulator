@@ -8,7 +8,7 @@
 #include <array>
 #include "bus.h"
 #include "nes_ppu.h"
-#include "processor_6502.h"
+#include "CPU.h"
 
 template<class Interface>
 inline void SafeRelease(

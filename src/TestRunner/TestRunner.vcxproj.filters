@@ -28,13 +28,13 @@
     <ClCompile Include="..\BlueNES\nes_ppu.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
-    <ClCompile Include="..\BlueNES\processor_6502.cpp">
-      <Filter>EmulatorCore</Filter>
-    </ClCompile>
     <ClCompile Include="IntegrationRunner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\BlueNES\Core.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\cpu.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
   </ItemGroup>
@@ -48,13 +48,13 @@
     <ClInclude Include="..\BlueNES\nes_ppu.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
-    <ClInclude Include="..\BlueNES\processor_6502.h">
-      <Filter>EmulatorCore</Filter>
-    </ClInclude>
     <ClInclude Include="IntegrationRunner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Core.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\cpu.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>
