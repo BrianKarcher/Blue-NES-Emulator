@@ -14,6 +14,9 @@
 #define PPUSCROLL 0x2005
 #define PPUADDR 0x2006
 #define PPUDATA 0x2007
+#define PPUSTATUS_VBLANK 0x80
+#define PPUSTATUS_SPRITE0_HIT 0x40
+#define PPUSTATUS_SPRITE_OVERFLOW 0x20
 
 class Bus;
 
@@ -66,6 +69,7 @@ private:
 	uint8_t m_scrollY = 0;
 	uint8_t m_ppuCtrl = 0;
 	uint8_t m_ppuStatus = 0;
+	//int scrollY; // Fine Y scrolling (0-239)
 	
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 	// NES color palette (64 colors)

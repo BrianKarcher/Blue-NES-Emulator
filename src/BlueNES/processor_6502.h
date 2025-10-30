@@ -23,16 +23,13 @@ const uint8_t AND_IMMEDIATE = 0x29;
 const uint8_t AND_ZEROPAGE = 0x25;
 const uint8_t AND_ZEROPAGE_X = 0x35;
 
+class Bus;
+
 class Processor_6502
 {
-private:
-	void adc(uint8_t operand);
-	//void _and(uint8_t operand);
-	uint64_t m_cycle_count = 0;
 public:
-	void Initialize(uint8_t* romData, uint8_t* memory);
-	void Run();
-	void RunStep();
+	void Initialize();
+	void Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);
 	uint8_t GetX();
@@ -43,4 +40,23 @@ public:
 	void Reset();
 	void AddCycles(int count);
 	uint64_t GetCycleCount();
+	Bus* bus;
+	bool nmiRequested = false;
+	void NMI();
+private:
+	void adc(uint8_t operand);
+	//void _and(uint8_t operand);
+	uint64_t m_cycle_count = 0;
+	// Program counter
+	int m_pc;
+	int m_sp = 0xFD;
+
+	// Registers
+	uint8_t m_a;
+	uint8_t m_x;
+	uint8_t m_y;
+
+	// flags
+	uint8_t m_p;
+	void _and(uint8_t operand);
 };

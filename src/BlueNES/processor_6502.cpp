@@ -1,27 +1,12 @@
 #include "processor_6502.h"
+#include "Bus.h"
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
 
-// Program counter
-int m_pc;
-
-// Registers
-uint8_t m_a;
-uint8_t m_x;
-uint8_t m_y;
-
-// flags
-uint8_t m_p;
-
-uint8_t* m_pRomData;
-uint8_t* m_pMemory;
-
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
 
-void Processor_6502::Initialize(uint8_t* romData, uint8_t* memory)
+void Processor_6502::Initialize()
 {
-	m_pRomData = romData;
-	m_pMemory = memory;
 	m_pc = 0;
 	m_p = 0;
 	m_cycle_count = 0;
@@ -29,20 +14,13 @@ void Processor_6502::Initialize(uint8_t* romData, uint8_t* memory)
 
 void Processor_6502::Reset()
 {
-	m_pc = (static_cast<uint16_t>(m_pMemory[0xFFFD]) << 8) | m_pMemory[0xFFFC];
+	// TODO : Add the reset vector read from the bus
+	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
 	m_a = 0;
 	m_x = 0;
 	m_y = 0;
 	m_p = 0x24; // Set unused flag bit to 1, others to 0
 	m_cycle_count = 0;
-}
-
-void Processor_6502::Run()
-{
-	while (true)
-	{
-		RunStep();
-	}
 }
 
 void Processor_6502::AddCycles(int count)
@@ -55,25 +33,37 @@ uint64_t Processor_6502::GetCycleCount()
 	return m_cycle_count;
 }
 
+void Processor_6502::NMI() {
+	// Push PC and P to stack
+	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
+	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
+	// Set PC to NMI vector
+	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
+	// NMI takes 7 cycles
+	m_cycle_count += 7;
+}
+
 /// <summary>
 /// Speed is paramount so we try to reduce function hops as much as feasible while keeping the code readable.
 /// And yes, I realize that the loop in the Run() function is an extra hop to RunStep(). I'm keeping that hop to
 /// make testing easier.
 /// </summary>
-void Processor_6502::RunStep()
+void Processor_6502::Clock()
 {
-	switch (m_pRomData[m_pc++])
+	return;
+	switch (bus->read(m_pc++))
 	{
 		case ADC_IMMEDIATE:
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			adc(m_pRomData[m_pc++]);
+			adc(bus->read(m_pc++));
 			m_cycle_count += 2;
 			break;
 		case ADC_ZEROPAGE:
 			// An instruction using zero page addressing mode has only an 8 bit address operand.
 			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
 			// where the most significant byte of the address is always zero.
-			adc(m_pMemory[m_pRomData[m_pc++]]);
+			adc(bus->read(bus->read(m_pc++)));
 			m_cycle_count += 3;
 			break;
 		case ADC_ZEROPAGE_X:
@@ -82,17 +72,17 @@ void Processor_6502::RunStep()
 			// addressing is calculated by taking the 8 bit zero page address from the
 			// instruction and adding the current value of the X register to it.
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t offset = m_pMemory[m_pRomData[m_pc++] + m_x];
+			uint8_t offset = bus->read(bus->read(m_pc++) + m_x);
 			adc(offset);
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE:
 		{
-			uint8_t loByte = m_pRomData[m_pc++];
-			uint8_t hiByte = m_pRomData[m_pc++];
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			adc(m_pMemory[memoryLocation]);
+			adc(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
@@ -103,8 +93,8 @@ void Processor_6502::RunStep()
 			// I THINK this is less cycles than if I recorded the bytes in a 16-bit value.
 			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
 			// CPU specific.
-			uint8_t loByte = m_pRomData[m_pc++];
-			uint8_t hiByte = m_pRomData[m_pc++];
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
 			loByte += m_x;
 			// Carryover?
 			if (loByte < m_x)
@@ -114,14 +104,14 @@ void Processor_6502::RunStep()
 				m_cycle_count++;
 			}
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			adc(m_pMemory[memoryLocation]);
+			adc(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE_Y:
 		{
-			uint8_t loByte = m_pRomData[m_pc++];
-			uint8_t hiByte = m_pRomData[m_pc++];
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
 			loByte += m_y;
 			if (loByte < m_y)
 			{
@@ -129,29 +119,29 @@ void Processor_6502::RunStep()
 				m_cycle_count++; // Extra cycle for page crossing
 			}
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			adc(m_pMemory[memoryLocation]);
+			adc(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_INDEXEDINDIRECT:
 		{
-			uint8_t zp_base = m_pRomData[m_pc++];
+			uint8_t zp_base = bus->read(m_pc++);
 			// Add X register to base (with zp wraparound)
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-			uint8_t addr_lo = m_pMemory[zp_addr];
-			uint8_t addr_hi = m_pMemory[(zp_addr + 1) & 0xFF]; // Wraparound for the high byte
+			uint8_t addr_lo = bus->read(zp_addr);
+			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
 			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 
-			uint8_t operand = m_pMemory[target_addr];
+			uint8_t operand = bus->read(target_addr);
 			adc(operand);
 			m_cycle_count += 6;
 			break;
 		}
 		case ADC_INDIRECTINDEXED:
 		{
-			uint8_t zp_base = m_pRomData[m_pc++];
-			uint8_t addr_lo = m_pMemory[zp_base];
-			uint8_t addr_hi = m_pMemory[(zp_base + 1) & 0xFF]; // Wraparound for the high byte
+			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t addr_lo = bus->read(zp_base);
+			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
 			// Add Y register to the low byte of the address
 			addr_lo += m_y;
 			if (addr_lo < m_y) {
@@ -159,7 +149,7 @@ void Processor_6502::RunStep()
 				m_cycle_count++; // Extra cycle for page crossing
 			}
 			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = m_pMemory[target_addr];
+			uint8_t operand = bus->read(target_addr);
 			adc(operand);
 			m_cycle_count += 5;
 			break;
@@ -238,7 +228,7 @@ void Processor_6502::adc(uint8_t operand)
 	}
 }
 
-void _and(uint8_t operand)
+void Processor_6502::_and(uint8_t operand)
 {
 	// AND operation with the accumulator
 	m_a &= operand;

@@ -49,6 +49,8 @@ public:
 	// Declare a function pointer
 	void (*Update)();
 private:
+	int cpuCycleDebt = 0;
+	int ppuCyclesPerCPUCycle = 3;
 	// Draw content.
 	bool DrawToWindow();
 	void PPURenderToBackBuffer();

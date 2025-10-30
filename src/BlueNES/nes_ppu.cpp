@@ -140,20 +140,107 @@ void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
 
 void NesPPU::RenderScanline()
 {
+	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
+	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
+	int fineY = (m_scanline + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
 	// Render a single scanline to the back buffer here
+	for (int screenX = 0; screenX < 256; ++screenX)
+	{
+		int fineX = (scrollX + screenX) % (NAMETABLE_WIDTH * TILE_SIZE);
+		// Compute the base nametable index based on coarse scroll
+		uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
+		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
+
+		// Determine which nametable we’re in (0–3)
+		uint8_t nametableSelect = (m_ppuCtrl & 0x03);
+		if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
+		if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
+
+		uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+		nametableAddr = bus->cart->MirrorNametable(nametableAddr);
+
+		// Convert to tile coordinates
+		int tileCol = fineX / TILE_SIZE;
+		int tileRow = fineY / TILE_SIZE;
+		int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
+
+		// Get attribute byte for the tile
+		int attrRow = tileRow / 4;
+		int attrCol = tileCol / 4;
+		uint8_t attributeByte = m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
+
+		uint8_t paletteIndex = 0;
+		get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
+
+		std::array<uint16_t, 4> palette;
+		get_palette(paletteIndex, palette); // For now we don't use the colors
+
+		// Get the color of the specific pixel within the tile
+		int bgPixelInTileX = fineX % TILE_SIZE;
+		int bgPixelInTileY = fineY % TILE_SIZE;
+		uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY);
+		// Handle both background and sprite color mapping here since we have to deal with
+		// transparency and priority
+		// Added bonus: Single draw call to set pixel in back buffer
+		uint32_t bgColor = 0;
+		if (bgColorIndex == 0) {
+			bgColor = m_nesPalette[paletteTable[0]]; // Transparent color (background color)
+		}
+		else {
+			bgColor = palette[bgColorIndex]; // Map to actual color from palette
+		}
+		// Set pixel in back buffer
+		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		bool foundSprite = false;
+		for (int i = 0; i < 8 && !foundSprite; ++i) {
+			Sprite& sprite = secondaryOAM[i];
+			if (sprite.y >= 0xF0) {
+				continue; // Empty sprite slot
+			}
+			int spriteY = sprite.y + 1; // Adjust for off-by-one
+			int spriteX = sprite.x;
+			if (screenX >= spriteX && screenX < (spriteX + 8)) {
+				// Sprite pixel coordinates
+				int spritePixelX = screenX - spriteX;
+				int spritePixelY = m_scanline - spriteY;
+
+				bool flipHorizontal = sprite.attributes & 0x40;
+				bool flipVertical = sprite.attributes & 0x80;
+				if (flipHorizontal) {
+					spritePixelX = 7 - spritePixelX;
+				}
+				if (flipVertical) {
+					spritePixelY = 7 - spritePixelY;
+				}
+				// Get sprite palette
+				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
+				std::array<uint16_t, 4> spritePalette;
+				get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+				// Get color index from sprite tile
+				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
+				if (spriteColorIndex != 0) { // Non-transparent pixel
+					uint16_t spriteColor = spritePalette[spriteColorIndex];
+					// Handle priority (not implemented yet, assuming sprites are always on top)
+					m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+					foundSprite = true;
+				}
+			}
+		}
+	}
 }
 
 void NesPPU::Clock() {
 	// Emulate one PPU clock cycle here
 	if (m_scanline >= 0 && m_scanline < 240) {
 		if (m_cycle == 256) {
+			// TODO: Pixel by pixel rendering can be implemented here for more accuracy
 			RenderScanline();
 		}
 	}
 
 	// VBlank scanlines (241-260)
 	if (m_scanline == 241 && m_cycle == 1) {
-		m_ppuStatus |= 0x80; // Set VBlank flag
+		m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
 		m_frameComplete = true;
 	}
 
@@ -177,8 +264,15 @@ void NesPPU::Clock() {
 }
 
 // Render the entire frame (256x240 pixels). For testing purposes only.
+// TODO : Possible optimization: Use dirty rectangles or only render changed areas to 
+// a nametable buffer. Nametables don't change often, so we can cache them.
+// We can then composite the nametable buffer with sprites and scrolling to produce the final frame.
+// The nametable can be blitted via hardware acceleration for better performance.
+// The biggest caviate is what to do if the CPU writes to the nametable while we're "rendering" it.
+// Accuracy vs Performance tradeoff.
 void NesPPU::render_frame()
 {
+	return;
 	// Clear back buffer
 	// m_backBuffer.fill(0xFF000000);
 	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)

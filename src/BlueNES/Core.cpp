@@ -180,11 +180,11 @@ void Core::RunMessageLoop()
     MSG msg;
     bool running = true;
     // --- FPS tracking variables ---
-    LARGE_INTEGER freq, now, last;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&last);
+    LARGE_INTEGER frequency, lastTime, currentTime;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&lastTime);
     double targetFrameTime = 1.0 / 60.0;
-    double elapsedTime = 0.0;
+    double accumulator = 0.0;
     int frameCount = 0;
 
     while (running) {
@@ -200,36 +200,66 @@ void Core::RunMessageLoop()
         if (!running) {
             break;
         }
-        if (Update) {
-			Update();
-        }
 
         PPURenderToBackBuffer();
 
         // 60 FPS cap
         // --- Frame timing ---
-        QueryPerformanceCounter(&now);
-        double frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
+        QueryPerformanceCounter(&currentTime);
+        double deltaTime = (double)(currentTime.QuadPart - lastTime.QuadPart) / frequency.QuadPart;
+        lastTime = currentTime;
+        accumulator += deltaTime;
+
+		// Don't run faster than 60 FPS
+        if (accumulator >= targetFrameTime) {
+            if (Update) {
+                Update();
+            }
+            accumulator -= targetFrameTime;
+            frameCount++;
+
+            // Run PPU until frame complete (89342 cycles per frame)
+            while (!ppu.m_frameComplete) {
+                ppu.Clock();
+				// CPU runs at 1/3 the speed of the PPU
+				cpuCycleDebt++;
+
+                if (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
+					cpuCycleDebt -= ppuCyclesPerCPUCycle;
+                    cpu.Clock();
+                }
+
+                // Check for NMI
+                if (ppu.NMI() && !cpu.nmiRequested) {
+                    cpu.NMI();
+                }
+			}
+            ppu.m_frameComplete = false;
+            cpu.nmiRequested = false;
+
+            DrawToWindow();
+        }
+        else {
+			Sleep(1); // Sleep to yield CPU
+        }
 
         // Busy-wait (or Sleep) until 16.67 ms have passed
-        while (frameTime < targetFrameTime) {
-            Sleep(0); // yields CPU
-            QueryPerformanceCounter(&now);
-            frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
-        }
-        DrawToWindow();
-
-        last = now;
+        //while (frameTime < targetFrameTime) {
+        //    Sleep(0); // yields CPU
+        //    QueryPerformanceCounter(&now);
+        //    frameTime = (now.QuadPart - last.QuadPart) / (double)freq.QuadPart;
+        //}
+        
 
         // --- FPS calculation every second ---
-        frameCount++;
-        elapsedTime += frameTime;
-        if (elapsedTime >= 1.0) {
-            double fps = frameCount / elapsedTime;
-            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
-            SetWindowText(m_hwnd, title.c_str());
-            frameCount = 0;
-            elapsedTime = 0.0;
-        }
+        
+        //elapsedTime += frameTime;
+        //if (elapsedTime >= 1.0) {
+        //    double fps = frameCount / elapsedTime;
+        //    std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
+        //    SetWindowText(m_hwnd, title.c_str());
+        //    frameCount = 0;
+        //    elapsedTime = 0.0;
+        //}
     }
 }
