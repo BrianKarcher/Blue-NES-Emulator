@@ -242,5 +242,26 @@ namespace BlueNESTest
 			Assert::AreEqual((uint8_t)0x8A, bus.read(0x0010));
 			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 		}
+		TEST_METHOD(TestASLAbsolute)
+		{
+			uint8_t rom[] = { ASL_ABSOLUTE, 0x25, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1525, 0x45); // 0100 0101
+			processor.Clock();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus.read(0x1525));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestASLAbsoluteX)
+		{
+			uint8_t rom[] = { ASL_ABSOLUTE_X, 0x24, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1525, 0x45); // 0100 0101
+			processor.SetX(0x1);
+			processor.Clock();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus.read(0x1525));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
 	};
 }

@@ -287,6 +287,34 @@ void Processor_6502::Clock()
 			m_cycle_count += 6;
 			break;
 		}
+		case ASL_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = bus->read(addr);
+			ASL(data);
+			bus->write(addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ASL_ABSOLUTE_X:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			loByte += m_x;
+			// Carryover?
+			if (loByte < m_x)
+			{
+				hiByte += 1;
+			}
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = bus->read(addr);
+			ASL(data);
+			bus->write(addr, data);
+			m_cycle_count += 7;
+			break;
+		}
 	}
 }
 

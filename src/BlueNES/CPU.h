@@ -30,6 +30,8 @@ const uint8_t AND_INDIRECTINDEXED = 0x31;
 const uint8_t ASL_ACCUMULATOR = 0x0A;
 const uint8_t ASL_ZEROPAGE = 0x06;
 const uint8_t ASL_ZEROPAGE_X = 0x16;
+const uint8_t ASL_ABSOLUTE = 0x0E;
+const uint8_t ASL_ABSOLUTE_X = 0x1E;
 
 class Bus;
 
