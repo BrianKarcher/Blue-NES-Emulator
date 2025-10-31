@@ -27,6 +27,9 @@ const uint8_t AND_ABSOLUTE_X = 0x3D;
 const uint8_t AND_ABSOLUTE_Y = 0x39;
 const uint8_t AND_INDEXEDINDIRECT = 0x21;
 const uint8_t AND_INDIRECTINDEXED = 0x31;
+const uint8_t ASL_ACCUMULATOR = 0x0A;
+const uint8_t ASL_ZEROPAGE = 0x06;
+const uint8_t ASL_ZEROPAGE_X = 0x16;
 
 class Bus;
 
@@ -66,5 +69,6 @@ private:
 	// flags
 	uint8_t m_p;
 	void _and(uint8_t operand);
+	void ASL(uint8_t& byte);
 	bool isActive = false;
 };

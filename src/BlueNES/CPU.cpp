@@ -262,6 +262,31 @@ void Processor_6502::Clock()
 			m_cycle_count += 5;
 			break;
 		}
+		case ASL_ACCUMULATOR:
+		{
+			ASL(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case ASL_ZEROPAGE:
+		{
+			uint8_t zp_addr = bus->read(m_pc++);
+			uint8_t data = bus->read(zp_addr);
+			ASL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 5;
+			break;
+		}
+		case ASL_ZEROPAGE_X:
+		{
+			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t data = bus->read(zp_addr);
+			ASL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 6;
+			break;
+		}
 	}
 }
 
@@ -320,6 +345,33 @@ void Processor_6502::_and(uint8_t operand)
 	}
 	// Set/clear negative flag (bit 7 of result)
 	if (m_a & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
+}
+
+void Processor_6502::ASL(uint8_t& byte)
+{
+	// Set/clear carry flag based on bit 7
+	if (byte & 0x80) {
+		m_p |= FLAG_CARRY;   // Set carry
+	}
+	else {
+		m_p &= ~FLAG_CARRY;  // Clear carry
+	}
+	// Shift left by 1
+	byte <<= 1;
+	// Set/clear zero flag
+	if (byte == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+	// Set/clear negative flag (bit 7 of result)
+	if (byte & 0x80) {
 		m_p |= FLAG_NEGATIVE;
 	}
 	else {
