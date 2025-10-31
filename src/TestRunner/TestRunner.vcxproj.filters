@@ -34,7 +34,7 @@
     <ClCompile Include="..\BlueNES\Core.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
-    <ClCompile Include="..\BlueNES\cpu.cpp">
+    <ClCompile Include="..\BlueNES\CPU.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
   </ItemGroup>
@@ -54,7 +54,7 @@
     <ClInclude Include="..\BlueNES\Core.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
-    <ClInclude Include="..\BlueNES\cpu.h">
+    <ClInclude Include="..\BlueNES\CPU.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>

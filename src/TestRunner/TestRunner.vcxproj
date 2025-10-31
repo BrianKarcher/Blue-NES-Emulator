@@ -134,7 +134,7 @@
     <ClCompile Include="..\BlueNES\Bus.cpp" />
     <ClCompile Include="..\BlueNES\Cartridge.cpp" />
     <ClCompile Include="..\BlueNES\Core.cpp" />
-    <ClCompile Include="..\BlueNES\cpu.cpp" />
+    <ClCompile Include="..\BlueNES\CPU.cpp" />
     <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
     <ClCompile Include="IntegrationRunner.cpp" />
   </ItemGroup>
@@ -142,7 +142,7 @@
     <ClInclude Include="..\BlueNES\Bus.h" />
     <ClInclude Include="..\BlueNES\Cartridge.h" />
     <ClInclude Include="..\BlueNES\Core.h" />
-    <ClInclude Include="..\BlueNES\cpu.h" />
+    <ClInclude Include="..\BlueNES\CPU.h" />
     <ClInclude Include="..\BlueNES\nes_ppu.h" />
     <ClInclude Include="IntegrationRunner.h" />
   </ItemGroup>

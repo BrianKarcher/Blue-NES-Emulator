@@ -33,7 +33,7 @@ uint8_t Bus::read(uint16_t addr)
 	}
     else
     {
-        // Cartridge, APU, etc. (not implemented yet)
+        // APU, etc. (not implemented yet)
     }
 
     return data;

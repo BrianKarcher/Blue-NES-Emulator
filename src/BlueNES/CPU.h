@@ -43,6 +43,7 @@ public:
 	Bus* bus;
 	bool nmiRequested = false;
 	void NMI();
+	void Activate(bool active);
 private:
 	void adc(uint8_t operand);
 	//void _and(uint8_t operand);
@@ -59,4 +60,5 @@ private:
 	// flags
 	uint8_t m_p;
 	void _and(uint8_t operand);
+	bool isActive = false;
 };
