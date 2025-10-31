@@ -22,6 +22,11 @@ const uint8_t ADC_INDIRECTINDEXED = 0x71;
 const uint8_t AND_IMMEDIATE = 0x29;
 const uint8_t AND_ZEROPAGE = 0x25;
 const uint8_t AND_ZEROPAGE_X = 0x35;
+const uint8_t AND_ABSOLUTE = 0x2D;
+const uint8_t AND_ABSOLUTE_X = 0x3D;
+const uint8_t AND_ABSOLUTE_Y = 0x39;
+const uint8_t AND_INDEXEDINDIRECT = 0x21;
+const uint8_t AND_INDIRECTINDEXED = 0x31;
 
 class Bus;
 
@@ -35,6 +40,7 @@ public:
 	uint8_t GetX();
 	void SetX(uint8_t x);
 	uint8_t GetY();
+	void SetY(uint8_t y);
 	bool GetFlag(uint8_t flag);
 	void SetFlag(bool byte, uint8_t flag);
 	void Reset();

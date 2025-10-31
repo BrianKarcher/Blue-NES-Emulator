@@ -144,5 +144,71 @@ namespace BlueNESTest
 			// 0x11 + 0x20 + 1 (Carry) = 0x32
 			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
 		}
+
+		TEST_METHOD(TestANDAbsolute)
+		{
+			bus.write(0x0235, 0x07); // 0111
+			uint8_t data[] = { AND_ABSOLUTE, 0x35, 0x02 };
+			cart.SetPRGRom(data, sizeof(data));
+			processor.SetA(0xE); // 1110
+
+			processor.Clock();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
+		}
+
+		TEST_METHOD(TestANDAbsoluteX)
+		{
+			bus.write(0x0235, 0x07); // 0111
+			uint8_t data[] = { AND_ABSOLUTE_X, 0x33, 0x02 };
+			cart.SetPRGRom(data, sizeof(data));
+			processor.SetA(0xE); // 1110
+			processor.SetX(0x2);
+
+			processor.Clock();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
+		}
+
+		TEST_METHOD(TestANDAbsoluteY)
+		{
+			bus.write(0x0235, 0x07); // 0111
+			uint8_t data[] = { AND_ABSOLUTE_Y, 0x33, 0x02 };
+			cart.SetPRGRom(data, sizeof(data));
+			processor.SetA(0xE); // 1110
+			processor.SetY(0x2);
+
+			processor.Clock();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
+		}
+
+		TEST_METHOD(TestANDIndexedIndirect)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x02); // Pointer to 0x0235
+			bus.write(0x0235, 0x07); // 0111
+			uint8_t data[] = { AND_INDEXEDINDIRECT, 0x33 };
+			cart.SetPRGRom(data, sizeof(data));
+			processor.SetA(0xE); // 1110
+			processor.SetX(0x2);
+
+			processor.Clock();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
+		}
+		TEST_METHOD(TestANDIndirectIndexed)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x02); // Pointer to 0x0235
+			bus.write(0x0237, 0x07); // 0111
+			uint8_t data[] = { AND_INDIRECTINDEXED, 0x35 };
+			cart.SetPRGRom(data, sizeof(data));
+			processor.SetA(0xE); // 1110
+			processor.SetY(0x2);
+			processor.Clock();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, processor.GetA()); // 0110
+}
 	};
 }
