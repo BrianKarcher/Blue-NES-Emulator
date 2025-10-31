@@ -263,5 +263,14 @@ namespace BlueNESTest
 			Assert::AreEqual((uint8_t)0x8A, bus.read(0x1525));
 			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 		}
+		TEST_METHOD(TestBCCRelative)
+		{
+			uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_CARRY); // Clear carry to take branch
+			processor.Clock();
+			// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
 	};
 }

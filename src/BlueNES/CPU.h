@@ -32,6 +32,8 @@ const uint8_t ASL_ZEROPAGE = 0x06;
 const uint8_t ASL_ZEROPAGE_X = 0x16;
 const uint8_t ASL_ABSOLUTE = 0x0E;
 const uint8_t ASL_ABSOLUTE_X = 0x1E;
+const uint8_t BCC_RELATIVE = 0x90;
+const uint8_t NOP_IMPLIED = 0xEA;
 
 class Bus;
 
@@ -55,6 +57,7 @@ public:
 	bool nmiRequested = false;
 	void NMI();
 	void Activate(bool active);
+	uint16_t GetPC();
 private:
 	void adc(uint8_t operand);
 	//void _and(uint8_t operand);
@@ -72,5 +75,6 @@ private:
 	uint8_t m_p;
 	void _and(uint8_t operand);
 	void ASL(uint8_t& byte);
+	bool NearBranch(uint8_t value);
 	bool isActive = false;
 };

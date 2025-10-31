@@ -315,6 +315,19 @@ void Processor_6502::Clock()
 			m_cycle_count += 7;
 			break;
 		}
+		case BCC_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (!(m_p & FLAG_CARRY)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
 	}
 }
 
@@ -407,6 +420,15 @@ void Processor_6502::ASL(uint8_t& byte)
 	}
 }
 
+bool Processor_6502::NearBranch(uint8_t value) {
+	int8_t offset = static_cast<int8_t>(value); // Convert to signed
+	// Determine if page crossed
+	uint8_t old_pc_hi = (m_pc & 0xFF00) >> 8;
+	m_pc += offset;
+	uint8_t new_pc_hi = (m_pc & 0xFF00) >> 8;
+	return old_pc_hi != new_pc_hi;
+}
+
 // Primarily used for testing purposes.
 uint8_t Processor_6502::GetA()
 {
@@ -451,4 +473,8 @@ void Processor_6502::SetFlag(bool byte, uint8_t flag)
 	else {
 		m_p &= ~flag;  // Clear flag
 	}
+}
+
+uint16_t Processor_6502::GetPC() {
+	return m_pc;
 }
