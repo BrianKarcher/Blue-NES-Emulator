@@ -109,6 +109,17 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 		}
+		TEST_METHOD(TestADCImmediateNegativeResult)
+		{
+			uint8_t rom[] = { ADC_IMMEDIATE, 0x90 }; // 144 decimal
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x50); // 80 decimal
+			processor.Clock();
+			// 80 + 144 = 224 which is negative in signed 8-bit
+			Assert::AreEqual((uint8_t)0xE0, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
 
 		TEST_METHOD(TestANDImmediate)
 		{
@@ -271,6 +282,131 @@ namespace BlueNESTest
 			processor.Clock();
 			// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
 			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBCCRelativeNotTaken)
+		{
+			uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_CARRY); // Set carry to not take branch
+			processor.Clock();
+			// After clocking BCC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestBCSRelative)
+		{
+			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_CARRY); // Set carry to take branch
+			processor.Clock();
+			// After clocking BCS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBCSRelativeNotTaken)
+		{
+			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_CARRY); // Clear carry to not take branch
+			processor.Clock();
+			// After clocking BCS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestBEQRelative)
+		{
+			uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_ZERO); // Set zero to take branch
+			processor.Clock();
+			// After clocking BEQ, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBEQRelativeNotTaken)
+		{
+			uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_ZERO); // Clear zero to not take branch
+			processor.Clock();
+			// After clocking BEQ, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestBITZeroPage)
+		{
+			uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0010, 0b11000000); // Set bits 6 and 7
+			processor.SetA(0b11111111); // A can be anything, just testing flags
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE)); // Bit 7 set
+			Assert::IsTrue(processor.GetFlag(FLAG_OVERFLOW)); // Bit 6 set
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));    // A & M != 0
+		}
+		TEST_METHOD(TestBITAbsolute)
+		{
+			uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1510, 0b01000000); // Set bit 6
+			processor.SetA(0b11111111); // A can be anything, just testing flags
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsTrue(processor.GetFlag(FLAG_OVERFLOW));  // Bit 6 set
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));     // A & M != 0
+		}
+		TEST_METHOD(TestBITZeroPageZeroResult)
+		{
+			uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0010, 0b00001111); // Lower nibble set
+			processor.SetA(0b11110000); // A upper nibble set, so A & M = 0
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsFalse(processor.GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));       // A & M == 0
+		}
+		TEST_METHOD(TestBITAbsoluteZeroResult)
+		{
+			uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1510, 0b00001111); // Lower nibble set
+			processor.SetA(0b11110000); // A upper nibble set, so A & M = 0
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsFalse(processor.GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));       // A & M == 0
+		}
+		TEST_METHOD(TestBMIRelative)
+		{
+			uint8_t rom[] = { BMI_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_NEGATIVE); // Set negative to take branch
+			processor.Clock();
+			// After clocking BMI, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBMIRelativeNotTaken)
+		{
+			uint8_t rom[] = { BMI_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_NEGATIVE); // Clear negative to not take branch
+			processor.Clock();
+			// After clocking BMI, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestBNERelative)
+		{
+			uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_ZERO); // Clear zero to take branch
+			processor.Clock();
+			// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBNERelativeNotTaken)
+		{
+			uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_ZERO); // Set zero to not take branch
+			processor.Clock();
+			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
 		}
 	};
 }

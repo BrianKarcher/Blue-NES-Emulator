@@ -33,7 +33,15 @@ const uint8_t ASL_ZEROPAGE_X = 0x16;
 const uint8_t ASL_ABSOLUTE = 0x0E;
 const uint8_t ASL_ABSOLUTE_X = 0x1E;
 const uint8_t BCC_RELATIVE = 0x90;
+const uint8_t BCS_RELATIVE = 0xB0;
+const uint8_t BEQ_RELATIVE = 0xF0;
+const uint8_t BIT_ZEROPAGE = 0x24;
+const uint8_t BIT_ABSOLUTE = 0x2C;
+const uint8_t BMI_RELATIVE = 0x30;
+const uint8_t BNE_RELATIVE = 0xD0;
+
 const uint8_t NOP_IMPLIED = 0xEA;
+
 
 class Bus;
 
@@ -76,5 +84,6 @@ private:
 	void _and(uint8_t operand);
 	void ASL(uint8_t& byte);
 	bool NearBranch(uint8_t value);
+	void BIT(uint8_t data);
 	bool isActive = false;
 };

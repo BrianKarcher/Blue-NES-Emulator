@@ -328,6 +328,74 @@ void Processor_6502::Clock()
 			}
 			break;
 		}
+		case BCS_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (m_p & FLAG_CARRY) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BEQ_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (m_p & FLAG_ZERO) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BIT_ZEROPAGE:
+		{
+			uint8_t zp_addr = bus->read(m_pc++);
+			uint8_t data = bus->read(zp_addr);
+			BIT(data);
+			break;
+		}
+		case BIT_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = bus->read(addr);
+			BIT(data);
+			break;
+		}
+		case BMI_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (m_p & FLAG_NEGATIVE) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BNE_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (!(m_p & FLAG_ZERO)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
 	}
 }
 
@@ -427,6 +495,30 @@ bool Processor_6502::NearBranch(uint8_t value) {
 	m_pc += offset;
 	uint8_t new_pc_hi = (m_pc & 0xFF00) >> 8;
 	return old_pc_hi != new_pc_hi;
+}
+
+void Processor_6502::BIT(uint8_t data) {
+	// Set zero flag based on AND with accumulator
+	if ((m_a & data) == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+	// Set negative flag based on bit 7 of data
+	if (data & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
+	// Set overflow flag based on bit 6 of data
+	if (data & 0x40) {
+		m_p |= FLAG_OVERFLOW;
+	}
+	else {
+		m_p &= ~FLAG_OVERFLOW;
+	}
 }
 
 // Primarily used for testing purposes.
