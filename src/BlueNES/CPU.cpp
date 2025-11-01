@@ -476,21 +476,21 @@ void Processor_6502::Clock()
 		case CMP_IMMEDIATE:
 		{
 			uint8_t operand = bus->read(m_pc++);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 2;
 			break;
 		}
 		case CMP_ZEROPAGE:
 		{
 			uint8_t operand = bus->read(bus->read(m_pc++));
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 3;
 			break;
 		}
 		case CMP_ZEROPAGE_X:
 		{
 			uint8_t operand = bus->read(bus->read(m_pc++) + m_x);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
@@ -500,7 +500,7 @@ void Processor_6502::Clock()
 			uint8_t hiByte = bus->read(m_pc++);
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t operand = bus->read(memoryLocation);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
@@ -518,7 +518,7 @@ void Processor_6502::Clock()
 			}
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t operand = bus->read(memoryLocation);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
@@ -534,7 +534,7 @@ void Processor_6502::Clock()
 			}
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t operand = bus->read(memoryLocation);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
@@ -548,7 +548,7 @@ void Processor_6502::Clock()
 			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 
 			uint8_t operand = bus->read(target_addr);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 6;
 			break;
 		}
@@ -565,8 +565,56 @@ void Processor_6502::Clock()
 			}
 			uint16_t target_addr = (addr_hi << 8) | addr_lo;
 			uint8_t operand = bus->read(target_addr);
-			cmp(operand);
+			cp(m_a, operand);
 			m_cycle_count += 5;
+			break;
+		}
+		case CPX_IMMEDIATE:
+		{
+			uint8_t operand = bus->read(m_pc++);
+			cp(m_x, operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case CPX_ZEROPAGE:
+		{
+			uint8_t operand = bus->read(bus->read(m_pc++));
+			cp(m_x, operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case CPX_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = bus->read(memoryLocation);
+			cp(m_x, operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CPY_IMMEDIATE:
+		{
+			uint8_t operand = bus->read(m_pc++);
+			cp(m_y, operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case CPY_ZEROPAGE:
+		{
+			uint8_t operand = bus->read(bus->read(m_pc++));
+			cp(m_y, operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case CPY_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = bus->read(memoryLocation);
+			cp(m_y, operand);
+			m_cycle_count += 4;
 			break;
 		}
 	}
@@ -694,11 +742,11 @@ void Processor_6502::BIT(uint8_t data) {
 	}
 }
 
-void Processor_6502::cmp(uint8_t operand)
+void Processor_6502::cp(uint8_t value, uint8_t operand)
 {
-	uint8_t result = m_a - operand;
+	uint8_t result = value - operand;
 	// Set/clear carry flag
-	if (m_a >= operand) {
+	if (value >= operand) {
 		m_p |= FLAG_CARRY;   // Set carry
 	}
 	else {

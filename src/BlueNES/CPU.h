@@ -55,6 +55,12 @@ const uint8_t CMP_ABSOLUTE_X = 0xDD;
 const uint8_t CMP_ABSOLUTE_Y = 0xD9;
 const uint8_t CMP_INDEXEDINDIRECT = 0xC1;
 const uint8_t CMP_INDIRECTINDEXED = 0xD1;
+const uint8_t CPX_IMMEDIATE = 0xE0;
+const uint8_t CPX_ZEROPAGE = 0xE4;
+const uint8_t CPX_ABSOLUTE = 0xEC;
+const uint8_t CPY_IMMEDIATE = 0xC0;
+const uint8_t CPY_ZEROPAGE = 0xC4;
+const uint8_t CPY_ABSOLUTE = 0xCC;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -102,6 +108,6 @@ private:
 	void ASL(uint8_t& byte);
 	bool NearBranch(uint8_t value);
 	void BIT(uint8_t data);
-	void cmp(uint8_t operand);
+	void cp(uint8_t value, uint8_t operand);
 	bool isActive = false;
 };

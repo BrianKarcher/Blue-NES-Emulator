@@ -609,5 +609,71 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestCPXImmediate)
+		{
+			uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x40);
+			processor.Clock();
+			// X (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCPXZeroPage)
+		{
+			uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x30);
+			processor.SetX(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCPXAbsolute)
+		{
+			uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x30);
+			processor.SetX(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCPYImmediate)
+		{
+			uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x40);
+			processor.Clock();
+			// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCPYZeroPage)
+		{
+			uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x30);
+			processor.SetY(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCPYAbsolute)
+		{
+			uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x30);
+			processor.SetY(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }
