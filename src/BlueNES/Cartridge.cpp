@@ -65,7 +65,7 @@ void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
 }
 
 void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
-    m_prgData.resize(size);
+    //m_prgData.resize(size);
     memcpy(m_prgData.data(), data, size);
 }
 
@@ -74,6 +74,14 @@ uint8_t Cartridge::ReadPRG(uint16_t address) {
 		return m_prgData[address - 0x8000];
 	}
 	return 0;
+}
+
+void Cartridge::WritePRG(uint16_t address, uint8_t data)
+{
+    // Typically, PRG ROM is not writable. This is a placeholder for mappers that support it.
+    if (address >= 0x8000) {
+        m_prgData[address - 0x8000] = data;
+	}
 }
 
 uint8_t Cartridge::ReadCHR(uint16_t address) {

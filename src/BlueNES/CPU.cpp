@@ -417,7 +417,7 @@ void Processor_6502::Clock()
 			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
 			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
 			// Set PC to NMI vector
-			m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
+			m_pc = (static_cast<uint16_t>(bus->read(0xFFFF) << 8)) | bus->read(0xFFFE);
 			// NMI takes 7 cycles
 			m_cycle_count += 7;
 	}
@@ -593,4 +593,9 @@ void Processor_6502::SetFlag(bool byte, uint8_t flag)
 
 uint16_t Processor_6502::GetPC() {
 	return m_pc;
+}
+
+void Processor_6502::SetPC(uint16_t address)
+{
+	m_pc = address;
 }

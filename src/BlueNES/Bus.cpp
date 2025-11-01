@@ -60,6 +60,11 @@ void Bus::write(uint16_t addr, uint8_t data)
         // APU or I/O registers
         // TODO: handle APU writes
     }
+    else if (addr >= 0x8000)
+    {
+        // Cartridge space (PRG ROM/RAM)
+        cart->WritePRG(addr, data);
+    }
     else
     {
         // Cartridge or open bus

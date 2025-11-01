@@ -426,5 +426,21 @@ namespace BlueNESTest
 			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
 			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
 		}
+		TEST_METHOD(TestBRKImplied)
+		{
+			uint8_t rom[] = { BRK_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0xFFFE, 0x88); // Set IRQ vector low byte to 0x0088
+			bus.write(0xFFFF, 0x80); // Set IRQ vector high byte to 0x8000
+			processor.SetPC(0x8000);
+			processor.Clock();
+			// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
+			uint16_t lo = bus.read(0xFFFE);
+			uint16_t hi = bus.read(0xFFFF);
+			uint16_t irqVector = (hi << 8) | lo;
+			Assert::AreEqual(irqVector, processor.GetPC());
+			// Also check that the Break flag is set
+			Assert::IsTrue(processor.GetFlag(FLAG_BREAK));
+		}
 	};
 }

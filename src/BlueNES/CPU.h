@@ -67,6 +67,7 @@ public:
 	bool nmiRequested = false;
 	void NMI();
 	void Activate(bool active);
+	void SetPC(uint16_t address);
 	uint16_t GetPC();
 private:
 	void adc(uint8_t operand);
