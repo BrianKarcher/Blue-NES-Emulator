@@ -552,6 +552,23 @@ void Processor_6502::Clock()
 			m_cycle_count += 6;
 			break;
 		}
+		case CMP_INDIRECTINDEXED:
+		{
+			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t addr_lo = bus->read(zp_base);
+			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
+			// Add Y register to the low byte of the address
+			addr_lo += m_y;
+			if (addr_lo < m_y) {
+				addr_hi += 1; // Carryover
+				m_cycle_count++; // Extra cycle for page crossing
+			}
+			uint16_t target_addr = (addr_hi << 8) | addr_lo;
+			uint8_t operand = bus->read(target_addr);
+			cmp(operand);
+			m_cycle_count += 5;
+			break;
+		}
 	}
 }
 

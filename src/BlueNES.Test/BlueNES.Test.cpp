@@ -595,5 +595,19 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestCMPIndirectIndexed)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1237, 0x30);
+			uint8_t rom[] = { CMP_INDIRECTINDEXED, 0x35 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x2);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

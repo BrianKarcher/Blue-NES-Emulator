@@ -54,6 +54,7 @@ const uint8_t CMP_ABSOLUTE = 0xCD;
 const uint8_t CMP_ABSOLUTE_X = 0xDD;
 const uint8_t CMP_ABSOLUTE_Y = 0xD9;
 const uint8_t CMP_INDEXEDINDIRECT = 0xC1;
+const uint8_t CMP_INDIRECTINDEXED = 0xD1;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
