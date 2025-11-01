@@ -61,6 +61,10 @@ const uint8_t CPX_ABSOLUTE = 0xEC;
 const uint8_t CPY_IMMEDIATE = 0xC0;
 const uint8_t CPY_ZEROPAGE = 0xC4;
 const uint8_t CPY_ABSOLUTE = 0xCC;
+const uint8_t DEC_ZEROPAGE = 0xC6;
+const uint8_t DEC_ZEROPAGE_X = 0xD6;
+const uint8_t DEC_ABSOLUTE = 0xCE;
+const uint8_t DEC_ABSOLUTE_X = 0xDE;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
