@@ -442,5 +442,158 @@ namespace BlueNESTest
 			// Also check that the Break flag is set
 			Assert::IsTrue(processor.GetFlag(FLAG_BREAK));
 		}
+		TEST_METHOD(TestBVCRelative)
+		{
+			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_OVERFLOW); // Clear overflow to take branch
+			processor.Clock();
+			// After clocking BVC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBVCRelativeNotTaken)
+		{
+			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_OVERFLOW); // Set overflow to not take branch
+			processor.Clock();
+			// After clocking BVC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestBVSRelative)
+		{
+			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_OVERFLOW); // Set overflow to take branch
+			processor.Clock();
+			// After clocking BVS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBVSRelativeNotTaken)
+		{
+			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_OVERFLOW); // Clear overflow to not take branch
+			processor.Clock();
+			// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
+		TEST_METHOD(TestCLCImplied)
+		{
+			uint8_t rom[] = { CLC_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_CARRY); // Set carry flag
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY)); // Carry flag should be cleared
+		}
+		TEST_METHOD(TestCLDImplied)
+		{
+			uint8_t rom[] = { CLD_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_DECIMAL); // Set decimal flag
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_DECIMAL)); // Decimal flag should be cleared
+		}
+		TEST_METHOD(TestCLIImplied)
+		{
+			uint8_t rom[] = { CLI_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_INTERRUPT); // Set interrupt flag
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_INTERRUPT)); // Interrupt flag should be cleared
+		}
+		TEST_METHOD(TestCLVImplied)
+		{
+			uint8_t rom[] = { CLV_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_OVERFLOW); // Set overflow flag
+			processor.Clock();
+			Assert::IsFalse(processor.GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
+		}
+		TEST_METHOD(TestCMPImmediate)
+		{
+			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x40);
+			processor.Clock();
+			// A (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPZeroPage)
+		{
+			// Add what is at zero page 0x15 to A.
+			uint8_t rom[] = { CMP_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x30);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPZeroPageX)
+		{
+			// Add what is at zero page 0x15 to A.
+			uint8_t rom[] = { CMP_ZEROPAGE_X, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0016, 0x30);
+			processor.SetX(0x1);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPAbsolute)
+		{
+			uint8_t rom[] = { CMP_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x30);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPAbsoluteX)
+		{
+			uint8_t rom[] = { CMP_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x30);
+			processor.SetX(0x1);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPAbsoluteY)
+		{
+			uint8_t rom[] = { CMP_ABSOLUTE_Y, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x30);
+			processor.SetY(0x1);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestCMPIndexedIndirect)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1235, 0x30);
+			uint8_t rom[] = { CMP_INDEXEDINDIRECT, 0x33 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x2);
+			processor.SetA(0x40);
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

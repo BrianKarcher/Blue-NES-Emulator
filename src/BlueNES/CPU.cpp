@@ -410,6 +410,7 @@ void Processor_6502::Clock()
 			break;
 		}
 		case BRK_IMPLIED:
+		{
 			m_p |= FLAG_BREAK; // Set break flag
 			m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
 			// Push PC and P to stack
@@ -420,6 +421,137 @@ void Processor_6502::Clock()
 			m_pc = (static_cast<uint16_t>(bus->read(0xFFFF) << 8)) | bus->read(0xFFFE);
 			// NMI takes 7 cycles
 			m_cycle_count += 7;
+			break;
+		}
+		case BVC_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (!(m_p & FLAG_OVERFLOW)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BVS_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (m_p & FLAG_OVERFLOW) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case CLC_IMPLIED:
+		{
+			m_p &= ~FLAG_CARRY; // Clear carry flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLD_IMPLIED:
+		{
+			m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLI_IMPLIED:
+		{
+			m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLV_IMPLIED:
+		{
+			m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CMP_IMMEDIATE:
+		{
+			uint8_t operand = bus->read(m_pc++);
+			cmp(operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case CMP_ZEROPAGE:
+		{
+			uint8_t operand = bus->read(bus->read(m_pc++));
+			cmp(operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case CMP_ZEROPAGE_X:
+		{
+			uint8_t operand = bus->read(bus->read(m_pc++) + m_x);
+			cmp(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = bus->read(memoryLocation);
+			cmp(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE_X:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			loByte += m_x;
+			// Carryover?
+			if (loByte < m_x)
+			{
+				hiByte += 1;
+				// One more cycle if a page is crossed.
+				m_cycle_count++;
+			}
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = bus->read(memoryLocation);
+			cmp(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE_Y:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			loByte += m_y;
+			if (loByte < m_y)
+			{
+				hiByte += 1; // Carryover
+				m_cycle_count++; // Extra cycle for page crossing
+			}
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = bus->read(memoryLocation);
+			cmp(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_INDEXEDINDIRECT:
+		{
+			uint8_t zp_base = bus->read(m_pc++);
+			// Add X register to base (with zp wraparound)
+			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
+			uint8_t addr_lo = bus->read(zp_addr);
+			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
+			uint16_t target_addr = (addr_hi << 8) | addr_lo;
+
+			uint8_t operand = bus->read(target_addr);
+			cmp(operand);
+			m_cycle_count += 6;
+			break;
+		}
 	}
 }
 
@@ -542,6 +674,32 @@ void Processor_6502::BIT(uint8_t data) {
 	}
 	else {
 		m_p &= ~FLAG_OVERFLOW;
+	}
+}
+
+void Processor_6502::cmp(uint8_t operand)
+{
+	uint8_t result = m_a - operand;
+	// Set/clear carry flag
+	if (m_a >= operand) {
+		m_p |= FLAG_CARRY;   // Set carry
+	}
+	else {
+		m_p &= ~FLAG_CARRY;  // Clear carry
+	}
+	// Set/clear zero flag
+	if (result == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+	// Set/clear negative flag (bit 7 of result)
+	if (result & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
 	}
 }
 

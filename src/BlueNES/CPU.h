@@ -41,6 +41,19 @@ const uint8_t BMI_RELATIVE = 0x30;
 const uint8_t BNE_RELATIVE = 0xD0;
 const uint8_t BPL_RELATIVE = 0x10;
 const uint8_t BRK_IMPLIED = 0x00;
+const uint8_t BVC_RELATIVE = 0x50;
+const uint8_t BVS_RELATIVE = 0x70;
+const uint8_t CLC_IMPLIED = 0x18;
+const uint8_t CLD_IMPLIED = 0xD8;
+const uint8_t CLI_IMPLIED = 0x58;
+const uint8_t CLV_IMPLIED = 0xB8;
+const uint8_t CMP_IMMEDIATE = 0xC9;
+const uint8_t CMP_ZEROPAGE = 0xC5;
+const uint8_t CMP_ZEROPAGE_X = 0xD5;
+const uint8_t CMP_ABSOLUTE = 0xCD;
+const uint8_t CMP_ABSOLUTE_X = 0xDD;
+const uint8_t CMP_ABSOLUTE_Y = 0xD9;
+const uint8_t CMP_INDEXEDINDIRECT = 0xC1;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -88,5 +101,6 @@ private:
 	void ASL(uint8_t& byte);
 	bool NearBranch(uint8_t value);
 	void BIT(uint8_t data);
+	void cmp(uint8_t operand);
 	bool isActive = false;
 };
