@@ -39,6 +39,8 @@ const uint8_t BIT_ZEROPAGE = 0x24;
 const uint8_t BIT_ABSOLUTE = 0x2C;
 const uint8_t BMI_RELATIVE = 0x30;
 const uint8_t BNE_RELATIVE = 0xD0;
+const uint8_t BPL_RELATIVE = 0x10;
+const uint8_t BRK_IMPLIED = 0x00;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 

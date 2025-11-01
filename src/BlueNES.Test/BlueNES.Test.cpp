@@ -408,5 +408,23 @@ namespace BlueNESTest
 			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
 			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
 		}
+		TEST_METHOD(TestBPLRelative)
+		{
+			uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(false, FLAG_NEGATIVE); // Clear zero to take branch
+			processor.Clock();
+			// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, processor.GetPC());
+		}
+		TEST_METHOD(TestBPLRelativeNotTaken)
+		{
+			uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetFlag(true, FLAG_NEGATIVE); // Set zero to not take branch
+			processor.Clock();
+			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, processor.GetPC());
+		}
 	};
 }

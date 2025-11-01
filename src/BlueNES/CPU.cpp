@@ -396,6 +396,30 @@ void Processor_6502::Clock()
 			}
 			break;
 		}
+		case BPL_RELATIVE:
+		{
+			uint8_t offset = bus->read(m_pc++);
+			if (!(m_p & FLAG_NEGATIVE)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BRK_IMPLIED:
+			m_p |= FLAG_BREAK; // Set break flag
+			m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
+			// Push PC and P to stack
+			bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
+			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
+			// Set PC to NMI vector
+			m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
+			// NMI takes 7 cycles
+			m_cycle_count += 7;
 	}
 }
 
