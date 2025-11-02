@@ -1027,12 +1027,39 @@ void Processor_6502::Clock()
 			m_cycle_count += 3;
 			break;
 		}
+		case PHP_IMPLIED:
+		{
+			bus->write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
+			m_cycle_count += 3;
+			break;
+		}
+		case PLA_IMPLIED:
+		{
+			m_a = ReadByte(0x0100 + ++m_sp);
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case PLP_IMPLIED:
+		{
+			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
+			m_p = ReadByte(0x0100 + ++m_sp);
+			SetBreak(break_flag); // Restore B flag state
+			m_cycle_count += 4;
+			break;
+		}
 	}
 }
 
 uint8_t Processor_6502::GetSP()
 {
 	return m_sp;
+}
+
+void Processor_6502::SetSP(uint8_t sp)
+{
+	m_sp = sp;
 }
 
 inline uint8_t Processor_6502::ReadNextByte()
@@ -1096,6 +1123,16 @@ inline uint16_t Processor_6502::ReadIndirectIndexed()
 inline uint8_t Processor_6502::ReadByte(uint16_t addr)
 {
 	return bus->read(addr);
+}
+
+uint8_t Processor_6502::GetStatus()
+{
+	return m_p;
+}
+
+void Processor_6502::SetStatus(uint8_t status)
+{
+	m_p = status;
 }
 
 inline void Processor_6502::SetZero(uint8_t value)

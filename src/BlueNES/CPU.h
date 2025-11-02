@@ -117,6 +117,9 @@ const uint8_t ORA_ABSOLUTE_Y = 0x19;
 const uint8_t ORA_INDEXEDINDIRECT = 0x01;
 const uint8_t ORA_INDIRECTINDEXED = 0x11;
 const uint8_t PHA_IMPLIED = 0x48;
+const uint8_t PHP_IMPLIED = 0x08;
+const uint8_t PLA_IMPLIED = 0x68;
+const uint8_t PLP_IMPLIED = 0x28;
 
 
 class Bus;
@@ -143,7 +146,10 @@ public:
 	void Activate(bool active);
 	void SetPC(uint16_t address);
 	uint16_t GetPC();
+	uint8_t GetStatus();
+	void SetStatus(uint8_t status);
 	uint8_t GetSP();
+	void SetSP(uint8_t sp);
 private:
 	void adc(uint8_t operand);
 	//void _and(uint8_t operand);

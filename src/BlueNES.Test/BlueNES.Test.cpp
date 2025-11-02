@@ -1300,5 +1300,38 @@ namespace BlueNESTest
 			Assert::AreEqual((uint8_t)0x42, valueOnStack);
 			Assert::AreEqual((uint8_t)(initialSP - 1), processor.GetSP());
 		}
+		TEST_METHOD(TestPHPImplied)
+		{
+			uint8_t rom[] = { PHP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetStatus(0b10100000); // Set some flags
+			uint8_t initialSP = processor.GetSP();
+			processor.Clock();
+			uint8_t valueOnStack = bus.read(0x0100 + initialSP);
+			Assert::AreEqual((uint8_t)(0b10100000 | 0b00110000), valueOnStack); // Break and Unused bits should be set
+			Assert::AreEqual((uint8_t)(initialSP - 1), processor.GetSP());
+		}
+		TEST_METHOD(TestPLAImplied)
+		{
+			uint8_t rom[] = { PLA_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x01FF, 0x37); // Value to pull from stack
+			processor.SetSP(0xFE); // Set SP to point to 0x01FF
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::AreEqual((uint8_t)0xFF, processor.GetSP());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestPLPImplied)
+		{
+			uint8_t rom[] = { PLP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x01FF, 0b11010101); // Value to pull from stack
+			processor.SetSP(0xFE); // Set SP to point to 0x01FF
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0xC5, processor.GetStatus()); // Break and Unused bits should be ignored
+			Assert::AreEqual((uint8_t)0xFF, processor.GetSP());
+		}
 	};
 }
