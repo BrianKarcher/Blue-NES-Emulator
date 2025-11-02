@@ -911,6 +911,48 @@ void Processor_6502::Clock()
 			m_cycle_count += 4;
 			break;
 		}
+		case LSR_ACCUMULATOR:
+		{
+			LSR(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case LSR_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			LSR(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 5;
+			break;
+		}
+		case LSR_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t data = ReadByte(zp_addr);
+			LSR(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case LSR_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t data = ReadByte(addr);
+			LSR(data);
+			bus->write(addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case LSR_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
+			LSR(data);
+			bus->write(addr, data);
+			m_cycle_count += 7;
+			break;
+		}
 	}
 }
 
@@ -1220,6 +1262,28 @@ void Processor_6502::EOR(uint8_t operand)
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
+}
+
+void Processor_6502::LSR(uint8_t& byte)
+{
+	// Set/clear carry flag based on bit 0  
+	if (byte & 0x01) {
+		m_p |= FLAG_CARRY;   // Set carry  
+	}
+	else {
+		m_p &= ~FLAG_CARRY;  // Clear carry  
+	}
+	// Shift right by 1  
+	byte >>= 1;
+	// Set/clear zero flag  
+	if (byte == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+	// Set/clear negative flag (bit 7 of result)  
+	m_p &= ~FLAG_NEGATIVE; // Clear negative flag since result of LSR is always positive  
 }
 
 // Primarily used for testing purposes.

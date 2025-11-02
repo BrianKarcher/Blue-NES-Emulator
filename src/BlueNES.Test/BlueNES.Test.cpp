@@ -1135,5 +1135,62 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestLSRAccumulator)
+		{
+			uint8_t rom[] = { LSR_ACCUMULATOR };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x02); // 0000 0010
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x01, processor.GetA()); // 0000 0001
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestLSRZeroPage)
+		{
+			uint8_t rom[] = { LSR_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x02); // 0000 0010
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x01, bus.read(0x0015)); // 0000 0001
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestLSRZeroPageX)
+		{
+			uint8_t rom[] = { LSR_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x02); // 0000 0010
+			processor.SetX(0x1);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x01, bus.read(0x0015)); // 0000 0001
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestLSRAbsolute)
+		{
+			uint8_t rom[] = { LSR_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x02); // 0000 0010
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x01, bus.read(0x1215)); // 0000 0001
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestLSRAbsoluteX)
+		{
+			uint8_t rom[] = { LSR_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x02); // 0000 0010
+			processor.SetX(0x1);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x01, bus.read(0x1215)); // 0000 0001
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
+		}
 	};
 }

@@ -102,6 +102,11 @@ const uint8_t LDY_ZEROPAGE = 0xA4;
 const uint8_t LDY_ZEROPAGE_X = 0xB4;
 const uint8_t LDY_ABSOLUTE = 0xAC;
 const uint8_t LDY_ABSOLUTE_X = 0xBC;
+const uint8_t LSR_ACCUMULATOR = 0x4A;
+const uint8_t LSR_ZEROPAGE = 0x46;
+const uint8_t LSR_ZEROPAGE_X = 0x56;
+const uint8_t LSR_ABSOLUTE = 0x4E;
+const uint8_t LSR_ABSOLUTE_X = 0x5E;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -152,6 +157,7 @@ private:
 	void BIT(uint8_t data);
 	void cp(uint8_t value, uint8_t operand);
 	void EOR(uint8_t operand);
+	void LSR(uint8_t& byte);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);
