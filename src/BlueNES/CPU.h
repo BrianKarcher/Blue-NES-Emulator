@@ -120,6 +120,11 @@ const uint8_t PHA_IMPLIED = 0x48;
 const uint8_t PHP_IMPLIED = 0x08;
 const uint8_t PLA_IMPLIED = 0x68;
 const uint8_t PLP_IMPLIED = 0x28;
+const uint8_t ROL_ACCUMULATOR = 0x2A;
+const uint8_t ROL_ZEROPAGE = 0x26;
+const uint8_t ROL_ZEROPAGE_X = 0x36;
+const uint8_t ROL_ABSOLUTE = 0x2E;
+const uint8_t ROL_ABSOLUTE_X = 0x3E;
 
 
 class Bus;
@@ -148,6 +153,7 @@ public:
 	uint16_t GetPC();
 	uint8_t GetStatus();
 	void SetStatus(uint8_t status);
+	void ClearFlag(uint8_t flag);
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
 private:
@@ -173,11 +179,13 @@ private:
 	void EOR(uint8_t operand);
 	void LSR(uint8_t& byte);
 	void ORA(uint8_t operand);
+	void ROL(uint8_t& byte);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);
 	inline uint16_t ReadNextWord();
 	inline uint16_t ReadNextWord(uint8_t offset);
+	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
 	inline uint8_t ReadByte(uint16_t addr);
 	inline uint16_t ReadIndexedIndirect();
 	inline void SetZero(uint8_t value);

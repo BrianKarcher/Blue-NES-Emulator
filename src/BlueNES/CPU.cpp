@@ -1049,6 +1049,48 @@ void Processor_6502::Clock()
 			m_cycle_count += 4;
 			break;
 		}
+		case ROL_ACCUMULATOR:
+		{
+			ROL(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case ROL_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			ROL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 5;
+			break;
+		}
+		case ROL_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t data = ReadByte(zp_addr);
+			ROL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ROL_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t data = ReadByte(addr);
+			ROL(data);
+			bus->write(addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ROL_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWordNoCycle(m_x);
+			uint8_t data = ReadByte(addr);
+			ROL(data);
+			bus->write(addr, data);
+			m_cycle_count += 7;
+			break;
+		}
 	}
 }
 
@@ -1096,6 +1138,19 @@ inline uint16_t Processor_6502::ReadNextWord(uint8_t offset)
 	return (static_cast<uint16_t>(hiByte << 8) | loByte);
 }
 
+inline uint16_t Processor_6502::ReadNextWordNoCycle(uint8_t offset)
+{
+	uint8_t loByte = ReadNextByte();
+	uint8_t hiByte = ReadNextByte();
+	loByte += offset;
+	// Carryover?
+	if (loByte < offset)
+	{
+		hiByte += 1;
+	}
+	return (static_cast<uint16_t>(hiByte << 8) | loByte);
+}
+
 inline uint16_t Processor_6502::ReadIndexedIndirect()
 {
 	uint8_t zp_base = bus->read(m_pc++);
@@ -1133,6 +1188,11 @@ uint8_t Processor_6502::GetStatus()
 void Processor_6502::SetStatus(uint8_t status)
 {
 	m_p = status;
+}
+
+void Processor_6502::ClearFlag(uint8_t flag)
+{
+	m_p &= ~flag;
 }
 
 inline void Processor_6502::SetZero(uint8_t value)
@@ -1417,6 +1477,28 @@ void Processor_6502::ORA(uint8_t operand)
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
+}
+
+void Processor_6502::ROL(uint8_t& byte)  
+{  
+	// Save the carry flag before modifying it  
+	bool carry_in = (m_p & FLAG_CARRY) != 0;  
+
+	// Set/clear carry flag based on bit 7  
+	if (byte & 0x80) {  
+		m_p |= FLAG_CARRY;   // Set carry  
+	} else {  
+		m_p &= ~FLAG_CARRY;  // Clear carry  
+	}  
+
+	// Rotate left by 1 (shift left and insert carry into bit 0)  
+	byte = (byte << 1) | (carry_in ? 1 : 0);  
+
+	// Set/clear zero flag  
+	SetZero(byte);  
+
+	// Set/clear negative flag (bit 7 of result)  
+	SetNegative(byte);  
 }
 
 // Primarily used for testing purposes.

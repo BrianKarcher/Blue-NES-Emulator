@@ -1333,5 +1333,67 @@ namespace BlueNESTest
 			Assert::AreEqual((uint8_t)0xC5, processor.GetStatus()); // Break and Unused bits should be ignored
 			Assert::AreEqual((uint8_t)0xFF, processor.GetSP());
 		}
+		TEST_METHOD(TestROLAccumulator)
+		{
+			uint8_t rom[] = { ROL_ACCUMULATOR };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x80); // 1000 0000
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, processor.GetA()); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestROLZeroPage)
+		{
+			uint8_t rom[] = { ROL_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x80); // 1000 0000
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x0015)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestROLZeroPageX)
+		{
+			uint8_t rom[] = { ROL_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x80); // 1000 0000
+			processor.SetX(0x1);
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x0015)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestROLAbsolute)
+		{
+			uint8_t rom[] = { ROL_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x80); // 1000 0000
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x1215)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestROLAbsoluteX)
+		{
+			uint8_t rom[] = { ROL_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x80); // 1000 0000
+			processor.SetX(0x1);
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x1215)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }
