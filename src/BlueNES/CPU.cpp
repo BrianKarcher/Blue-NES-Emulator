@@ -1021,6 +1021,12 @@ void Processor_6502::Clock()
 			m_cycle_count += 5;
 			break;
 		}
+		case PHA_IMPLIED:
+		{
+			bus->write(0x0100 + m_sp--, m_a);
+			m_cycle_count += 3;
+			break;
+		}
 	}
 }
 

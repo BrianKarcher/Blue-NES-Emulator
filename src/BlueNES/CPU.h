@@ -116,6 +116,7 @@ const uint8_t ORA_ABSOLUTE_X = 0x1D;
 const uint8_t ORA_ABSOLUTE_Y = 0x19;
 const uint8_t ORA_INDEXEDINDIRECT = 0x01;
 const uint8_t ORA_INDIRECTINDEXED = 0x11;
+const uint8_t PHA_IMPLIED = 0x48;
 
 
 class Bus;

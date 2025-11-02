@@ -1289,5 +1289,16 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestPHAImplied)
+		{
+			uint8_t rom[] = { PHA_IMPLIED  };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x42);
+			uint8_t initialSP = processor.GetSP();
+			processor.Clock();
+			uint8_t valueOnStack = bus.read(0x0100 + initialSP);
+			Assert::AreEqual((uint8_t)0x42, valueOnStack);
+			Assert::AreEqual((uint8_t)(initialSP - 1), processor.GetSP());
+		}
 	};
 }
