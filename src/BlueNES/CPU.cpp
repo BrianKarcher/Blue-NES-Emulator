@@ -835,8 +835,7 @@ void Processor_6502::Clock()
 		}
 		case LDX_ZEROPAGE_Y:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_y) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_y) & 0xFF;
 			uint8_t operand = ReadByte(zp_addr);
 			m_x = operand;
 			SetZero(m_x);
@@ -864,6 +863,54 @@ void Processor_6502::Clock()
 			m_cycle_count += 4;
 			break;
 		}
+		case LDY_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			m_y = operand;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 2;
+			break;
+		}
+		case LDY_ZEROPAGE:
+		{
+			uint8_t operand = ReadByte(ReadNextByte());
+			m_y = operand;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 3;
+			break;
+		}
+		case LDY_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t operand = ReadByte(zp_addr);
+			m_y = operand;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDY_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t operand = ReadByte(addr);
+			m_y = operand;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDY_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(addr);
+			m_y = operand;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 4;
+			break;
+		}
 	}
 }
 
@@ -875,6 +922,13 @@ uint8_t Processor_6502::GetSP()
 inline uint8_t Processor_6502::ReadNextByte()
 {
 	return bus->read(m_pc++);
+}
+
+inline uint8_t Processor_6502::ReadNextByte(uint8_t offset)
+{
+	uint8_t base = ReadNextByte();
+	uint8_t byte = (base + offset) & 0xFF; // Wraparound
+	return byte;
 }
 
 inline uint16_t Processor_6502::ReadNextWord()

@@ -97,6 +97,11 @@ const uint8_t LDX_ZEROPAGE = 0xA6;
 const uint8_t LDX_ZEROPAGE_Y = 0xB6;
 const uint8_t LDX_ABSOLUTE = 0xAE;
 const uint8_t LDX_ABSOLUTE_Y = 0xBE;
+const uint8_t LDY_IMMEDIATE = 0xA0;
+const uint8_t LDY_ZEROPAGE = 0xA4;
+const uint8_t LDY_ZEROPAGE_X = 0xB4;
+const uint8_t LDY_ABSOLUTE = 0xAC;
+const uint8_t LDY_ABSOLUTE_X = 0xBC;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -149,6 +154,7 @@ private:
 	void EOR(uint8_t operand);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
+	inline uint8_t ReadNextByte(uint8_t offset);
 	inline uint16_t ReadNextWord();
 	inline uint16_t ReadNextWord(uint8_t offset);
 	inline uint8_t ReadByte(uint16_t addr);
