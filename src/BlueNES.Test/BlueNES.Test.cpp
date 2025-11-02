@@ -945,5 +945,93 @@ namespace BlueNESTest
 			uint16_t returnAddress = (hi << 8) | lo;
 			Assert::AreEqual((uint16_t)0x8002, returnAddress);
 		}
+		TEST_METHOD(TestLDAImmediate)
+		{
+			uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x42, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAZeroPage)
+		{
+			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0010, 0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAZeroPageX)
+		{
+			uint8_t rom[] = { LDA_ZEROPAGE_X, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x37);
+			processor.SetX(0x5);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAAbsolute)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1510, 0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAAbsoluteX)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1510, 0x37);
+			processor.SetX(0x1);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAAbsoluteY)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1510, 0x37);
+			processor.SetY(0x1);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAIndexedIndirect)
+		{
+			bus.write(0x0020, 0x40);
+			bus.write(0x0021, 0x12); // Pointer to 0x1240
+			bus.write(0x1240, 0x37);
+			uint8_t rom[] = { LDA_INDEXEDINDIRECT, 0x1C };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x4);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDAIndirectIndexed)
+		{
+			bus.write(0x0020, 0x40);
+			bus.write(0x0021, 0x12); // Pointer to 0x1240
+			bus.write(0x1242, 0x37);
+			uint8_t rom[] = { LDA_INDIRECTINDEXED, 0x20 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x2);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

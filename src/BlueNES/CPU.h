@@ -84,6 +84,14 @@ const uint8_t INY_IMPLIED = 0xC8;
 const uint8_t JMP_ABSOLUTE = 0x4C;
 const uint8_t JMP_INDIRECT = 0x6C;
 const uint8_t JSR_ABSOLUTE = 0x20;
+const uint8_t LDA_IMMEDIATE = 0xA9;
+const uint8_t LDA_ZEROPAGE = 0xA5;
+const uint8_t LDA_ZEROPAGE_X = 0xB5;
+const uint8_t LDA_ABSOLUTE = 0xAD;
+const uint8_t LDA_ABSOLUTE_X = 0xBD;
+const uint8_t LDA_ABSOLUTE_Y = 0xB9;
+const uint8_t LDA_INDEXEDINDIRECT = 0xA1;
+const uint8_t LDA_INDIRECTINDEXED = 0xB1;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 

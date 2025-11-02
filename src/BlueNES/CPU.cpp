@@ -736,6 +736,85 @@ void Processor_6502::Clock()
 			m_cycle_count += 6;
 			break;
 		}
+		case LDA_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case LDA_ZEROPAGE:
+		{
+			uint8_t operand = ReadByte(ReadNextByte());
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 3;
+			break;
+		}
+		case LDA_ZEROPAGE_X:
+		{
+			uint8_t zp_base = ReadNextByte();
+			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t operand = ReadByte(zp_addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDA_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t operand = ReadByte(addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDA_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDA_ABSOLUTE_Y:
+		{
+			uint16_t addr = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDA_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 6;
+			break;
+		}
+		case LDA_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
+			m_a = operand;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 5;
+			break;
+		}
 	}
 }
 
