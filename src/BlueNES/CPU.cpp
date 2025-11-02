@@ -857,6 +857,129 @@ void Processor_6502::Clock()
 			m_cycle_count += 5;
 			break;
 		}
+		case INC_ZEROPAGE:
+		{
+			uint8_t zp_addr = bus->read(m_pc++);
+			uint8_t data = bus->read(zp_addr);
+			data++;
+			bus->write(zp_addr, data);
+			// Set/clear zero flag
+			if (data == 0) {
+				m_p |= FLAG_ZERO;
+			}
+			else {
+				m_p &= ~FLAG_ZERO;
+			}
+			// Set/clear negative flag (bit 7 of result)
+			if (data & 0x80) {
+				m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				m_p &= ~FLAG_NEGATIVE;
+			}
+			m_cycle_count += 5;
+			break;
+		}
+		case INC_ZEROPAGE_X:
+		{
+			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t data = bus->read(zp_addr);
+			data++;
+			bus->write(zp_addr, data);
+			// Set/clear zero flag
+			if (data == 0) {
+				m_p |= FLAG_ZERO;
+			}
+			else {
+				m_p &= ~FLAG_ZERO;
+			}
+			// Set/clear negative flag (bit 7 of result)
+			if (data & 0x80) {
+				m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				m_p &= ~FLAG_NEGATIVE;
+			}
+			m_cycle_count += 6;
+			break;
+		}
+		case INC_ABSOLUTE:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = bus->read(addr);
+			data++;
+			bus->write(addr, data);
+			// Set/clear zero flag
+			if (data == 0) {
+				m_p |= FLAG_ZERO;
+			}
+			else {
+				m_p &= ~FLAG_ZERO;
+			}
+			// Set/clear negative flag (bit 7 of result)
+			if (data & 0x80) {
+				m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				m_p &= ~FLAG_NEGATIVE;
+			}
+			m_cycle_count += 6;
+			break;
+		}
+		case INC_ABSOLUTE_X:
+		{
+			uint8_t loByte = bus->read(m_pc++);
+			uint8_t hiByte = bus->read(m_pc++);
+			loByte += m_x;
+			// Carryover?
+			if (loByte < m_x)
+			{
+				hiByte += 1;
+			}
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = bus->read(addr);
+			data++;
+			bus->write(addr, data);
+			// Set/clear zero flag
+			if (data == 0) {
+				m_p |= FLAG_ZERO;
+			}
+			else {
+				m_p &= ~FLAG_ZERO;
+			}
+			// Set/clear negative flag (bit 7 of result)
+			if (data & 0x80) {
+				m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				m_p &= ~FLAG_NEGATIVE;
+			}
+			m_cycle_count += 7;
+			break;
+		}
+		case INX_IMPLIED:
+		{
+			m_x++;
+			// Set/clear zero flag
+			if (m_x == 0) {
+				m_p |= FLAG_ZERO;
+			}
+			else {
+				m_p &= ~FLAG_ZERO;
+			}
+			// Set/clear negative flag (bit 7 of result)
+			if (m_x & 0x80) {
+				m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				m_p &= ~FLAG_NEGATIVE;
+			}
+			m_cycle_count += 2;
+			break;
+		}
 	}
 }
 

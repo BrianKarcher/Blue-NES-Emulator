@@ -844,5 +844,57 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestINCZeroPage)
+		{
+			uint8_t rom[] = { INC_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x2A);
+			processor.Clock();
+			Assert::IsTrue(bus.read(0x0015) == 0x2B);
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestINCZeroPageX)
+		{
+			uint8_t rom[] = { INC_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x2A);
+			processor.SetX(0x1);
+			processor.Clock();
+			Assert::IsTrue(bus.read(0x0015) == 0x2B);
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestINCAbsolute)
+		{
+			uint8_t rom[] = { INC_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x2A);
+			processor.Clock();
+			Assert::IsTrue(bus.read(0x1215) == 0x2B);
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestINCAbsoluteX)
+		{
+			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x2A);
+			processor.SetX(0x1);
+			processor.Clock();
+			Assert::IsTrue(bus.read(0x1215) == 0x2B);
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestINXImplied)
+		{
+			uint8_t rom[] = { INX_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x01);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x02, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

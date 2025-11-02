@@ -75,6 +75,11 @@ const uint8_t EOR_ABSOLUTE_X = 0x5D;
 const uint8_t EOR_ABSOLUTE_Y = 0x59;
 const uint8_t EOR_INDEXEDINDIRECT = 0x41;
 const uint8_t EOR_INDIRECTINDEXED = 0x51;
+const uint8_t INC_ZEROPAGE = 0xE6;
+const uint8_t INC_ZEROPAGE_X = 0xF6;
+const uint8_t INC_ABSOLUTE = 0xEE;
+const uint8_t INC_ABSOLUTE_X = 0xFE;
+const uint8_t INX_IMPLIED = 0xE8;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
