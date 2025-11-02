@@ -92,6 +92,11 @@ const uint8_t LDA_ABSOLUTE_X = 0xBD;
 const uint8_t LDA_ABSOLUTE_Y = 0xB9;
 const uint8_t LDA_INDEXEDINDIRECT = 0xA1;
 const uint8_t LDA_INDIRECTINDEXED = 0xB1;
+const uint8_t LDX_IMMEDIATE = 0xA2;
+const uint8_t LDX_ZEROPAGE = 0xA6;
+const uint8_t LDX_ZEROPAGE_Y = 0xB6;
+const uint8_t LDX_ABSOLUTE = 0xAE;
+const uint8_t LDX_ABSOLUTE_Y = 0xBE;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 

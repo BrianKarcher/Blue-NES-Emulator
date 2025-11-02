@@ -815,6 +815,55 @@ void Processor_6502::Clock()
 			m_cycle_count += 5;
 			break;
 		}
+		case LDX_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			m_x = operand;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 2;
+			break;
+		}
+		case LDX_ZEROPAGE:
+		{
+			uint8_t operand = ReadByte(ReadNextByte());
+			m_x = operand;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 3;
+			break;
+		}
+		case LDX_ZEROPAGE_Y:
+		{
+			uint8_t zp_base = ReadNextByte();
+			uint8_t zp_addr = (zp_base + m_y) & 0xFF; // Wraparound
+			uint8_t operand = ReadByte(zp_addr);
+			m_x = operand;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDX_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t operand = ReadByte(addr);
+			m_x = operand;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 4;
+			break;
+		}
+		case LDX_ABSOLUTE_Y:
+		{
+			uint16_t addr = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(addr);
+			m_x = operand;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 4;
+			break;
+		}
 	}
 }
 

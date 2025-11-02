@@ -1033,5 +1033,56 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestLDXImmediate)
+		{
+			uint8_t rom[] = { LDX_IMMEDIATE, 0x55  };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x55, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDXZeroPage)
+		{
+			uint8_t rom[] = { LDX_ZEROPAGE, 0x20 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0020, 0x66);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x66, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDXZeroPageY)
+		{
+			uint8_t rom[] = { LDX_ZEROPAGE_Y, 0x1F };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0024, 0x66);
+			processor.SetY(0x5);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x66, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDXAbsolute)
+		{
+			uint8_t rom[] = { LDX_ABSOLUTE, 0x30, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1530, 0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestLDXAbsoluteY)
+		{
+			uint8_t rom[] = { LDX_ABSOLUTE_Y, 0x2F, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1530, 0x77);
+			processor.SetY(0x1);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }
