@@ -703,7 +703,45 @@ void Processor_6502::Clock()
 			m_cycle_count += 2;
 			break;
 		}
+		case JMP_ABSOLUTE:
+		{
+			m_pc = ReadNextWord();
+			m_cycle_count += 3;
+			break;
+		}
+		case JMP_INDIRECT:
+		{
+			uint16_t pointer_addr = ReadNextWord();
+			// Simulate page boundary hardware bug
+			uint8_t loByte = ReadByte(pointer_addr);
+			uint8_t hiByte;
+			if ((pointer_addr & 0x00FF) == 0x00FF) {
+				hiByte = ReadByte(pointer_addr & 0xFF00); // Wraparound
+			}
+			else {
+				hiByte = ReadByte(pointer_addr + 1);
+			}
+			m_pc = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			m_cycle_count += 5;
+			break;
+		}
+		case JSR_ABSOLUTE:
+		{
+			uint16_t return_addr = m_pc + 1; // Address to return to after subroutine
+			// Push return address onto stack (high byte first)
+			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
+			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
+			// Set PC to target address
+			m_pc = ReadNextWord();
+			m_cycle_count += 6;
+			break;
+		}
 	}
+}
+
+uint8_t Processor_6502::GetSP()
+{
+	return m_sp;
 }
 
 inline uint8_t Processor_6502::ReadNextByte()
@@ -713,8 +751,8 @@ inline uint8_t Processor_6502::ReadNextByte()
 
 inline uint16_t Processor_6502::ReadNextWord()
 {
-	uint8_t loByte = bus->read(m_pc++);
-	uint8_t hiByte = bus->read(m_pc++);
+	uint8_t loByte = ReadNextByte();
+	uint8_t hiByte = ReadNextByte();
 	return (static_cast<uint16_t>(hiByte << 8) | loByte);
 }
 

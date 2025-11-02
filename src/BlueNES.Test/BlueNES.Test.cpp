@@ -906,5 +906,44 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestJMPAbsolute)
+		{
+			uint8_t rom[] = { JMP_ABSOLUTE, 0x00, 0x90 }; // Jump to 0x9000
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.Clock();
+			Assert::AreEqual((uint16_t)0x9000, processor.GetPC());
+		}
+		TEST_METHOD(TestJMPIndirect)
+		{
+			bus.write(0x10FF, 0x00); // Low byte of jump address
+			bus.write(0x1000, 0x90); // High byte of jump address (note the page boundary wraparound)
+			uint8_t rom[] = { JMP_INDIRECT, 0xFF, 0x10 }; // Pointer at 0x30FF/3000
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.Clock();
+			Assert::AreEqual((uint16_t)0x9000, processor.GetPC());
+		}
+		TEST_METHOD(TestJMPIndirectNoBug)
+		{
+			bus.write(0x10F0, 0x00); // Low byte of jump address
+			bus.write(0x10F1, 0x90); // High byte of jump address
+			uint8_t rom[] = { JMP_INDIRECT, 0xF0, 0x10 }; // Pointer at 0x30FF/3000
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.Clock();
+			Assert::AreEqual((uint16_t)0x9000, processor.GetPC());
+		}
+		TEST_METHOD(TestJSRAbsolute)
+		{
+			uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetPC(0x8000);
+			processor.Clock();
+			// After clocking JSR, PC should be at 0x8005
+			Assert::AreEqual((uint16_t)0x8005, processor.GetPC());
+			// The return address (0x8004) should be on the stack
+			uint8_t lo = bus.read(0x0100 + processor.GetSP() + 1);
+			uint8_t hi = bus.read(0x0100 + processor.GetSP() + 2);
+			uint16_t returnAddress = (hi << 8) | lo;
+			Assert::AreEqual((uint16_t)0x8002, returnAddress);
+		}
 	};
 }

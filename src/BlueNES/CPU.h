@@ -81,6 +81,9 @@ const uint8_t INC_ABSOLUTE = 0xEE;
 const uint8_t INC_ABSOLUTE_X = 0xFE;
 const uint8_t INX_IMPLIED = 0xE8;
 const uint8_t INY_IMPLIED = 0xC8;
+const uint8_t JMP_ABSOLUTE = 0x4C;
+const uint8_t JMP_INDIRECT = 0x6C;
+const uint8_t JSR_ABSOLUTE = 0x20;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -109,6 +112,7 @@ public:
 	void Activate(bool active);
 	void SetPC(uint16_t address);
 	uint16_t GetPC();
+	uint8_t GetSP();
 private:
 	void adc(uint8_t operand);
 	//void _and(uint8_t operand);
