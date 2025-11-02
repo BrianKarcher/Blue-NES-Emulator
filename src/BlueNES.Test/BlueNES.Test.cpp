@@ -1192,5 +1192,102 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 			Assert::IsFalse(processor.GetFlag(FLAG_CARRY));
 		}
+		TEST_METHOD(TestORAImmediate)
+		{
+			uint8_t rom[] = { ORA_IMMEDIATE, 0x0F }; // 0000 1111
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			// A (0xF0) | M (0x0F) = 0xFF
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAZeroPage)
+		{
+			uint8_t rom[] = { ORA_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x0F); // 0000 1111
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAZeroPageX)
+		{
+			uint8_t rom[] = { ORA_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x0F); // 0000 1111
+			processor.SetX(0x1);
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAAbsolute)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x0F); // 0000 1111
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAAbsoluteX)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x0F); // 0000 1111
+			processor.SetX(0x1);
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAAbsoluteY)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE_Y, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x0F); // 0000 1111
+			processor.SetY(0x1);
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAIndexedIndirect)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1235, 0x0F); // 0000 1111
+			uint8_t rom[] = { ORA_INDEXEDINDIRECT, 0x33 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x2);
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestORAIndirectIndexed)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1237, 0x0F); // 0000 1111
+			uint8_t rom[] = { ORA_INDIRECTINDEXED, 0x35 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x2);
+			processor.SetA(0xF0); // 1111 0000
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), processor.GetA()); // 1111 1111
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsTrue(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

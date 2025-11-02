@@ -60,24 +60,30 @@ void Processor_6502::Clock()
 	switch (bus->read(m_pc++))
 	{
 		case ADC_IMMEDIATE:
+		{
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			adc(bus->read(m_pc++));
+			adc(ReadNextByte());
 			m_cycle_count += 2;
 			break;
+		}
 		case ADC_ZEROPAGE:
+		{
 			// An instruction using zero page addressing mode has only an 8 bit address operand.
 			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
 			// where the most significant byte of the address is always zero.
-			adc(bus->read(bus->read(m_pc++)));
+			uint8_t zp_addr = ReadNextByte();
+			adc(ReadByte(zp_addr));
 			m_cycle_count += 3;
 			break;
+		}
 		case ADC_ZEROPAGE_X:
 		{
 			// The address to be accessed by an instruction using indexed zero page
 			// addressing is calculated by taking the 8 bit zero page address from the
 			// instruction and adding the current value of the X register to it.
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t offset = bus->read(bus->read(m_pc++) + m_x);
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t offset = ReadByte(zp_addr);
 			adc(offset);
 			m_cycle_count += 4;
 			break;
@@ -148,16 +154,14 @@ void Processor_6502::Clock()
 			// addressing is calculated by taking the 8 bit zero page address from the
 			// instruction and adding the current value of the X register to it.
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t operand = ReadByte(ReadNextByte() + m_x);
+			uint8_t operand = ReadByte(ReadNextByte(m_x));
 			_and(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case AND_ABSOLUTE:
 		{
-			uint8_t loByte = ReadNextByte();
-			uint8_t hiByte = ReadNextByte();
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint16_t memoryLocation = ReadNextWord();
 			uint8_t operand = ReadByte(memoryLocation);
 			_and(operand);
 			m_cycle_count += 4;
@@ -212,8 +216,7 @@ void Processor_6502::Clock()
 		}
 		case ASL_ZEROPAGE_X:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			ASL(data);
 			bus->write(zp_addr, data);
@@ -414,7 +417,7 @@ void Processor_6502::Clock()
 		}
 		case CMP_ZEROPAGE_X:
 		{
-			uint8_t operand = ReadByte(ReadNextByte() + m_x);
+			uint8_t operand = ReadByte(ReadNextByte(m_x));
 			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
@@ -522,8 +525,7 @@ void Processor_6502::Clock()
 		}
 		case DEC_ZEROPAGE_X:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			data--;
 			bus->write(zp_addr, data);
@@ -590,8 +592,7 @@ void Processor_6502::Clock()
 		}
 		case EOR_ZEROPAGE_X:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t operand = ReadByte(zp_addr);
 			EOR(operand);
 			m_cycle_count += 4;
@@ -652,8 +653,7 @@ void Processor_6502::Clock()
 		}
 		case INC_ZEROPAGE_X:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			data++;
 			bus->write(zp_addr, data);
@@ -756,8 +756,7 @@ void Processor_6502::Clock()
 		}
 		case LDA_ZEROPAGE_X:
 		{
-			uint8_t zp_base = ReadNextByte();
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
+			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t operand = ReadByte(zp_addr);
 			m_a = operand;
 			SetZero(m_a);
@@ -835,7 +834,7 @@ void Processor_6502::Clock()
 		}
 		case LDX_ZEROPAGE_Y:
 		{
-			uint8_t zp_addr = ReadNextByte(m_y) & 0xFF;
+			uint8_t zp_addr = ReadNextByte(m_y);
 			uint8_t operand = ReadByte(zp_addr);
 			m_x = operand;
 			SetZero(m_x);
@@ -951,6 +950,75 @@ void Processor_6502::Clock()
 			LSR(data);
 			bus->write(addr, data);
 			m_cycle_count += 7;
+			break;
+		}
+		case NOP_IMPLIED:
+		{
+			// No operation
+			m_cycle_count += 2;
+			break;
+		}
+		case ORA_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			ORA(operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case ORA_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			ORA(data);
+			m_cycle_count += 3;
+			break;
+		}
+		case ORA_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t data = ReadByte(zp_addr);
+			ORA(data);
+			m_cycle_count += 4;
+			break;
+		}
+		case ORA_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t data = ReadByte(addr);
+			ORA(data);
+			m_cycle_count += 4;
+			break;
+		}
+		case ORA_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
+			ORA(data);
+			m_cycle_count += 4;
+			break;
+		}
+		case ORA_ABSOLUTE_Y:
+		{
+			uint16_t addr = ReadNextWord(m_y);
+			uint8_t data = ReadByte(addr);
+			ORA(data);
+			m_cycle_count += 4;
+			break;
+		}
+		case ORA_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
+			ORA(operand);
+			m_cycle_count += 6;
+			break;
+		}
+		case ORA_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
+			ORA(operand);
+			m_cycle_count += 5;
 			break;
 		}
 	}
@@ -1284,6 +1352,28 @@ void Processor_6502::LSR(uint8_t& byte)
 	}
 	// Set/clear negative flag (bit 7 of result)  
 	m_p &= ~FLAG_NEGATIVE; // Clear negative flag since result of LSR is always positive  
+}
+
+void Processor_6502::ORA(uint8_t operand)
+{
+	// Perform bitwise OR operation with the accumulator  
+	m_a |= operand;
+
+	// Set/clear zero flag  
+	if (m_a == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+
+	// Set/clear negative flag (bit 7 of result)  
+	if (m_a & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
 }
 
 // Primarily used for testing purposes.

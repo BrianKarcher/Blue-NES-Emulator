@@ -107,8 +107,15 @@ const uint8_t LSR_ZEROPAGE = 0x46;
 const uint8_t LSR_ZEROPAGE_X = 0x56;
 const uint8_t LSR_ABSOLUTE = 0x4E;
 const uint8_t LSR_ABSOLUTE_X = 0x5E;
-
 const uint8_t NOP_IMPLIED = 0xEA;
+const uint8_t ORA_IMMEDIATE = 0x09;
+const uint8_t ORA_ZEROPAGE = 0x05;
+const uint8_t ORA_ZEROPAGE_X = 0x15;
+const uint8_t ORA_ABSOLUTE = 0x0D;
+const uint8_t ORA_ABSOLUTE_X = 0x1D;
+const uint8_t ORA_ABSOLUTE_Y = 0x19;
+const uint8_t ORA_INDEXEDINDIRECT = 0x01;
+const uint8_t ORA_INDIRECTINDEXED = 0x11;
 
 
 class Bus;
@@ -158,6 +165,7 @@ private:
 	void cp(uint8_t value, uint8_t operand);
 	void EOR(uint8_t operand);
 	void LSR(uint8_t& byte);
+	void ORA(uint8_t operand);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);
