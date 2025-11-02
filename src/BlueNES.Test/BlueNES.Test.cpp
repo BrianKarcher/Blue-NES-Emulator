@@ -896,5 +896,15 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestINYImplied)
+		{
+			uint8_t rom[] = { INY_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x01);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x02, processor.GetY());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

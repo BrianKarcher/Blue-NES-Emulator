@@ -84,9 +84,7 @@ void Processor_6502::Clock()
 		}
 		case ADC_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint16_t memoryLocation = ReadNextWord();
 			adc(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
@@ -98,63 +96,30 @@ void Processor_6502::Clock()
 			// I THINK this is less cycles than if I recorded the bytes in a 16-bit value.
 			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
 			// CPU specific.
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-				// One more cycle if a page is crossed.
-				m_cycle_count++;
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint16_t memoryLocation = ReadNextWord(m_x);
 			adc(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE_Y:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_y;
-			if (loByte < m_y)
-			{
-				hiByte += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			adc(bus->read(memoryLocation));
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			adc(ReadByte(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_INDEXEDINDIRECT:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			// Add X register to base (with zp wraparound)
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-			uint8_t addr_lo = bus->read(zp_addr);
-			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
 			adc(operand);
 			m_cycle_count += 6;
 			break;
 		}
 		case ADC_INDIRECTINDEXED:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			uint8_t addr_lo = bus->read(zp_base);
-			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-			// Add Y register to the low byte of the address
-			addr_lo += m_y;
-			if (addr_lo < m_y) {
-				addr_hi += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
 			adc(operand);
 			m_cycle_count += 5;
 			break;
@@ -162,7 +127,7 @@ void Processor_6502::Clock()
 		case AND_IMMEDIATE:
 		{
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			uint8_t operand = bus->read(m_pc++);
+			uint8_t operand = ReadNextByte();
 			_and(operand);
 			m_cycle_count += 2;
 			break;
@@ -172,7 +137,7 @@ void Processor_6502::Clock()
 			// An instruction using zero page addressing mode has only an 8 bit address operand.
 			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
 			// where the most significant byte of the address is always zero.
-			uint8_t operand = bus->read(bus->read(m_pc++));
+			uint8_t operand = ReadByte(ReadNextByte());
 			_and(operand);
 			m_cycle_count += 3;
 			break;
@@ -183,81 +148,49 @@ void Processor_6502::Clock()
 			// addressing is calculated by taking the 8 bit zero page address from the
 			// instruction and adding the current value of the X register to it.
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-			uint8_t operand = bus->read(bus->read(m_pc++) + m_x);
+			uint8_t operand = ReadByte(ReadNextByte() + m_x);
 			_and(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case AND_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint8_t operand = ReadByte(memoryLocation);
 			_and(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case AND_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-				// One more cycle if a page is crossed.
-				m_cycle_count++;
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint16_t memoryLocation = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(memoryLocation);
 			_and(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case AND_ABSOLUTE_Y:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_y;
-			if (loByte < m_y)
-			{
-				hiByte += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(memoryLocation);
 			_and(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case AND_INDEXEDINDIRECT:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			// Add X register to base (with zp wraparound)
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-			uint8_t addr_lo = bus->read(zp_addr);
-			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
 			_and(operand);
 			m_cycle_count += 6;
 			break;
 		}
 		case AND_INDIRECTINDEXED:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			uint8_t addr_lo = bus->read(zp_base);
-			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-			// Add Y register to the low byte of the address
-			addr_lo += m_y;
-			if (addr_lo < m_y) {
-				addr_hi += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
 			_and(operand);
 			m_cycle_count += 5;
 			break;
@@ -270,8 +203,8 @@ void Processor_6502::Clock()
 		}
 		case ASL_ZEROPAGE:
 		{
-			uint8_t zp_addr = bus->read(m_pc++);
-			uint8_t data = bus->read(zp_addr);
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
 			ASL(data);
 			bus->write(zp_addr, data);
 			m_cycle_count += 5;
@@ -279,9 +212,9 @@ void Processor_6502::Clock()
 		}
 		case ASL_ZEROPAGE_X:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_base = ReadNextByte();
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
-			uint8_t data = bus->read(zp_addr);
+			uint8_t data = ReadByte(zp_addr);
 			ASL(data);
 			bus->write(zp_addr, data);
 			m_cycle_count += 6;
@@ -289,10 +222,10 @@ void Processor_6502::Clock()
 		}
 		case ASL_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint8_t data = ReadByte(addr);
 			ASL(data);
 			bus->write(addr, data);
 			m_cycle_count += 6;
@@ -300,16 +233,8 @@ void Processor_6502::Clock()
 		}
 		case ASL_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-			}
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
 			ASL(data);
 			bus->write(addr, data);
 			m_cycle_count += 7;
@@ -317,7 +242,7 @@ void Processor_6502::Clock()
 		}
 		case BCC_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (!(m_p & FLAG_CARRY)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -330,7 +255,7 @@ void Processor_6502::Clock()
 		}
 		case BCS_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (m_p & FLAG_CARRY) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -343,7 +268,7 @@ void Processor_6502::Clock()
 		}
 		case BEQ_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (m_p & FLAG_ZERO) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -356,23 +281,23 @@ void Processor_6502::Clock()
 		}
 		case BIT_ZEROPAGE:
 		{
-			uint8_t zp_addr = bus->read(m_pc++);
-			uint8_t data = bus->read(zp_addr);
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
 			BIT(data);
 			break;
 		}
 		case BIT_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint8_t data = ReadByte(addr);
 			BIT(data);
 			break;
 		}
 		case BMI_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (m_p & FLAG_NEGATIVE) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -385,7 +310,7 @@ void Processor_6502::Clock()
 		}
 		case BNE_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (!(m_p & FLAG_ZERO)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -398,7 +323,7 @@ void Processor_6502::Clock()
 		}
 		case BPL_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (!(m_p & FLAG_NEGATIVE)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -418,14 +343,14 @@ void Processor_6502::Clock()
 			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
 			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
 			// Set PC to NMI vector
-			m_pc = (static_cast<uint16_t>(bus->read(0xFFFF) << 8)) | bus->read(0xFFFE);
+			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
 			// NMI takes 7 cycles
 			m_cycle_count += 7;
 			break;
 		}
 		case BVC_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (!(m_p & FLAG_OVERFLOW)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -438,7 +363,7 @@ void Processor_6502::Clock()
 		}
 		case BVS_RELATIVE:
 		{
-			uint8_t offset = bus->read(m_pc++);
+			uint8_t offset = ReadNextByte();
 			if (m_p & FLAG_OVERFLOW) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -475,248 +400,159 @@ void Processor_6502::Clock()
 		}
 		case CMP_IMMEDIATE:
 		{
-			uint8_t operand = bus->read(m_pc++);
+			uint8_t operand = ReadNextByte();
 			cp(m_a, operand);
 			m_cycle_count += 2;
 			break;
 		}
 		case CMP_ZEROPAGE:
 		{
-			uint8_t operand = bus->read(bus->read(m_pc++));
+			uint8_t operand = ReadByte(ReadNextByte());
 			cp(m_a, operand);
 			m_cycle_count += 3;
 			break;
 		}
 		case CMP_ZEROPAGE_X:
 		{
-			uint8_t operand = bus->read(bus->read(m_pc++) + m_x);
+			uint8_t operand = ReadByte(ReadNextByte() + m_x);
 			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case CMP_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case CMP_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-				// One more cycle if a page is crossed.
-				m_cycle_count++;
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint16_t memoryLocation = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case CMP_ABSOLUTE_Y:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_y;
-			if (loByte < m_y)
-			{
-				hiByte += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_a, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case CMP_INDEXEDINDIRECT:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			// Add X register to base (with zp wraparound)
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-			uint8_t addr_lo = bus->read(zp_addr);
-			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
 			cp(m_a, operand);
 			m_cycle_count += 6;
 			break;
 		}
 		case CMP_INDIRECTINDEXED:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			uint8_t addr_lo = bus->read(zp_base);
-			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-			// Add Y register to the low byte of the address
-			addr_lo += m_y;
-			if (addr_lo < m_y) {
-				addr_hi += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
 			cp(m_a, operand);
 			m_cycle_count += 5;
 			break;
 		}
 		case CPX_IMMEDIATE:
 		{
-			uint8_t operand = bus->read(m_pc++);
+			uint8_t operand = ReadNextByte();
 			cp(m_x, operand);
 			m_cycle_count += 2;
 			break;
 		}
 		case CPX_ZEROPAGE:
 		{
-			uint8_t operand = bus->read(bus->read(m_pc++));
+			uint8_t operand = ReadByte(ReadNextByte());
 			cp(m_x, operand);
 			m_cycle_count += 3;
 			break;
 		}
 		case CPX_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_x, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case CPY_IMMEDIATE:
 		{
-			uint8_t operand = bus->read(m_pc++);
+			uint8_t operand = ReadNextByte();
 			cp(m_y, operand);
 			m_cycle_count += 2;
 			break;
 		}
 		case CPY_ZEROPAGE:
 		{
-			uint8_t operand = bus->read(bus->read(m_pc++));
+			uint8_t operand = ReadByte(ReadNextByte());
 			cp(m_y, operand);
 			m_cycle_count += 3;
 			break;
 		}
 		case CPY_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(memoryLocation);
+			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_y, operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case DEC_ZEROPAGE:
 		{
-			uint8_t zp_addr = bus->read(m_pc++);
-			uint8_t data = bus->read(zp_addr);
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
 			data--;
 			bus->write(zp_addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 5;
 			break;
 		}
 		case DEC_ZEROPAGE_X:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_base = ReadNextByte();
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
-			uint8_t data = bus->read(zp_addr);
+			uint8_t data = ReadByte(zp_addr);
 			data--;
 			bus->write(zp_addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 6;
 			break;
 		}
 		case DEC_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint8_t data = ReadByte(addr);
 			data--;
 			bus->write(addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 6;
 			break;
 		}
 		case DEC_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-			}
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
 			data--;
 			bus->write(addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -724,239 +560,129 @@ void Processor_6502::Clock()
 		{
 			m_x--;
 			// Set/clear zero flag
-			if (m_x == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
+			SetZero(m_x);
 			// Set/clear negative flag (bit 7 of result)
-			if (m_x & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetNegative(m_x);
 			m_cycle_count += 2;
 			break;
 		}
 		case DEY_IMPLIED:
 		{
 			m_y--;
-			// Set/clear zero flag
-			if (m_y == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (m_y & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(m_y);
+			SetNegative(m_y);
 			m_cycle_count += 2;
 			break;
 		}
 		case EOR_IMMEDIATE:
 		{
-			uint8_t operand = bus->read(m_pc++);
+			uint8_t operand = ReadNextByte();
 			EOR(operand);
 			m_cycle_count += 2;
 			break;
 		}
 		case EOR_ZEROPAGE:
 		{
-			uint8_t operand = bus->read(bus->read(m_pc++));
+			uint8_t operand = ReadByte(ReadNextByte());
 			EOR(operand);
 			m_cycle_count += 3;
 			break;
 		}
 		case EOR_ZEROPAGE_X:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_base = ReadNextByte();
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
-			uint8_t operand = bus->read(zp_addr);
+			uint8_t operand = ReadByte(zp_addr);
 			EOR(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case EOR_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(addr);
+			uint8_t operand = ReadByte(addr);
 			EOR(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case EOR_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(addr);
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(addr);
 			EOR(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case EOR_ABSOLUTE_Y:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_y;
-			// Carryover?
-			if (loByte < m_y)
-			{
-				hiByte += 1;
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = bus->read(addr);
+			uint16_t addr = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(addr);
 			EOR(operand);
 			m_cycle_count += 4;
 			break;
 		}
 		case EOR_INDEXEDINDIRECT:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			// Add X register to base (with zp wraparound)
-			uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-			uint8_t addr_lo = bus->read(zp_addr);
-			uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
 			EOR(operand);
 			m_cycle_count += 6;
 			break;
 		}
 		case EOR_INDIRECTINDEXED:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
-			uint8_t addr_lo = bus->read(zp_base);
-			uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-			// Add Y register to the low byte of the address
-			addr_lo += m_y;
-			if (addr_lo < m_y) {
-				addr_hi += 1; // Carryover
-				m_cycle_count++; // Extra cycle for page crossing
-			}
-			uint16_t target_addr = (addr_hi << 8) | addr_lo;
-			uint8_t operand = bus->read(target_addr);
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
 			EOR(operand);
 			m_cycle_count += 5;
 			break;
 		}
 		case INC_ZEROPAGE:
 		{
-			uint8_t zp_addr = bus->read(m_pc++);
-			uint8_t data = bus->read(zp_addr);
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
 			data++;
 			bus->write(zp_addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 5;
 			break;
 		}
 		case INC_ZEROPAGE_X:
 		{
-			uint8_t zp_base = bus->read(m_pc++);
+			uint8_t zp_base = ReadNextByte();
 			uint8_t zp_addr = (zp_base + m_x) & 0xFF; // Wraparound
-			uint8_t data = bus->read(zp_addr);
+			uint8_t data = ReadByte(zp_addr);
 			data++;
 			bus->write(zp_addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 6;
 			break;
 		}
 		case INC_ABSOLUTE:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint8_t data = ReadByte(addr);
 			data++;
 			bus->write(addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 6;
 			break;
 		}
 		case INC_ABSOLUTE_X:
 		{
-			uint8_t loByte = bus->read(m_pc++);
-			uint8_t hiByte = bus->read(m_pc++);
-			loByte += m_x;
-			// Carryover?
-			if (loByte < m_x)
-			{
-				hiByte += 1;
-			}
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = bus->read(addr);
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
 			data++;
 			bus->write(addr, data);
-			// Set/clear zero flag
-			if (data == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (data & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(data);
+			SetNegative(data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -964,22 +690,147 @@ void Processor_6502::Clock()
 		{
 			m_x++;
 			// Set/clear zero flag
-			if (m_x == 0) {
-				m_p |= FLAG_ZERO;
-			}
-			else {
-				m_p &= ~FLAG_ZERO;
-			}
-			// Set/clear negative flag (bit 7 of result)
-			if (m_x & 0x80) {
-				m_p |= FLAG_NEGATIVE;
-			}
-			else {
-				m_p &= ~FLAG_NEGATIVE;
-			}
+			SetZero(m_x);
+			SetNegative(m_x);
 			m_cycle_count += 2;
 			break;
 		}
+		case INY_IMPLIED:
+		{
+			m_y++;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 2;
+			break;
+		}
+	}
+}
+
+inline uint8_t Processor_6502::ReadNextByte()
+{
+	return bus->read(m_pc++);
+}
+
+inline uint16_t Processor_6502::ReadNextWord()
+{
+	uint8_t loByte = bus->read(m_pc++);
+	uint8_t hiByte = bus->read(m_pc++);
+	return (static_cast<uint16_t>(hiByte << 8) | loByte);
+}
+
+inline uint16_t Processor_6502::ReadNextWord(uint8_t offset)
+{
+	uint8_t loByte = ReadNextByte();
+	uint8_t hiByte = ReadNextByte();
+	loByte += offset;
+	// Carryover?
+	if (loByte < offset)
+	{
+		hiByte += 1;
+		// One more cycle if a page is crossed.
+		m_cycle_count++;
+	}
+	return (static_cast<uint16_t>(hiByte << 8) | loByte);
+}
+
+inline uint16_t Processor_6502::ReadIndexedIndirect()
+{
+	uint8_t zp_base = bus->read(m_pc++);
+	// Add X register to base (with zp wraparound)
+	uint8_t zp_addr = (zp_base + m_x) & 0xFF;
+	uint8_t addr_lo = bus->read(zp_addr);
+	uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
+	return (addr_hi << 8) | addr_lo;
+}
+
+inline uint16_t Processor_6502::ReadIndirectIndexed()
+{
+	uint8_t zp_base = bus->read(m_pc++);
+	uint8_t addr_lo = bus->read(zp_base);
+	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
+	// Add Y register to the low byte of the address
+	addr_lo += m_y;
+	if (addr_lo < m_y) {
+		addr_hi += 1; // Carryover
+		m_cycle_count++; // Extra cycle for page crossing
+	}
+	return (addr_hi << 8) | addr_lo;
+}
+
+inline uint8_t Processor_6502::ReadByte(uint16_t addr)
+{
+	return bus->read(addr);
+}
+
+inline void Processor_6502::SetZero(uint8_t value)
+{
+	// Set/clear zero flag
+	if (value == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+}
+
+inline void Processor_6502::SetNegative(uint8_t value)
+{
+	// Set/clear negative flag (bit 7 of result)
+	if (value & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
+}
+
+inline void Processor_6502::SetOverflow(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_OVERFLOW;
+	}
+	else {
+		m_p &= ~FLAG_OVERFLOW;
+	}
+}
+
+inline void Processor_6502::SetCarry(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_CARRY;
+	}
+	else {
+		m_p &= ~FLAG_CARRY;
+	}
+}
+
+inline void Processor_6502::SetDecimal(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_DECIMAL;
+	}
+	else {
+		m_p &= ~FLAG_DECIMAL;
+	}
+}
+
+inline void Processor_6502::SetInterrupt(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_INTERRUPT;
+	}
+	else {
+		m_p &= ~FLAG_INTERRUPT;
+	}
+}
+
+inline void Processor_6502::SetBreak(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_BREAK;
+	}
+	else {
+		m_p &= ~FLAG_BREAK;
 	}
 }
 

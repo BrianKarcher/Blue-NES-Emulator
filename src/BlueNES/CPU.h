@@ -80,6 +80,7 @@ const uint8_t INC_ZEROPAGE_X = 0xF6;
 const uint8_t INC_ABSOLUTE = 0xEE;
 const uint8_t INC_ABSOLUTE_X = 0xFE;
 const uint8_t INX_IMPLIED = 0xE8;
+const uint8_t INY_IMPLIED = 0xC8;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -130,4 +131,18 @@ private:
 	void cp(uint8_t value, uint8_t operand);
 	void EOR(uint8_t operand);
 	bool isActive = false;
+	inline uint8_t ReadNextByte();
+	inline uint16_t ReadNextWord();
+	inline uint16_t ReadNextWord(uint8_t offset);
+	inline uint8_t ReadByte(uint16_t addr);
+	inline uint16_t ReadIndexedIndirect();
+	inline void SetZero(uint8_t value);
+	inline void SetNegative(uint8_t value);
+	inline void SetOverflow(bool condition);
+	inline void SetCarry(bool condition);
+	inline void SetDecimal(bool condition);
+	inline void SetInterrupt(bool condition);
+	inline void SetBreak(bool condition);
+	inline uint16_t ReadIndirectIndexed();
+	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 };
