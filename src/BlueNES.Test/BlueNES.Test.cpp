@@ -727,5 +727,122 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestDEXImplied)
+		{
+			uint8_t rom[] = { DEX_IMPLIED  };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x01);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, processor.GetX());
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestDEYImplied)
+		{
+			uint8_t rom[] = { DEY_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x01);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, processor.GetY());
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORImmediate)
+		{
+			uint8_t rom[] = { EOR_IMMEDIATE, 0xAA }; // 1010 1010
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0xFF);
+			processor.Clock();
+			// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORZeroPage)
+		{
+			uint8_t rom[] = { EOR_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0xAA); // 1010 1010
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORZeroPageX)
+		{
+			uint8_t rom[] = { EOR_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0xAA); // 1010 1010
+			processor.SetX(0x1);
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORAbsolute)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0xAA); // 1010 1010
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORAbsoluteX)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0xAA); // 1010 1010
+			processor.SetX(0x1);
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORAbsoluteY)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE_Y, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0xAA); // 1010 1010
+			processor.SetY(0x1);
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORIndexedIndirect)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1235, 0xAA); // 1010 1010
+			uint8_t rom[] = { EOR_INDEXEDINDIRECT, 0x33 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x2);
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestEORIndirectIndexed)
+		{
+			bus.write(0x0035, 0x35);
+			bus.write(0x0036, 0x12); // Pointer to 0x1235
+			bus.write(0x1237, 0xAA); // 1010 1010
+			uint8_t rom[] = { EOR_INDIRECTINDEXED, 0x35 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x2);
+			processor.SetA(0xFF);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), processor.GetA()); // 0101 0101
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

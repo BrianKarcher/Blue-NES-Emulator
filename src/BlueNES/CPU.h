@@ -65,6 +65,16 @@ const uint8_t DEC_ZEROPAGE = 0xC6;
 const uint8_t DEC_ZEROPAGE_X = 0xD6;
 const uint8_t DEC_ABSOLUTE = 0xCE;
 const uint8_t DEC_ABSOLUTE_X = 0xDE;
+const uint8_t DEX_IMPLIED = 0xCA;
+const uint8_t DEY_IMPLIED = 0x88;
+const uint8_t EOR_IMMEDIATE = 0x49;
+const uint8_t EOR_ZEROPAGE = 0x45;
+const uint8_t EOR_ZEROPAGE_X = 0x55;
+const uint8_t EOR_ABSOLUTE = 0x4D;
+const uint8_t EOR_ABSOLUTE_X = 0x5D;
+const uint8_t EOR_ABSOLUTE_Y = 0x59;
+const uint8_t EOR_INDEXEDINDIRECT = 0x41;
+const uint8_t EOR_INDIRECTINDEXED = 0x51;
 
 const uint8_t NOP_IMPLIED = 0xEA;
 
@@ -113,5 +123,6 @@ private:
 	bool NearBranch(uint8_t value);
 	void BIT(uint8_t data);
 	void cp(uint8_t value, uint8_t operand);
+	void EOR(uint8_t operand);
 	bool isActive = false;
 };
