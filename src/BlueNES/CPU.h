@@ -125,6 +125,11 @@ const uint8_t ROL_ZEROPAGE = 0x26;
 const uint8_t ROL_ZEROPAGE_X = 0x36;
 const uint8_t ROL_ABSOLUTE = 0x2E;
 const uint8_t ROL_ABSOLUTE_X = 0x3E;
+const uint8_t ROR_ACCUMULATOR = 0x6A;
+const uint8_t ROR_ZEROPAGE = 0x66;
+const uint8_t ROR_ZEROPAGE_X = 0x76;
+const uint8_t ROR_ABSOLUTE = 0x6E;
+const uint8_t ROR_ABSOLUTE_X = 0x7E;
 
 
 class Bus;
@@ -180,6 +185,7 @@ private:
 	void LSR(uint8_t& byte);
 	void ORA(uint8_t operand);
 	void ROL(uint8_t& byte);
+	void ROR(uint8_t& byte);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);

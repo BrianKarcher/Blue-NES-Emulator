@@ -1091,6 +1091,48 @@ void Processor_6502::Clock()
 			m_cycle_count += 7;
 			break;
 		}
+		case ROR_ACCUMULATOR:
+		{
+			ROR(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case ROR_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			ROR(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 5;
+			break;
+		}
+		case ROR_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t data = ReadByte(zp_addr);
+			ROR(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ROR_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t data = ReadByte(addr);
+			ROR(data);
+			bus->write(addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ROR_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWordNoCycle(m_x);
+			uint8_t data = ReadByte(addr);
+			ROR(data);
+			bus->write(addr, data);
+			m_cycle_count += 7;
+			break;
+		}
 	}
 }
 
@@ -1499,6 +1541,24 @@ void Processor_6502::ROL(uint8_t& byte)
 
 	// Set/clear negative flag (bit 7 of result)  
 	SetNegative(byte);  
+}
+
+void Processor_6502::ROR(uint8_t& byte)
+{
+	// Save the carry flag before modifying it  
+	bool carry_in = (m_p & FLAG_CARRY) != 0;  
+	// Set/clear carry flag based on bit 0  
+	if (byte & 0x01) {  
+		m_p |= FLAG_CARRY;   // Set carry  
+	} else {  
+		m_p &= ~FLAG_CARRY;  // Clear carry  
+	}  
+	// Rotate right by 1 (shift right and insert carry into bit 7)  
+	byte = (byte >> 1) | (carry_in ? 0x80 : 0);  
+	// Set/clear zero flag  
+	SetZero(byte);  
+	// Set/clear negative flag (bit 7 of result)  
+	SetNegative(byte);
 }
 
 // Primarily used for testing purposes.

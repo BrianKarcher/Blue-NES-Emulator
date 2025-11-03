@@ -1395,5 +1395,67 @@ namespace BlueNESTest
 			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestRORAccumulator)
+		{
+			uint8_t rom[] = { ROR_ACCUMULATOR };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x01); // 0000 0001
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, processor.GetA()); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestRORZeroPage)
+		{
+			uint8_t rom[] = { ROR_ZEROPAGE, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x01); // 0000 0001
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x0015)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestRORZeroPageX)
+		{
+			uint8_t rom[] = { ROR_ZEROPAGE_X, 0x14 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x0015, 0x01); // 0000 0001
+			processor.SetX(0x1);
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x0015)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestRORAbsolute)
+		{
+			uint8_t rom[] = { ROR_ABSOLUTE, 0x15, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x01); // 0000 0001
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x1215)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestRORAbsoluteX)
+		{
+			uint8_t rom[] = { ROR_ABSOLUTE_X, 0x14, 0x12 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			bus.write(0x1215, 0x01); // 0000 0001
+			processor.SetX(0x1);
+			processor.ClearFlag(FLAG_CARRY);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x00, bus.read(0x1215)); // 0000 0000
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }
