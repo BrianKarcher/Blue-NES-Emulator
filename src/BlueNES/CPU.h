@@ -132,6 +132,14 @@ const uint8_t ROR_ABSOLUTE = 0x6E;
 const uint8_t ROR_ABSOLUTE_X = 0x7E;
 const uint8_t RTI_IMPLIED = 0x40;
 const uint8_t RTS_IMPLIED = 0x60;
+const uint8_t SBC_IMMEDIATE = 0xE9;
+const uint8_t SBC_ZEROPAGE = 0xE5;
+const uint8_t SBC_ZEROPAGE_X = 0xF5;
+const uint8_t SBC_ABSOLUTE = 0xED;
+const uint8_t SBC_ABSOLUTE_X = 0xFD;
+const uint8_t SBC_ABSOLUTE_Y = 0xF9;
+const uint8_t SBC_INDEXEDINDIRECT = 0xE1;
+const uint8_t SBC_INDIRECTINDEXED = 0xF1;
 
 
 class Bus;
@@ -148,7 +156,7 @@ public:
 	uint8_t GetY();
 	void SetY(uint8_t y);
 	bool GetFlag(uint8_t flag);
-	void SetFlag(bool byte, uint8_t flag);
+	void SetFlag(uint8_t flag);
 	void Reset();
 	void AddCycles(int count);
 	uint64_t GetCycleCount();
@@ -164,7 +172,7 @@ public:
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
 private:
-	void adc(uint8_t operand);
+	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);
 	uint64_t m_cycle_count = 0;
 	// Program counter
@@ -188,6 +196,7 @@ private:
 	void ORA(uint8_t operand);
 	void ROL(uint8_t& byte);
 	void ROR(uint8_t& byte);
+	void SBC(uint8_t operand);
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);

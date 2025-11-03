@@ -62,7 +62,7 @@ void Processor_6502::Clock()
 		case ADC_IMMEDIATE:
 		{
 			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			adc(ReadNextByte());
+			ADC(ReadNextByte());
 			m_cycle_count += 2;
 			break;
 		}
@@ -72,7 +72,7 @@ void Processor_6502::Clock()
 			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
 			// where the most significant byte of the address is always zero.
 			uint8_t zp_addr = ReadNextByte();
-			adc(ReadByte(zp_addr));
+			ADC(ReadByte(zp_addr));
 			m_cycle_count += 3;
 			break;
 		}
@@ -84,14 +84,14 @@ void Processor_6502::Clock()
 			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t offset = ReadByte(zp_addr);
-			adc(offset);
+			ADC(offset);
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE:
 		{
 			uint16_t memoryLocation = ReadNextWord();
-			adc(bus->read(memoryLocation));
+			ADC(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
@@ -103,14 +103,14 @@ void Processor_6502::Clock()
 			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
 			// CPU specific.
 			uint16_t memoryLocation = ReadNextWord(m_x);
-			adc(bus->read(memoryLocation));
+			ADC(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
 		case ADC_ABSOLUTE_Y:
 		{
 			uint16_t memoryLocation = ReadNextWord(m_y);
-			adc(ReadByte(memoryLocation));
+			ADC(ReadByte(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
@@ -118,7 +118,7 @@ void Processor_6502::Clock()
 		{
 			uint16_t target_addr = ReadIndexedIndirect();
 			uint8_t operand = ReadByte(target_addr);
-			adc(operand);
+			ADC(operand);
 			m_cycle_count += 6;
 			break;
 		}
@@ -126,7 +126,7 @@ void Processor_6502::Clock()
 		{
 			uint16_t target_addr = ReadIndirectIndexed();
 			uint8_t operand = ReadByte(target_addr);
-			adc(operand);
+			ADC(operand);
 			m_cycle_count += 5;
 			break;
 		}
@@ -1156,6 +1156,68 @@ void Processor_6502::Clock()
 			m_cycle_count += 6;
 			break;
 		}
+		case SBC_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			SBC(operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case SBC_ZEROPAGE:
+		{
+			uint8_t operand = ReadByte(ReadNextByte());
+			SBC(operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case SBC_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t operand = ReadByte(zp_addr);
+			SBC(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case SBC_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			uint8_t operand = ReadByte(addr);
+			SBC(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case SBC_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(addr);
+			SBC(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case SBC_ABSOLUTE_Y:
+		{
+			uint16_t addr = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(addr);
+			SBC(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case SBC_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
+			SBC(operand);
+			m_cycle_count += 6;
+			break;
+		}
+		case SBC_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
+			SBC(operand);
+			m_cycle_count += 5;
+			break;
+		}
 	}
 }
 
@@ -1332,7 +1394,7 @@ inline void Processor_6502::SetBreak(bool condition)
 	}
 }
 
-void Processor_6502::adc(uint8_t operand)
+void Processor_6502::ADC(uint8_t operand)
 {
 	uint8_t a_old = m_a;
 	
@@ -1584,6 +1646,14 @@ void Processor_6502::ROR(uint8_t& byte)
 	SetNegative(byte);
 }
 
+void Processor_6502::SBC(uint8_t operand)
+{
+	// Invert the operand for subtraction
+	uint8_t inverted_operand = ~operand;
+	// Perform addition with inverted operand and carry flag
+	ADC(inverted_operand);
+}
+
 // Primarily used for testing purposes.
 uint8_t Processor_6502::GetA()
 {
@@ -1620,14 +1690,9 @@ bool Processor_6502::GetFlag(uint8_t flag)
 	return (m_p & flag) == flag;
 }
 
-void Processor_6502::SetFlag(bool byte, uint8_t flag)
+void Processor_6502::SetFlag(uint8_t flag)
 {
-	if (byte) {
-		m_p |= flag;   // Set flag
-	}
-	else {
-		m_p &= ~flag;  // Clear flag
-	}
+	m_p |= flag;
 }
 
 uint16_t Processor_6502::GetPC() {
