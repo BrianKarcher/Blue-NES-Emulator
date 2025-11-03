@@ -1692,5 +1692,30 @@ namespace BlueNESTest
 			processor.Clock();
 			Assert::AreEqual((uint8_t)0x37, bus.read(0x1232));
 		}
+		TEST_METHOD(TestSTXZeroPage)
+		{
+			uint8_t rom[] = { STX_ZEROPAGE, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x0010));
+		}
+		TEST_METHOD(TestSTXZeroPageY)
+		{
+			uint8_t rom[] = { STX_ZEROPAGE_Y, 0x0F };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x1);
+			processor.SetX(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x0010));
+		}
+		TEST_METHOD(TestSTXAbsolute)
+		{
+			uint8_t rom[] = { STX_ABSOLUTE, 0x20, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1520));
+		}
 	};
 }
