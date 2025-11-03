@@ -1133,6 +1133,29 @@ void Processor_6502::Clock()
 			m_cycle_count += 7;
 			break;
 		}
+		case RTI_IMPLIED:
+		{
+			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
+			// Pull P from stack
+			m_p = ReadByte(0x0100 + ++m_sp);
+			SetBreak(break_flag); // Restore B flag state
+			// Pull PC from stack (low byte first)
+			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
+			m_cycle_count += 6;
+			break;
+		}
+		case RTS_IMPLIED:
+		{
+			// Pull return address from stack (low byte first)
+			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
+			m_pc++; // Increment PC to point to the next instruction after the JSR
+			m_cycle_count += 6;
+			break;
+		}
 	}
 }
 

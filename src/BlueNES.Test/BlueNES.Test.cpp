@@ -1457,5 +1457,31 @@ namespace BlueNESTest
 			Assert::IsTrue(processor.GetFlag(FLAG_ZERO));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestRTIImplied)
+		{
+			uint8_t rom[] = { RTI_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			// Push status and return address onto stack
+			bus.write(0x01FF, 0x80); // Return address high byte
+			bus.write(0x01FE, 0x00); // Return address low byte
+			bus.write(0x01FD, 0x24); // Status with some flags set
+			processor.SetSP(0xFC); // Set SP to point to 0x01FD
+			processor.Clock();
+			Assert::AreEqual((uint16_t)0x8000, processor.GetPC());
+			Assert::AreEqual((uint8_t)0x24, processor.GetStatus());
+			Assert::AreEqual((uint8_t)0xFF, processor.GetSP());
+		}
+		TEST_METHOD(TestRTSImplied)
+		{
+			uint8_t rom[] = { RTS_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			// Push return address onto stack
+			bus.write(0x01FF, 0x80); // Return address high byte
+			bus.write(0x01FE, 0x05); // Return address low byte
+			processor.SetSP(0xFD); // Set SP to point to 0x01FE
+			processor.Clock();
+			Assert::AreEqual((uint16_t)0x8006, processor.GetPC()); // PC should be return address + 1
+			Assert::AreEqual((uint8_t)0xFF, processor.GetSP());
+		}
 	};
 }

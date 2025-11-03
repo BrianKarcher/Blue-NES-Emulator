@@ -130,6 +130,8 @@ const uint8_t ROR_ZEROPAGE = 0x66;
 const uint8_t ROR_ZEROPAGE_X = 0x76;
 const uint8_t ROR_ABSOLUTE = 0x6E;
 const uint8_t ROR_ABSOLUTE_X = 0x7E;
+const uint8_t RTI_IMPLIED = 0x40;
+const uint8_t RTS_IMPLIED = 0x60;
 
 
 class Bus;
