@@ -37,7 +37,7 @@ public:
 	void render_chr_rom();
 	void render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors);
 
-	void OAMDMA(uint8_t* cpuMemory, uint16_t page);
+	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
 	Bus* bus;

@@ -123,20 +123,84 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 
 uint8_t NesPPU::read_register(uint16_t addr)
 {
-	// Handle reads from PPU registers here
+	switch (addr)
+	{
+		case PPUCTRL:
+		{
+			return m_ppuCtrl;
+		}
+		case PPUMASK:
+		{
+			// Handle PPUMASK read here (not typically readable, return 0)
+			return 0;
+		}
+		case PPUSTATUS:
+		{
+			writeToggle = false; // Reset write toggle on reading PPUSTATUS
+			// Return PPU status register value and clear VBlank flag
+			uint8_t status = m_ppuStatus;
+			m_ppuStatus &= ~PPUSTATUS_VBLANK;
+			return status;
+		}
+		case OAMADDR:
+		{
+			return oamAddr;
+		}
+		case OAMDATA:
+		{
+			// Return OAM data at current OAMADDR
+			return oam[oamAddr];
+		}
+		case PPUSCROLL:
+		{
+			// PPUSCROLL is write-only, return 0
+			return 0;
+		}
+		case PPUADDR:
+		{
+			// PPUADDR is write-only, return 0
+			return 0;
+		}
+		case PPUDATA:
+		{
+			// Read from VRAM at current vramAddr
+			uint8_t value = 0;
+			if (vramAddr < 0x2000) {
+				// Reading from CHR-ROM/RAM
+				value = bus->cart->ReadCHR(vramAddr);
+			} else if (vramAddr < 0x3F00) {
+				// Reading from nametables and attribute tables
+				uint16_t mirroredAddr = vramAddr & 0x2FFF; // Mirror nametables every 4KB
+				mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
+				value = m_vram[mirroredAddr];
+			} else if (vramAddr < 0x4000) {
+				// Reading from palette RAM (mirrored every 32 bytes)
+				uint8_t paletteAddr = vramAddr & 0x1F;
+				if (paletteAddr % 4 == 0) {
+					// Handle mirroring of the background color by setting the address to 0x3F00
+					paletteAddr = 0;
+				}
+				value = paletteTable[paletteAddr];
+			}
+			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
+			vramAddr += 1;
+			return value;
+		}
+	}
+
 	return 0;
 }
 
 // OAM DMA - Direct Memory Access for sprites
-void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
-	uint16_t addr = page << 8;
-	for (int i = 0; i < 256; i++) {
-		oam[oamAddr++] = cpuMemory[addr + i];
-	}
-	// OAM DMA takes 513 or 514 CPU cycles depending on odd/even alignment
-	// OAMADDR wraps around automatically in hardware
-	oamAddr &= 0xFF;
-}
+//void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
+//	uint16_t addr = page << 8;
+//	for (int i = 0; i < 256; i++) {
+//		oam[oamAddr++] = cpuMemory[addr + i];
+//	}
+//	// OAM DMA takes 513 or 514 CPU cycles depending on odd/even alignment
+//	// OAMADDR wraps around automatically in hardware
+//	oamAddr &= 0xFF;
+//}
 
 void NesPPU::RenderScanline()
 {

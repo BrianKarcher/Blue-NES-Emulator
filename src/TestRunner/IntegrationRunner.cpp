@@ -8,7 +8,6 @@
 
 void Update();
 
-uint8_t ppuCtrl = 0x00;
 Core core;
 Bus& bus = core.bus;
 NesPPU& ppu = core.ppu;
@@ -98,9 +97,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 //    return DefWindowProc(hwnd, msg, wParam, lParam);
 //}
 
-//int scrollX = 0;
-int scrollY = 0;
-
 void Update() {
     integrationRunner.Update();
 }
@@ -111,21 +107,8 @@ void IntegrationRunner::Update() {
          //ppuCtrl ^= 0x01; // Switch nametable
 //         ppu.write_register(PPUCTRL, ppuCtrl); // Update PPUCTRL with current nametable
 //     }
-    if (scrollY >= 240) {
-        scrollY -= 240;
-        ppuCtrl ^= 0x02; // Switch nametable
-        ppu.write_register(PPUCTRL, ppuCtrl); // Update PPUCTRL with current nametable
-    }
-    ppu.write_register(PPUSCROLL, 0x00); // No horizontal scroll
-    ppu.write_register(PPUSCROLL, scrollY);
-    //scrollX++;
-    scrollY++;
-    // Move sprite
-    oam[3] += 1; // X position
-    oam[7] += 1; // X position of 2nd sprite
-    oam[11] += 1; // X position of 3rd sprite
-    oam[15] += 1; // X position of 4th sprite
-    PerformDMA();
+    
+    
 }
 
 void IntegrationRunner::SetupTestData()

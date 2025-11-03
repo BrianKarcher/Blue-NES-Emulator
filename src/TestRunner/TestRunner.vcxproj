@@ -137,6 +137,8 @@
     <ClCompile Include="..\BlueNES\CPU.cpp" />
     <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
     <ClCompile Include="IntegrationRunner.cpp" />
+    <ClCompile Include="IntegrationTest.cpp" />
+    <ClCompile Include="ScrollTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h" />
@@ -145,9 +147,17 @@
     <ClInclude Include="..\BlueNES\CPU.h" />
     <ClInclude Include="..\BlueNES\nes_ppu.h" />
     <ClInclude Include="IntegrationRunner.h" />
+    <ClInclude Include="IntegrationTest.h" />
+    <ClInclude Include="ScrollTest.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="test-chr-rom.chr">
+      <DeploymentContent>true</DeploymentContent>
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="project.nes">
       <DeploymentContent>true</DeploymentContent>
       <FileType>Document</FileType>
     </CopyFileToFolders>

@@ -11,7 +11,7 @@
     </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>chr;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+      <Extensions>nes;chr;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="EmulatorCore">
       <UniqueIdentifier>{ae98a4ab-7ca7-429e-b6ef-33fddb2da9f2}</UniqueIdentifier>
@@ -37,6 +37,12 @@
     <ClCompile Include="..\BlueNES\CPU.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="IntegrationTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScrollTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h">
@@ -57,9 +63,18 @@
     <ClInclude Include="..\BlueNES\CPU.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
+    <ClInclude Include="IntegrationTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ScrollTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="test-chr-rom.chr">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="project.nes">
       <Filter>Resource Files</Filter>
     </CopyFileToFolders>
   </ItemGroup>
