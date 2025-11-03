@@ -140,6 +140,16 @@ const uint8_t SBC_ABSOLUTE_X = 0xFD;
 const uint8_t SBC_ABSOLUTE_Y = 0xF9;
 const uint8_t SBC_INDEXEDINDIRECT = 0xE1;
 const uint8_t SBC_INDIRECTINDEXED = 0xF1;
+const uint8_t SEC_IMPLIED = 0x38;
+const uint8_t SED_IMPLIED = 0xF8;
+const uint8_t SEI_IMPLIED = 0x78;
+const uint8_t STA_ZEROPAGE = 0x85;
+const uint8_t STA_ZEROPAGE_X = 0x95;
+const uint8_t STA_ABSOLUTE = 0x8D;
+const uint8_t STA_ABSOLUTE_X = 0x9D;
+const uint8_t STA_ABSOLUTE_Y = 0x99;
+const uint8_t STA_INDEXEDINDIRECT = 0x81;
+const uint8_t STA_INDIRECTINDEXED = 0x91;
 
 
 class Bus;
@@ -205,6 +215,7 @@ private:
 	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
 	inline uint8_t ReadByte(uint16_t addr);
 	inline uint16_t ReadIndexedIndirect();
+	inline uint16_t ReadIndirectIndexedNoCycle();
 	inline void SetZero(uint8_t value);
 	inline void SetNegative(uint8_t value);
 	inline void SetOverflow(bool condition);

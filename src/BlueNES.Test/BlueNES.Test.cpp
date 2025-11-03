@@ -1603,5 +1603,94 @@ namespace BlueNESTest
 			Assert::IsFalse(processor.GetFlag(FLAG_OVERFLOW));
 			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		}
+		TEST_METHOD(TestSECImplied)
+		{
+			uint8_t rom[] = { SEC_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.ClearFlag(FLAG_CARRY); // Set carry for no borrow
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_CARRY));
+		}
+		TEST_METHOD(TestSEDImplied)
+		{
+			uint8_t rom[] = { SED_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.ClearFlag(FLAG_DECIMAL); // Clear decimal flag
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_DECIMAL));
+		}
+		TEST_METHOD(TestSEIImplied)
+		{
+			uint8_t rom[] = { SEI_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.ClearFlag(FLAG_INTERRUPT); // Clear interrupt disable flag
+			processor.Clock();
+			Assert::IsTrue(processor.GetFlag(FLAG_INTERRUPT));
+		}
+		TEST_METHOD(TestSTAZeroPage)
+		{
+			uint8_t rom[] = { STA_ZEROPAGE, 0x10 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x0010));
+		}
+		TEST_METHOD(TestSTAZeroPageX)
+		{
+			uint8_t rom[] = { STA_ZEROPAGE_X, 0x0F };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x1);
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x0010));
+		}
+		TEST_METHOD(TestSTAAbsolute)
+		{
+			uint8_t rom[] = { STA_ABSOLUTE, 0x20, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1520));
+		}
+		TEST_METHOD(TestSTAAbsoluteX)
+		{
+			uint8_t rom[] = { STA_ABSOLUTE_X, 0x1F, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x1);
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1520));
+		}
+		TEST_METHOD(TestSTAAbsoluteY)
+		{
+			uint8_t rom[] = { STA_ABSOLUTE_Y, 0x1F, 0x15 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x1);
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1520));
+		}
+		TEST_METHOD(TestSTAIndexedIndirect)
+		{
+			bus.write(0x0040, 0x30);
+			bus.write(0x0041, 0x12); // Pointer to 0x1230
+			uint8_t rom[] = { STA_INDEXEDINDIRECT, 0x3E };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x2);
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1230));
+		}
+		TEST_METHOD(TestSTAIndirectIndexed)
+		{
+			bus.write(0x0040, 0x30);
+			bus.write(0x0041, 0x12); // Pointer to 0x1230
+			uint8_t rom[] = { STA_INDIRECTINDEXED, 0x40 };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x2);
+			processor.SetA(0x37);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x37, bus.read(0x1232));
+		}
 	};
 }

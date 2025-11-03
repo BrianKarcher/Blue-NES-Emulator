@@ -1218,6 +1218,73 @@ void Processor_6502::Clock()
 			m_cycle_count += 5;
 			break;
 		}
+		case SEC_IMPLIED:
+		{
+			m_p |= FLAG_CARRY; // Set carry flag
+			m_cycle_count += 2;
+			break;
+		}
+		case SED_IMPLIED:
+		{
+			m_p |= FLAG_DECIMAL; // Set decimal mode flag
+			m_cycle_count += 2;
+			break;
+		}
+		case SEI_IMPLIED:
+		{
+			m_p |= FLAG_INTERRUPT; // Set interrupt disable flag
+			m_cycle_count += 2;
+			break;
+		}
+		case STA_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			bus->write(zp_addr, m_a);
+			m_cycle_count += 3;
+			break;
+		}
+		case STA_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			bus->write(zp_addr, m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case STA_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			bus->write(addr, m_a);
+			m_cycle_count += 4;
+			break;
+		}
+		case STA_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWordNoCycle(m_x);
+			bus->write(addr, m_a);
+			m_cycle_count += 5;
+			break;
+		}
+		case STA_ABSOLUTE_Y:
+		{
+			uint16_t addr = ReadNextWordNoCycle(m_y);
+			bus->write(addr, m_a);
+			m_cycle_count += 5;
+			break;
+		}
+		case STA_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			bus->write(target_addr, m_a);
+			m_cycle_count += 6;
+			break;
+		}
+		case STA_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexedNoCycle();
+			bus->write(target_addr, m_a);
+			m_cycle_count += 6;
+			break;
+		}
 	}
 }
 
@@ -1298,6 +1365,19 @@ inline uint16_t Processor_6502::ReadIndirectIndexed()
 	if (addr_lo < m_y) {
 		addr_hi += 1; // Carryover
 		m_cycle_count++; // Extra cycle for page crossing
+	}
+	return (addr_hi << 8) | addr_lo;
+}
+
+inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
+{
+	uint8_t zp_base = bus->read(m_pc++);
+	uint8_t addr_lo = bus->read(zp_base);
+	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
+	// Add Y register to the low byte of the address
+	addr_lo += m_y;
+	if (addr_lo < m_y) {
+		addr_hi += 1; // Carryover
 	}
 	return (addr_hi << 8) | addr_lo;
 }
