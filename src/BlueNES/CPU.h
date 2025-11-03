@@ -153,6 +153,9 @@ const uint8_t STA_INDIRECTINDEXED = 0x91;
 const uint8_t STX_ZEROPAGE = 0x86;
 const uint8_t STX_ZEROPAGE_Y = 0x96;
 const uint8_t STX_ABSOLUTE = 0x8E;
+const uint8_t STY_ZEROPAGE = 0x84;
+const uint8_t STY_ZEROPAGE_X = 0x94;
+const uint8_t STY_ABSOLUTE = 0x8C;
 
 
 class Bus;

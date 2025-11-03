@@ -1306,6 +1306,27 @@ void Processor_6502::Clock()
 			m_cycle_count += 4;
 			break;
 		}
+		case STY_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			bus->write(zp_addr, m_y);
+			m_cycle_count += 3;
+			break;
+		}
+		case STY_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			bus->write(zp_addr, m_y);
+			m_cycle_count += 4;
+			break;
+		}
+		case STY_ABSOLUTE:
+		{
+			uint16_t addr = ReadNextWord();
+			bus->write(addr, m_y);
+			m_cycle_count += 4;
+			break;
+		}
 	}
 }
 
