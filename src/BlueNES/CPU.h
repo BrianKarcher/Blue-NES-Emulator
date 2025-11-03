@@ -156,6 +156,12 @@ const uint8_t STX_ABSOLUTE = 0x8E;
 const uint8_t STY_ZEROPAGE = 0x84;
 const uint8_t STY_ZEROPAGE_X = 0x94;
 const uint8_t STY_ABSOLUTE = 0x8C;
+const uint8_t TAX_IMPLIED = 0xAA;
+const uint8_t TAY_IMPLIED = 0xA8;
+const uint8_t TSX_IMPLIED = 0xBA;
+const uint8_t TXA_IMPLIED = 0x8A;
+const uint8_t TXS_IMPLIED = 0x9A;
+const uint8_t TYA_IMPLIED = 0x98;
 
 
 class Bus;

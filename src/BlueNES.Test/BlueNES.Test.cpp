@@ -1742,5 +1742,63 @@ namespace BlueNESTest
 			processor.Clock();
 			Assert::AreEqual((uint8_t)0x37, bus.read(0x1520));
 		}
+		TEST_METHOD(TestTAXImplied)
+		{
+			uint8_t rom[] = { TAX_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestTAYImplied)
+		{
+			uint8_t rom[] = { TAY_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetA(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetY());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestTSXImplied)
+		{
+			uint8_t rom[] = { TSX_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetSP(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetX());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestTXAImplied)
+		{
+			uint8_t rom[] = { TXA_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
+		TEST_METHOD(TestTXSImplied)
+		{
+			uint8_t rom[] = { TXS_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetX(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetSP());
+		}
+		TEST_METHOD(TestTYAImplied)
+		{
+			uint8_t rom[] = { TYA_IMPLIED };
+			cart.SetPRGRom(rom, sizeof(rom));
+			processor.SetY(0x77);
+			processor.Clock();
+			Assert::AreEqual((uint8_t)0x77, processor.GetA());
+			Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
+			Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
+		}
 	};
 }

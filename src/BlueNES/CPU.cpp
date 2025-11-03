@@ -1327,6 +1327,52 @@ void Processor_6502::Clock()
 			m_cycle_count += 4;
 			break;
 		}
+		case TAX_IMPLIED:
+		{
+			m_x = m_a;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 2;
+			break;
+		}
+		case TAY_IMPLIED:
+		{
+			m_y = m_a;
+			SetZero(m_y);
+			SetNegative(m_y);
+			m_cycle_count += 2;
+			break;
+		}
+		case TSX_IMPLIED:
+		{
+			m_x = m_sp;
+			SetZero(m_x);
+			SetNegative(m_x);
+			m_cycle_count += 2;
+			break;
+		}
+		case TXA_IMPLIED:
+		{
+			m_a = m_x;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case TXS_IMPLIED:
+		{
+			m_sp = m_x;
+			m_cycle_count += 2;
+			break;
+		}
+		case TYA_IMPLIED:
+		{
+			m_a = m_y;
+			SetZero(m_a);
+			SetNegative(m_a);
+			m_cycle_count += 2;
+			break;
+		}
 	}
 }
 
