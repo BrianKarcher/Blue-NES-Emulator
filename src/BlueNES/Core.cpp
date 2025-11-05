@@ -1,5 +1,13 @@
 #include "Core.h"
 
+// Viewer state
+static int g_firstLine = 0;       // index of first displayed line (0-based)
+static int g_linesPerPage = 1;    // computed on resize
+static HFONT g_hFont = nullptr;
+static int g_lineHeight = 16;     // px, will be measured
+static int g_charWidth = 8;       // px, measured
+static const int BYTES_PER_LINE = 16;
+
 Core::Core() :
     m_hwnd(NULL),
     hdcMem(NULL),
@@ -21,10 +29,16 @@ void Core::PPURenderToBackBuffer()
 
 HRESULT Core::Initialize()
 {
+    // Fill example buffer with demo data (0x0000 - 0x0FF)
+    g_bufferSize = 0x300; // e.g. 768 bytes
+    g_buffer.resize(g_bufferSize);
+    for (size_t i = 0; i < g_bufferSize; ++i) g_buffer[i] = static_cast<uint8_t>(i & 0xFF);
+
+
     // Register the window class.
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc = Core::WndProc;
+    wcex.lpfnWndProc = Core::MainWndProc;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = sizeof(LONG_PTR);
     wcex.hInstance = HINST_THISCOMPONENT;
@@ -33,6 +47,10 @@ HRESULT Core::Initialize()
     wcex.hCursor = LoadCursor(NULL, IDI_APPLICATION);
     wcex.lpszClassName = L"Blue NES Emulator";
 
+    RegisterClassEx(&wcex);
+
+    wcex.lpfnWndProc = HexWndProc;
+    wcex.lpszClassName = L"HexWindowClass";
     RegisterClassEx(&wcex);
 
     // In terms of using the correct DPI, to create a window at a specific size
@@ -59,6 +77,22 @@ HRESULT Core::Initialize()
     if (!m_hwnd)
         return S_FALSE;
 
+    m_hwndHex = CreateWindow(
+        L"HexWindowClass",
+        L"Hex Editor",
+        WS_OVERLAPPEDWINDOW | WS_VSCROLL,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        800,
+        600,
+        NULL,
+        NULL,
+        HINST_THISCOMPONENT,
+        this);
+
+    if (!m_hwndHex)
+        return S_FALSE;
+
     bus.cart = &cart;
     bus.cpu = &cpu;
     bus.ppu = &ppu;
@@ -73,12 +107,265 @@ HRESULT Core::Initialize()
     ReleaseDC(m_hwnd, hdc);
 
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
+	ShowWindow(m_hwndHex, SW_SHOWNORMAL);
     //UpdateWindow(m_hwnd);
 
     return S_OK;
 }
 
-LRESULT CALLBACK Core::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    LRESULT result = 0;
+
+    if (msg == WM_CREATE)
+    {
+        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
+        Core* pMain = (Core*)pcs->lpCreateParams;
+
+        ::SetWindowLongPtrW(
+            hwnd,
+            GWLP_USERDATA,
+            reinterpret_cast<LONG_PTR>(pMain)
+        );
+
+        result = 1;
+    }
+    else
+    {
+        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
+            ::GetWindowLongPtrW(
+                hwnd,
+                GWLP_USERDATA
+            )));
+
+        bool wasHandled = false;
+
+        if (pMain)
+        {
+            switch (msg)
+            {
+            case WM_CREATE:
+            {
+                // Create fixed-width font (Consolas). Adjust size as desired.
+                g_hFont = CreateFontW(
+                    -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                    ANTIALIASED_QUALITY, FF_DONTCARE | FIXED_PITCH, L"Consolas"
+                );
+
+                HDC hdc = GetDC(hwnd);
+                HFONT old = (HFONT)SelectObject(hdc, g_hFont);
+                TEXTMETRIC tm;
+                GetTextMetrics(hdc, &tm);
+                g_lineHeight = tm.tmHeight;
+                // approximate char width by measuring '0'
+                SIZE sz;
+                GetTextExtentPoint32W(hdc, L"0", 1, &sz);
+                g_charWidth = sz.cx;
+                SelectObject(hdc, old);
+                ReleaseDC(hwnd, hdc);
+
+                pMain->RecalcLayout(hwnd);
+                pMain->UpdateScrollInfo(hwnd);
+                return 0;
+            }
+
+            case WM_SIZE:
+                pMain->RecalcLayout(hwnd);
+                pMain->UpdateScrollInfo(hwnd);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+
+            case WM_VSCROLL:
+            {
+                int action = LOWORD(wParam);
+                int pos = HIWORD(wParam);
+                int maxLine = static_cast<int>((pMain->g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE) - 1;
+
+                switch (action)
+                {
+                case SB_LINEUP:    g_firstLine = max(0, g_firstLine - 1); break;
+                case SB_LINEDOWN:  g_firstLine = min(maxLine, g_firstLine + 1); break;
+                case SB_PAGEUP:    g_firstLine = max(0, g_firstLine - g_linesPerPage); break;
+                case SB_PAGEDOWN:  g_firstLine = min(maxLine, g_firstLine + g_linesPerPage); break;
+                case SB_THUMBTRACK: g_firstLine = pos; break;
+                case SB_TOP: g_firstLine = 0; break;
+                case SB_BOTTOM: g_firstLine = maxLine; break;
+                }
+                pMain->UpdateScrollInfo(hwnd);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+            }
+
+            case WM_MOUSEWHEEL:
+            {
+                // Wheel rotates in multiples of WHEEL_DELTA (120). Positive = away from user = scroll up.
+                int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+                int lines = zDelta / WHEEL_DELTA; // number of detents
+                g_firstLine = max(0, g_firstLine - lines * 3); // scroll 3 lines per wheel detent
+                pMain->UpdateScrollInfo(hwnd);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+            }
+
+            case WM_KEYDOWN:
+            {
+                int maxLine = static_cast<int>((pMain->g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE) - 1;
+                switch (wParam)
+                {
+                case VK_PRIOR: // Page Up
+                    g_firstLine = max(0, g_firstLine - g_linesPerPage); break;
+                case VK_NEXT: // Page Down
+                    g_firstLine = min(maxLine, g_firstLine + g_linesPerPage); break;
+                case VK_HOME:
+                    g_firstLine = 0; break;
+                case VK_END:
+                    g_firstLine = maxLine; break;
+                }
+                pMain->UpdateScrollInfo(hwnd);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+            }
+
+            case WM_PAINT:
+            {
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hwnd, &ps);
+
+                // Fill background
+                FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+
+                // Use fixed font
+                HFONT old = (HFONT)SelectObject(hdc, g_hFont);
+
+                pMain->DrawHexDump(hdc, ps.rcPaint);
+
+                SelectObject(hdc, old);
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            case WM_DESTROY:
+                if (g_hFont) { DeleteObject(g_hFont); g_hFont = nullptr; }
+                PostQuitMessage(0);
+                return 0;
+            }
+
+    }
+
+    if (!wasHandled)
+    {
+        result = DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+    }
+
+    return result;
+}
+
+// Compute lines per page based on client height
+void Core::RecalcLayout(HWND hwnd)
+{
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+    int height = rc.bottom - rc.top;
+    if (g_lineHeight > 0)
+        g_linesPerPage = max(1, height / g_lineHeight);
+    else
+        g_linesPerPage = 1;
+}
+
+// Update vertical scrollbar to reflect buffer size
+void Core::UpdateScrollInfo(HWND hwnd)
+{
+    int totalLines = static_cast<int>((g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE);
+    int maxLine = max(0, totalLines - 1);
+
+    g_firstLine = max(0, min(g_firstLine, maxLine));
+
+    SCROLLINFO si;
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+    si.nMin = 0;
+    si.nMax = maxLine;
+    si.nPage = g_linesPerPage;
+    si.nPos = g_firstLine;
+
+    SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+}
+
+// Draw the visible range of hex dump into rc
+void Core::DrawHexDump(HDC hdc, RECT const& rc)
+{
+    // measure column positions (characters)
+    // Layout: "ADDR: " (8 chars for 6 hex digits + ': ') -> hex bytes (3 chars each incl space) -> two spaces -> ASCII 16 chars
+    // We'll position using pixel offsets computed from g_charWidth.
+    int addrChars = 6; // e.g. "0000FF"
+    int addrField = addrChars + 2; // "0000FF: "
+    int hexCharsPerByte = 3; // "FF "
+    int hexFieldChars = BYTES_PER_LINE * hexCharsPerByte;
+    int gapChars = 2;
+    int asciiFieldChars = BYTES_PER_LINE;
+
+    int xAddr = 8; // margin
+    int xHex = xAddr + addrField * g_charWidth;
+    int xAscii = xHex + hexFieldChars * g_charWidth + gapChars * g_charWidth;
+    int y = rc.top;
+
+    // Compute which lines to draw
+    int totalLines = static_cast<int>((g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE);
+    int startLine = g_firstLine;
+    int endLine = min(totalLines - 1, g_firstLine + g_linesPerPage - 1);
+
+    wchar_t lineBuf[256];
+
+    for (int line = startLine; line <= endLine; ++line)
+    {
+        size_t base = static_cast<size_t>(line) * BYTES_PER_LINE;
+        int yLine = y + (line - startLine) * g_lineHeight;
+
+        // Address
+        swprintf_s(lineBuf, L"%06X: ", static_cast<unsigned int>(base));
+        TextOutW(hdc, xAddr, yLine, lineBuf, static_cast<int>(wcslen(lineBuf)));
+
+        // Hex bytes
+        std::wstring hexs;
+        hexs.reserve(BYTES_PER_LINE * 3);
+        for (int b = 0; b < BYTES_PER_LINE; ++b)
+        {
+            if (base + b < g_bufferSize)
+            {
+                wchar_t tmp[8];
+                swprintf_s(tmp, L"%02X ", g_buffer[base + b]);
+                hexs += tmp;
+            }
+            else
+            {
+                hexs += L"   ";
+            }
+        }
+        TextOutW(hdc, xHex, yLine, hexs.c_str(), static_cast<int>(hexs.size()));
+
+        // ASCII
+        std::wstring ascii;
+        ascii.reserve(BYTES_PER_LINE);
+        for (int b = 0; b < BYTES_PER_LINE; ++b)
+        {
+            if (base + b < g_bufferSize)
+            {
+                uint8_t v = g_buffer[base + b];
+                if (v >= 0x20 && v <= 0x7E) ascii.push_back(static_cast<wchar_t>(v));
+                else ascii.push_back(L'.');
+            }
+            else
+            {
+                ascii.push_back(L' ');
+            }
+        }
+        TextOutW(hdc, xAscii, yLine, ascii.c_str(), static_cast<int>(ascii.size()));
+    }
+}
+
+LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
 

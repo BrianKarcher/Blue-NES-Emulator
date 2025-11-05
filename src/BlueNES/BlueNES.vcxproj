@@ -127,6 +127,7 @@
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
@@ -136,6 +137,7 @@
     <ClInclude Include="Bus.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nes_ppu.h" />

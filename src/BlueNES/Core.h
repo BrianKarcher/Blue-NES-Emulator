@@ -55,6 +55,13 @@ public:
 	Processor_6502 cpu;
 	// Declare a function pointer
 	void (*Update)();
+	// Hex dump window
+	// Example buffer: replace these with your emulator memory pointer and size.
+	std::vector<uint8_t> g_buffer;
+	size_t g_bufferSize;
+	void UpdateScrollInfo(HWND hwnd);
+	void RecalcLayout(HWND hwnd);
+	void DrawHexDump(HDC hdc, RECT const& rc);
 private:
 	int cpuCycleDebt = 0;
 	int ppuCyclesPerCPUCycle = 3;
@@ -62,7 +69,13 @@ private:
 	bool DrawToWindow();
 	void PPURenderToBackBuffer();
 	// The windows procedure.
-	static LRESULT CALLBACK WndProc(
+	static LRESULT CALLBACK MainWndProc(
+		HWND hWnd,
+		UINT message,
+		WPARAM wParam,
+		LPARAM lParam
+	);
+	static LRESULT CALLBACK HexWndProc(
 		HWND hWnd,
 		UINT message,
 		WPARAM wParam,
@@ -78,4 +91,5 @@ private:
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;
 	HWND m_hwnd;
+	HWND m_hwndHex;
 };

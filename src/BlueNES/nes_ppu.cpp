@@ -254,7 +254,7 @@ void NesPPU::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		//m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
 			Sprite& sprite = secondaryOAM[i];

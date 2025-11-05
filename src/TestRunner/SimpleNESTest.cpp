@@ -16,13 +16,16 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
     ppu = &m_core->ppu;
 
     size_t bytesRead;
-    uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
-	m_runner->GetCore()->cart.LoadROM("simple.nes");
+    //const char* testFile = "simple.nes";
+    const char* testFile = "sprite.nes";
+    //const char* testFile = "hello_world.nes";
+    //uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
+	m_runner->GetCore()->cart.LoadROM(testFile);
 
     bus->cart->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
     bus->cpu->Activate(true);
     //bus->cart->SetCHRRom(buffer, bytesRead);
-    delete[] buffer;
+    //delete[] buffer;
 }
 
 /// <summary>
