@@ -62,6 +62,12 @@ public:
 	void UpdateScrollInfo(HWND hwnd);
 	void RecalcLayout(HWND hwnd);
 	void DrawHexDump(HDC hdc, RECT const& rc);
+	HFONT hFont = nullptr;
+	HDC memDC = nullptr;
+	HBITMAP memBitmap = nullptr;
+	HBITMAP oldBitmap = nullptr;
+	int bufferWidth = 0, bufferHeight = 0;
+	int lineHeight = 16;
 private:
 	int cpuCycleDebt = 0;
 	int ppuCyclesPerCPUCycle = 3;

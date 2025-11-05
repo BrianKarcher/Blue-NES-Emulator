@@ -1,4 +1,7 @@
 #include "Core.h"
+#include <string>
+#include <sstream>
+#include <iomanip>
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -171,11 +174,33 @@ LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             }
 
             case WM_SIZE:
+            {
+                // Resize back buffer
+                HDC hdc = GetDC(hwnd);
+
+                int newWidth = LOWORD(lParam);
+                int newHeight = HIWORD(lParam);
+
+                if (pMain->memDC)
+                {
+                    SelectObject(pMain->memDC, pMain->oldBitmap);
+                    DeleteObject(pMain->memBitmap);
+                    DeleteDC(pMain->memDC);
+                }
+
+                pMain->memDC = CreateCompatibleDC(hdc);
+                pMain->memBitmap = CreateCompatibleBitmap(hdc, newWidth, newHeight);
+                pMain->oldBitmap = (HBITMAP)SelectObject(pMain->memDC, pMain->memBitmap);
+
+                pMain->bufferWidth = newWidth;
+                pMain->bufferHeight = newHeight;
+
+                ReleaseDC(hwnd, hdc);
                 pMain->RecalcLayout(hwnd);
                 pMain->UpdateScrollInfo(hwnd);
-                InvalidateRect(hwnd, nullptr, TRUE);
+                //InvalidateRect(hwnd, nullptr, TRUE);
                 return 0;
-
+            }
             case WM_VSCROLL:
             {
                 int action = LOWORD(wParam);
@@ -232,22 +257,48 @@ LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
 
-                // Fill background
-                FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+                if (!pMain->memDC)
+                {
+                    // Create initial buffer if not yet created
+                    RECT client;
+                    GetClientRect(hwnd, &client);
+                    SendMessage(hwnd, WM_SIZE, 0, MAKELPARAM(client.right, client.bottom));
+                }
 
-                // Use fixed font
-                HFONT old = (HFONT)SelectObject(hdc, g_hFont);
+                HBRUSH bgBrush = (HBRUSH)(COLOR_WINDOW + 1);
+                FillRect(pMain->memDC, &ps.rcPaint, bgBrush);
 
-                pMain->DrawHexDump(hdc, ps.rcPaint);
+                SelectObject(pMain->memDC, pMain->hFont);
+                SetBkMode(pMain->memDC, TRANSPARENT);
 
-                SelectObject(hdc, old);
+                RECT rc = ps.rcPaint;
+				pMain->DrawHexDump(pMain->memDC, rc);
+
+                BitBlt(hdc,
+                    ps.rcPaint.left, ps.rcPaint.top,
+                    ps.rcPaint.right - ps.rcPaint.left,
+                    ps.rcPaint.bottom - ps.rcPaint.top,
+                    pMain->memDC,
+                    ps.rcPaint.left, ps.rcPaint.top,
+                    SRCCOPY);
+
                 EndPaint(hwnd, &ps);
                 return 0;
             }
+            case WM_ERASEBKGND:
+                // Prevent flicker — we’ll handle full redraws in WM_PAINT
+                return 1;
 
             case WM_DESTROY:
-                if (g_hFont) { DeleteObject(g_hFont); g_hFont = nullptr; }
-                PostQuitMessage(0);
+                if (pMain->memDC)
+                {
+                    SelectObject(pMain->memDC, pMain->oldBitmap);
+                    DeleteObject(pMain->memBitmap);
+                    DeleteDC(pMain->memDC);
+                }
+                if (pMain->hFont) DeleteObject(pMain->hFont);
+                //PostQuitMessage(0);
+				ShowWindow(hwnd, SW_HIDE);
                 return 0;
             }
 
