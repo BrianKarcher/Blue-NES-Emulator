@@ -2,8 +2,8 @@
 #include "IntegrationTest.h"
 #include <array>
 
-class Core;
-class IntegrationRunner;
+//class Core;
+//class IntegrationRunner;
 
 class VertScrollTest : public IntegrationTest {
 public:

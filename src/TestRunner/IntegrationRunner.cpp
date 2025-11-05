@@ -3,9 +3,10 @@
 #include "IntegrationRunner.h"
 
 #include <Windows.h>
-#include "..\BlueNES\Core.h"
+#include "Core.h"
 #include <chrono>
 #include "VertScrollTest.h"
+#include "SimpleNESTest.h"
 
 void Update();
 
@@ -18,7 +19,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     {
         integrationRunner.Initialize(&core);
         // Register tests
-        auto scrollTest = new VertScrollTest();
+        auto scrollTest = new SimpleNESTest();
 		scrollTest->Setup(integrationRunner);
         integrationRunner.RegisterTest(scrollTest);
 
@@ -141,4 +142,37 @@ void IntegrationRunner::PerformDMA() {
 void IntegrationRunner::RunTests()
 {
 
+}
+
+uint8_t* IntegrationRunner::LoadFile(const char* filename, size_t& bytesRead) {
+    // read CHR-ROM data from file and load into PPU for testing
+    // read from file
+    FILE* file = nullptr;
+    errno_t err = fopen_s(&file, filename, "rb");
+    if (err != 0 || !file) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return nullptr;
+    }
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (fileSize <= 0) {
+        std::cerr << "File is empty or error reading size: " << filename << std::endl;
+        fclose(file);
+        return nullptr;
+    }
+    uint8_t* buffer = new uint8_t[fileSize];
+    bytesRead = fread(buffer, 1, fileSize, file);
+    fclose(file);
+    if (bytesRead != fileSize) {
+        std::cerr << "Error reading file: " << filename << std::endl;
+        delete[] buffer;
+        return nullptr;
+    }
+    return buffer;
+}
+
+HWND IntegrationRunner::GetWindowHandle()
+{
+	return m_core->GetWindowHandle();
 }

@@ -16,7 +16,7 @@ public:
 		FOUR_SCREEN = 4
 	};
 	Cartridge();
-	Cartridge(const std::string& filePath);
+	void LoadROM(const std::string& filePath);
 	MirrorMode GetMirrorMode();
 	void SetMirrorMode(MirrorMode mirrorMode);
 	// Used for testing
@@ -30,7 +30,7 @@ public:
 	void WriteCHR(uint16_t address, uint8_t data);
 
 private:
-	std::array<uint8_t, 0x8000> m_prgData;
+	std::vector<uint8_t> m_prgData;
 	std::vector<uint8_t> m_chrData;
 	MirrorMode m_mirrorMode;
 };

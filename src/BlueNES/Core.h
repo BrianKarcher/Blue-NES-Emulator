@@ -41,11 +41,18 @@ public:
 	Core();
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
+	// Load the game ROM
+	void LoadGame(
+		const std::string& szFileName
+	);
 
+	HWND GetWindowHandle();
 	// Process and dispatch messages
 	void RunMessageLoop();
 	Bus bus;
 	NesPPU ppu;
+	Cartridge cart;
+	Processor_6502 cpu;
 	// Declare a function pointer
 	void (*Update)();
 private:
@@ -67,8 +74,6 @@ private:
 		UINT width,
 		UINT height
 	);
-	Cartridge cart;
-	Processor_6502 cpu;
 	HDC hdcMem;
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;

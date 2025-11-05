@@ -1,11 +1,23 @@
 #include "Cartridge.h"
 #include <string>
+#include "INESLoader.h"
 
 Cartridge::Cartridge() {
 
 }
 
-Cartridge::Cartridge(const std::string& filePath) {
+void Cartridge::LoadROM(const std::string& filePath) {
+    INESLoader ines;
+    ines_file_t* inesFile = ines.load_data_from_ines(filePath.c_str());
+
+    for (int i = 0; i < inesFile->prg_rom->size; i++) {
+        m_prgData.push_back(inesFile->prg_rom->data[i]);
+	}
+    m_chrData.clear();
+    for (int i = 0; i < inesFile->chr_rom->size; i++) {
+        m_chrData.push_back(inesFile->chr_rom->data[i]);
+	}
+	//m_mirrorMode = ines.get_mirror_mode();
 	// Load the cartridge file and initialize PRG/CHR ROM, mirroring mode, etc.
 	m_mirrorMode = MirrorMode::VERTICAL; // Example default
 }

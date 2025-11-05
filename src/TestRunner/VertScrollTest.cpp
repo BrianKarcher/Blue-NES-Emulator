@@ -3,6 +3,7 @@
 #include "Core.h"
 #include <iostream>
 #include "IntegrationRunner.h"
+#include "Bus.h"
 
 Core* m_core;
 Bus* bus;
@@ -21,32 +22,8 @@ void VertScrollTest::Setup(IntegrationRunner& runner)
 	m_ppuCtrl = 0x00;
 	m_scrollY = 0;
     m_success = false;
-
-    // read CHR-ROM data from file and load into PPU for testing
-    const char* filename = "test-chr-rom.chr";
-    // read from file
-    FILE* file = nullptr;
-    errno_t err = fopen_s(&file, filename, "rb");
-    if (err != 0 || !file) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
-        return;
-    }
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    if (fileSize <= 0) {
-        std::cerr << "File is empty or error reading size: " << filename << std::endl;
-        fclose(file);
-        return;
-    }
-    uint8_t* buffer = new uint8_t[fileSize];
-    size_t bytesRead = fread(buffer, 1, fileSize, file);
-    fclose(file);
-    if (bytesRead != fileSize) {
-        std::cerr << "Error reading file: " << filename << std::endl;
-        delete[] buffer;
-        return;
-    }
+    size_t bytesRead;
+    uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
 
     bus->cart->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
     bus->cart->SetCHRRom(buffer, bytesRead);

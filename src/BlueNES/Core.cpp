@@ -63,6 +63,8 @@ HRESULT Core::Initialize()
     bus.cpu = &cpu;
     bus.ppu = &ppu;
     ppu.bus = &bus;
+	cpu.bus = &bus;
+    cpu.Initialize();
     ppu.set_hwnd(m_hwnd);
     HDC hdc = GetDC(m_hwnd);
     hdcMem = CreateCompatibleDC(hdc);
@@ -154,6 +156,18 @@ LRESULT CALLBACK Core::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     }
 
     return result;
+}
+
+void Core::LoadGame(
+    const std::string& szFileName
+)
+{
+	cart.LoadROM(szFileName);
+}
+
+HWND Core::GetWindowHandle()
+{
+	return m_hwnd;
 }
 
 bool Core::DrawToWindow()

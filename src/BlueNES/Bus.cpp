@@ -4,7 +4,6 @@
 
 Bus::Bus() {
 	// Constructor implementation (if needed)
-
 }
 
 uint8_t Bus::read(uint16_t addr)

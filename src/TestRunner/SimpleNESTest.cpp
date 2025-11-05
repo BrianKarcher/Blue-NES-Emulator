@@ -1,0 +1,40 @@
+#include "SimpleNESTest.h"
+#include "nes_ppu.h"
+#include "Core.h"
+#include "Bus.h"
+#include <iostream>
+#include "IntegrationRunner.h"
+#include <Windows.h>
+
+void SimpleNESTest::Setup(IntegrationRunner& runner)
+{
+    m_runner = &runner;
+    m_core = runner.GetCore();
+    //oam = m_runner->oam.data();
+    // Initialize test environment
+    bus = &m_core->bus;
+    ppu = &m_core->ppu;
+
+    size_t bytesRead;
+    uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
+	m_runner->GetCore()->cart.LoadROM("simple.nes");
+
+    bus->cart->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
+    bus->cpu->Activate(true);
+    //bus->cart->SetCHRRom(buffer, bytesRead);
+    delete[] buffer;
+}
+
+/// <summary>
+/// This test does nothing outside of running the VERY small NES program loaded in Setup.
+/// The program tests basic PPU functionality and writes results to $0000 in RAM.
+/// </summary>
+void SimpleNESTest::Update()
+{
+    // Create a 2-character wide string: [char, null terminator]
+    wchar_t text[2];
+    uint8_t val = bus->read(0x0001);
+    text[0] = static_cast<wchar_t>(val);
+    text[1] = L'\0';
+	SetWindowText(m_runner->GetWindowHandle(), text);
+}
