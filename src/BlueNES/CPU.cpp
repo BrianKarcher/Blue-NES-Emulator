@@ -57,7 +57,8 @@ void Processor_6502::NMI() {
 void Processor_6502::Clock()
 {
 	if (!isActive) return;
-	switch (bus->read(m_pc++))
+	uint8_t op = bus->read(m_pc++);
+	switch (op)
 	{
 		case ADC_IMMEDIATE:
 		{

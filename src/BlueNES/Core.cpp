@@ -33,9 +33,10 @@ void Core::PPURenderToBackBuffer()
 HRESULT Core::Initialize()
 {
     // Fill example buffer with demo data (0x0000 - 0x0FF)
-    g_bufferSize = 0x300; // e.g. 768 bytes
-    g_buffer.resize(g_bufferSize);
-    for (size_t i = 0; i < g_bufferSize; ++i) g_buffer[i] = static_cast<uint8_t>(i & 0xFF);
+    //g_bufferSize = 0x300; // e.g. 768 bytes
+	g_bufferSize = 0x10000; // 64KB
+    //g_buffer.resize(g_bufferSize);
+    //for (size_t i = 0; i < g_bufferSize; ++i) g_buffer[i] = static_cast<uint8_t>(i & 0xFF);
 
 
     // Register the window class.
@@ -96,9 +97,11 @@ HRESULT Core::Initialize()
     if (!m_hwndHex)
         return S_FALSE;
 
-    bus.cart = &cart;
+    /*bus.cart = &cart;
     bus.cpu = &cpu;
     bus.ppu = &ppu;
+    bus.core = this;*/
+    bus.Initialize(this);
     ppu.bus = &bus;
 	cpu.bus = &bus;
     cpu.Initialize();
@@ -302,12 +305,12 @@ LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 return 0;
             }
 
-    }
+        }
 
-    if (!wasHandled)
-    {
-        result = DefWindowProc(hwnd, msg, wParam, lParam);
-    }
+        if (!wasHandled)
+        {
+            result = DefWindowProc(hwnd, msg, wParam, lParam);
+        }
     }
 
     return result;
@@ -386,7 +389,7 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
             if (base + b < g_bufferSize)
             {
                 wchar_t tmp[8];
-                swprintf_s(tmp, L"%02X ", g_buffer[base + b]);
+                swprintf_s(tmp, L"%02X ", bus.read(base + b));
                 hexs += tmp;
             }
             else
@@ -403,7 +406,7 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
         {
             if (base + b < g_bufferSize)
             {
-                uint8_t v = g_buffer[base + b];
+                uint8_t v = bus.read(base + b); //g_buffer[base + b];
                 if (v >= 0x20 && v <= 0x7E) ascii.push_back(static_cast<wchar_t>(v));
                 else ascii.push_back(L'.');
             }

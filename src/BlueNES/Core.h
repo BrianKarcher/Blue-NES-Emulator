@@ -57,7 +57,7 @@ public:
 	void (*Update)();
 	// Hex dump window
 	// Example buffer: replace these with your emulator memory pointer and size.
-	std::vector<uint8_t> g_buffer;
+	uint8_t* g_buffer;
 	size_t g_bufferSize;
 	void UpdateScrollInfo(HWND hwnd);
 	void RecalcLayout(HWND hwnd);

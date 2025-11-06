@@ -443,7 +443,12 @@ void NesPPU::render_frame()
 }
 
 bool NesPPU::NMI() {
-	return (m_ppuStatus & 0x80) && (m_ppuCtrl & 0x80);
+	bool hasVBlank = m_ppuStatus & PPUSTATUS_VBLANK;
+	if (hasVBlank) {
+		// Disable blanking after NMI is triggered
+		m_ppuStatus &= ~PPUSTATUS_VBLANK;
+	}
+	return hasVBlank && (m_ppuCtrl & 0x80);
 }
 
 void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)

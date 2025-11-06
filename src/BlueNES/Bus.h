@@ -6,17 +6,20 @@
 #include "Cartridge.h"
 
 class NesPPU;
+class Core;
 
 class Bus
 {
 public:
 	Bus();
 	~Bus() = default;
+	void Initialize(Core* core);
 
 	// Devices connected to the bus
 	Processor_6502* cpu = nullptr;
 	NesPPU* ppu = nullptr;
 	Cartridge* cart = nullptr;
+	Core* core = nullptr;
 
 	// 2KB internal RAM (mirrored)
 	std::array<uint8_t, 2048> cpuRAM{};
@@ -27,5 +30,4 @@ public:
 
 	// DMA helper
 	void performDMA(uint8_t page);
-
 };

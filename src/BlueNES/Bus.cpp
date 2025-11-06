@@ -1,9 +1,21 @@
 #include "Bus.h"
 #include "nes_ppu.h"
 #include "Cartridge.h"
+#include "Core.h"
 
 Bus::Bus() {
 	// Constructor implementation (if needed)
+}
+
+void Bus::Initialize(Core* core)
+{
+    cpuRAM.fill(0); // Clear CPU RAM
+    this->core = core;
+    this->cpu = &this->core->cpu;
+    this->ppu = &this->core->ppu;
+    this->cart = &this->core->cart;
+    //this->core->g_bufferSize = cpuRAM.size();
+    //this->core->g_buffer = cpuRAM.data();
 }
 
 uint8_t Bus::read(uint16_t addr)
@@ -42,6 +54,14 @@ void Bus::write(uint16_t addr, uint8_t data)
 {
     if (addr <= 0x1FFF)
     {
+        // Check for blown stack
+        if (addr == 0x0105) {
+            int i = 0;
+        }
+        if (data != 0x00) {
+			//printf("Write to RAM at %04X: %02X\n", addr, data);
+            int i = 0;
+        }
         cpuRAM[addr & 0x07FF] = data;
     }
     else if (addr >= 0x2000 && addr <= 0x3FFF)
@@ -72,14 +92,14 @@ void Bus::write(uint16_t addr, uint8_t data)
 
 void Bus::performDMA(uint8_t page)
 {
-    uint16_t baseAddr = page << 8; // high byte from $4014
-    for (int i = 0; i < 256; i++)
-    {
-        uint8_t data = read(baseAddr + i);
-        ppu->oam[ppu->oamAddr++] = data;
-    }
+    //uint16_t baseAddr = page << 8; // high byte from $4014
+    //for (int i = 0; i < 256; i++)
+    //{
+    //    uint8_t data = read(baseAddr + i);
+    //    ppu->oam[ppu->oamAddr++] = data;
+    //}
 
-    // Timing penalty (513 or 514 CPU cycles)
-    int extraCycle = (cpu->GetCycleCount() & 1) ? 1 : 0;
-    cpu->AddCycles(513 + extraCycle);
+    //// Timing penalty (513 or 514 CPU cycles)
+    //int extraCycle = (cpu->GetCycleCount() & 1) ? 1 : 0;
+    //cpu->AddCycles(513 + extraCycle);
 }

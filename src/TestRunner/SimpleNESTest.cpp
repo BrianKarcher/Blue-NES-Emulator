@@ -35,9 +35,9 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
 void SimpleNESTest::Update()
 {
     // Create a 2-character wide string: [char, null terminator]
-    wchar_t text[2];
-    uint8_t val = bus->read(0x0001);
-    text[0] = static_cast<wchar_t>(val);
-    text[1] = L'\0';
-	SetWindowText(m_runner->GetWindowHandle(), text);
+ //   wchar_t text[2];
+ //   uint8_t val = bus->read(0x0001);
+ //   text[0] = static_cast<wchar_t>(val);
+ //   text[1] = L'\0';
+	//SetWindowText(m_runner->GetWindowHandle(), text);
 }
