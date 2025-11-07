@@ -72,7 +72,7 @@ private:
 	int cpuCycleDebt = 0;
 	int ppuCyclesPerCPUCycle = 3;
 	// Draw content.
-	bool DrawToWindow();
+	bool DrawToWindow(HDC dc);
 	void PPURenderToBackBuffer();
 	// The windows procedure.
 	static LRESULT CALLBACK MainWndProc(

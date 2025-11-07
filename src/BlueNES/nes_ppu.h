@@ -35,7 +35,7 @@ public:
 	void set_hwnd(HWND hwnd);
 	// For testing, may create a window and render CHR-ROM data
 	void render_chr_rom();
-	void render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors);
+	void render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 
 	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
@@ -85,7 +85,7 @@ private:
 	};
 
 	void write_vram(uint16_t addr, uint8_t value);
-	void get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors);
+	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);

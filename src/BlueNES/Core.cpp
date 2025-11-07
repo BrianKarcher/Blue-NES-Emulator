@@ -472,7 +472,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->DrawToWindow();
+                pMain->DrawToWindow(hdc);
                 EndPaint(hwnd, &ps);
                 ValidateRect(hwnd, NULL);
             }
@@ -511,9 +511,8 @@ HWND Core::GetWindowHandle()
 	return m_hwnd;
 }
 
-bool Core::DrawToWindow()
+bool Core::DrawToWindow(HDC hdc)
 {
-    HDC hdc = GetDC(m_hwnd);
     // Copy back buffer to bitmap
     SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
     // Stretch blit to window (3x scale)
@@ -521,7 +520,7 @@ bool Core::DrawToWindow()
     GetClientRect(m_hwnd, &clientRect);
     StretchBlt(hdc, 0, 0, clientRect.right, clientRect.bottom,
         hdcMem, 0, 0, 256, 240, SRCCOPY);
-    ReleaseDC(m_hwnd, hdc);
+    //ReleaseDC(m_hwnd, hdc);
     return true;
 }
 
@@ -542,6 +541,7 @@ void Core::RunMessageLoop()
     double accumulator = 0.0;
 	double elapsedTime = 0.0;
     int frameCount = 0;
+    int nextCycleCount = 30000;
 
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -584,20 +584,34 @@ void Core::RunMessageLoop()
 					cpuCycleDebt -= ppuCyclesPerCPUCycle;
                     cpu.Clock();
                 }
+                //cpu.Clock();
 
                 // Check for NMI
-                if (ppu.NMI() && !cpu.nmiRequested) {
+				// We are removing the PPU NMI request and just triggering
+				// an NMI every 30,000 CPU cycles for testing purposes
+                if (cpu.GetCycleCount() >= nextCycleCount) {
                     cpu.NMI();
-                }
+					nextCycleCount += 30000;
+                    // TODO Remove this when the PPU gets integrated.
+                    break;
+				}
+                //if (ppu.NMI() && !cpu.nmiRequested) {
+                    //cpu.NMI();
+                //}
 			}
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
 
-            DrawToWindow();
+			HDC hdc = GetDC(m_hwnd);
+            DrawToWindow(hdc);
             // --- FPS calculation every second ---
 
             elapsedTime += targetFrameTime;
             if (elapsedTime >= 1.0) {
+				// Updates the hex window
+				// TODO - Make this more efficient by only updating changed areas
+				// and also in real time rather than once per second
+				InvalidateRect(m_hwndHex, nullptr, TRUE);
                 double fps = frameCount / elapsedTime;
                 std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
                 SetWindowText(m_hwnd, title.c_str());

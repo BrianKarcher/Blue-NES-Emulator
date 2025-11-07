@@ -1254,6 +1254,9 @@ void Processor_6502::Clock()
 		case STA_ABSOLUTE:
 		{
 			uint16_t addr = ReadNextWord();
+			if (addr >= 0x0200 && addr <= 0x02FF) {
+				int i = 0;
+			}
 			bus->write(addr, m_a);
 			m_cycle_count += 4;
 			break;
@@ -1261,6 +1264,9 @@ void Processor_6502::Clock()
 		case STA_ABSOLUTE_X:
 		{
 			uint16_t addr = ReadNextWordNoCycle(m_x);
+			if (addr >= 0x0200 && addr <= 0x02FF) {
+				int i = 0;
+			}
 			bus->write(addr, m_a);
 			m_cycle_count += 5;
 			break;
@@ -1268,6 +1274,9 @@ void Processor_6502::Clock()
 		case STA_ABSOLUTE_Y:
 		{
 			uint16_t addr = ReadNextWordNoCycle(m_y);
+			if (addr >= 0x0200 && addr <= 0x02FF) {
+				int i = 0;
+			}
 			bus->write(addr, m_a);
 			m_cycle_count += 5;
 			break;

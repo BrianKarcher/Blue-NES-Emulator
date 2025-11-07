@@ -58,6 +58,9 @@ void Bus::write(uint16_t addr, uint8_t data)
         if (addr == 0x0105) {
             int i = 0;
         }
+        if (addr >= 0x0200 && addr <= 0x02FF) {
+            int i = 0;
+		}
         if (data != 0x00) {
 			//printf("Write to RAM at %04X: %02X\n", addr, data);
             int i = 0;
@@ -92,14 +95,14 @@ void Bus::write(uint16_t addr, uint8_t data)
 
 void Bus::performDMA(uint8_t page)
 {
-    //uint16_t baseAddr = page << 8; // high byte from $4014
-    //for (int i = 0; i < 256; i++)
-    //{
-    //    uint8_t data = read(baseAddr + i);
-    //    ppu->oam[ppu->oamAddr++] = data;
-    //}
+    uint16_t baseAddr = page << 8; // high byte from $4014
+    for (int i = 0; i < 256; i++)
+    {
+        uint8_t data = read(baseAddr + i);
+        ppu->oam[ppu->oamAddr++] = data;
+    }
 
-    //// Timing penalty (513 or 514 CPU cycles)
-    //int extraCycle = (cpu->GetCycleCount() & 1) ? 1 : 0;
-    //cpu->AddCycles(513 + extraCycle);
+    // Timing penalty (513 or 514 CPU cycles)
+    int extraCycle = (cpu->GetCycleCount() & 1) ? 1 : 0;
+    cpu->AddCycles(513 + extraCycle);
 }

@@ -236,7 +236,7 @@ void NesPPU::RenderScanline()
 		uint8_t paletteIndex = 0;
 		get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
 
-		std::array<uint16_t, 4> palette;
+		std::array<uint32_t, 4> palette;
 		get_palette(paletteIndex, palette); // For now we don't use the colors
 
 		// Get the color of the specific pixel within the tile
@@ -254,7 +254,7 @@ void NesPPU::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		//m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
 			Sprite& sprite = secondaryOAM[i];
@@ -278,12 +278,12 @@ void NesPPU::RenderScanline()
 				}
 				// Get sprite palette
 				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
-				std::array<uint16_t, 4> spritePalette;
+				std::array<uint32_t, 4> spritePalette;
 				get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 				// Get color index from sprite tile
 				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
 				if (spriteColorIndex != 0) { // Non-transparent pixel
-					uint16_t spriteColor = spritePalette[spriteColorIndex];
+					uint32_t spriteColor = spritePalette[spriteColorIndex];
 					// Handle priority (not implemented yet, assuming sprites are always on top)
 					m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
 					foundSprite = true;
@@ -336,7 +336,6 @@ void NesPPU::Clock() {
 // Accuracy vs Performance tradeoff.
 void NesPPU::render_frame()
 {
-	return;
 	// Clear back buffer
 	// m_backBuffer.fill(0xFF000000);
 	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
@@ -381,7 +380,7 @@ void NesPPU::render_frame()
 			uint8_t paletteIndex = 0;
 			get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
 
-			std::array<uint16_t, 4> palette;
+			std::array<uint32_t, 4> palette;
 			get_palette(paletteIndex, palette); // For now we don't use the colors
 
 			// Get the color of the specific pixel within the tile
@@ -423,12 +422,12 @@ void NesPPU::render_frame()
 					}
 					// Get sprite palette
 					uint8_t spritePaletteIndex = sprite.attributes & 0x03;
-					std::array<uint16_t, 4> spritePalette;
+					std::array<uint32_t, 4> spritePalette;
 					get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 					// Get color index from sprite tile
 					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
 					if (spriteColorIndex != 0) { // Non-transparent pixel
-						uint16_t spriteColor = spritePalette[spriteColorIndex];
+						uint32_t spriteColor = spritePalette[spriteColorIndex];
 						// Handle priority (not implemented yet, assuming sprites are always on top)
 						m_backBuffer[(screenY * 256) + screenX] = spriteColor;
 						foundSprite = true;
@@ -493,6 +492,11 @@ uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTil
 	uint8_t bit1 = (byte2 >> (7 - pixelInTileX)) & 1;
 	uint8_t colorIndex = (bit1 << 1) | bit0;
 
+	if (colorIndex != 0)
+	{
+		int i = 0;
+	}
+
 	return colorIndex;
 }
 
@@ -506,7 +510,7 @@ void NesPPU::render_nametable()
     const uint16_t nametableAddr = 0x2000;
     
 	// TODO: For now, we just render the nametable directly without scrolling or attribute tables
-	std::array<uint16_t, 4> palette;
+	std::array<uint32_t, 4> palette;
 	// Render the 32x30 tile nametable
     for (int row = 0; row < 30; row++) {
         for (int col = 0; col < 32; col++) {
@@ -562,7 +566,7 @@ void NesPPU::get_palette_index_from_attribute(uint8_t attributeByte, int tileRow
 	}
 }
 
-void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors)
+void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors)
 {
 	// Each palette consists of 4 colors, starting from 0x3F00 in VRAM
 	uint16_t paletteAddr = paletteIndex * 4;
@@ -575,7 +579,7 @@ void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint16_t, 4>& colors)
 void NesPPU::render_chr_rom()
 {
     //m_backBuffer.fill(0xFF000000); // For testing, fill with opaque black
-	std::array<uint16_t, 4> palette;
+	std::array<uint32_t, 4> palette;
 	// Draw a whole pattern table for testing
 	for (int pr = 0; pr < 128; pr += 8) {
 		for (int pc = 0; pc < 128; pc += 8) {
@@ -587,7 +591,7 @@ void NesPPU::render_chr_rom()
 	}
 }
 
-void NesPPU::render_tile(int pr, int pc, int tileIndex, std::array<uint16_t, 4>& colors) {
+void NesPPU::render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors) {
 	int tileBase = tileIndex * 16; // 16 bytes per tile
 
 	for (int y = 0; y < 8; y++) {
