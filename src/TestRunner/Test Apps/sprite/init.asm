@@ -65,6 +65,8 @@ reset:
 
     ; Other things you can do between vblank waits are set up audio
     ; or set up other mapper registers.
+
+    jsr clear_nametable
    
 @vblankwait2:
     bit $2002
@@ -98,6 +100,15 @@ lda #$00
 sta PPU_SCROLL
 sta PPU_SCROLL
 
+; Initialize OAM
+ldx #$00
+; Technically you only need to clear the Y's but this is easier and only happens once.
+init_oam_loop:
+    lda #$ff
+    sta OAM,x
+    inx
+    bne init_oam_loop
+
 lda #$c0
 sta $0200
 lda #$43
@@ -115,8 +126,8 @@ lda #$20            ; High byte of sprite_data address
 sta OAM_ADDRESS           ; Store high byte into OAMADDR
 
 ; Trigger OAMDMA transfer
-;lda #%00000001      ; Any non-zero value will initiate DMA transfer
-;sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
+lda #%00000001      ; Any non-zero value will initiate DMA transfer
+sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
 
 lda #$80
 ;lda #%10000000
@@ -226,6 +237,25 @@ jmp @loop
         ;bpl wait_dma    ; Wait until DMA transfer completes
 	rti
 .endproc
+
+clear_nametable:
+; Example: Clear nametables
+    LDA #$20        ; start at $2000
+    STA $2006
+    LDA #$00
+    STA $2006
+
+    LDA #$00        ; value to clear with
+    LDY #$10        ; 4 KB / 256 bytes per page = 16 pages
+ClearLoop:
+    LDX #$00
+PageLoop:
+    STA $2007
+    INX
+    BNE PageLoop
+    DEY
+    BNE ClearLoop
+    RTS
 
 .segment "VECTORS"
 	.addr nmi, reset, 0

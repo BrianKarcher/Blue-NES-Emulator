@@ -254,7 +254,7 @@ void NesPPU::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		// m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
 		m_backBuffer[(m_scanline * 256) + screenX] = 0;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
@@ -314,6 +314,7 @@ void NesPPU::Clock() {
 	if (m_scanline == 261 && m_cycle == 1) {
 		m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
 		m_frameComplete = false;
+		//m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
 	}
 
 	// Advance cycle and scanline counters
@@ -325,6 +326,41 @@ void NesPPU::Clock() {
 		m_scanline++;
 		if (m_scanline > 261) {
 			m_scanline = 0;
+		}
+	}
+}
+
+void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
+{
+	m_ppuStatus &= ~PPUSTATUS_SPRITE_OVERFLOW; // Clear sprite overflow flag
+	for (int i = 0; i < 8; ++i) {
+		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
+	}
+	// Evaluate sprites for this scanline
+	int spriteCount = 0;
+	for (int i = 0; i < 64; ++i) {
+		int spriteY = oam[i * 4]; // Y position of the sprite
+		if (spriteY > 0xF0) {
+			continue; // Empty sprite slot
+		}
+		int spriteHeight = 8; // For now, assume 8x8 sprites. TODO: Support 8x16 sprites.
+		if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
+			if (m_scanline == 0) {
+				int test = 0;
+			}
+			if (spriteCount < 8) {
+				// Copy sprite data to new OAM
+				newOam[spriteCount].y = oam[i * 4];
+				newOam[spriteCount].tileIndex = oam[i * 4 + 1];
+				newOam[spriteCount].attributes = oam[i * 4 + 2];
+				newOam[spriteCount].x = oam[i * 4 + 3];
+				spriteCount++;
+			}
+			else {
+				// Sprite overflow - more than 8 sprites on this scanline
+				m_ppuStatus |= PPUSTATUS_SPRITE_OVERFLOW;
+				break;
+			}
 		}
 	}
 }
@@ -450,37 +486,6 @@ bool NesPPU::NMI() {
 		m_ppuStatus &= ~PPUSTATUS_VBLANK;
 	}
 	return hasVBlank && (m_ppuCtrl & 0x80);
-}
-
-void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
-{
-	for (int i = 0; i < 8; ++i) {
-		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
-	}
-	// Evaluate sprites for this scanline
-	int spriteCount = 0;
-	for (int i = 0; i < 64; ++i) {
-		int spriteY = oam[i * 4]; // Y position of the sprite
-		if (spriteY > 0xF0) {
-			continue; // Empty sprite slot
-		}
-		int spriteHeight = 8; // For now, assume 8x8 sprites. TODO: Support 8x16 sprites.
-		if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
-			if (spriteCount < 8) {
-				// Copy sprite data to new OAM
-				newOam[spriteCount].y = oam[i * 4];
-				newOam[spriteCount].tileIndex = oam[i * 4 + 1];
-				newOam[spriteCount].attributes = oam[i * 4 + 2];
-				newOam[spriteCount].x = oam[i * 4 + 3];
-				spriteCount++;
-			}
-			else {
-				// Sprite overflow - more than 8 sprites on this scanline
-				// Set sprite overflow flag in PPUSTATUS (not implemented yet)
-				break;
-			}
-		}
-	}
 }
 
 uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY)
