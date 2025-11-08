@@ -83,6 +83,9 @@ void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
 
 uint8_t Cartridge::ReadPRG(uint16_t address) {
 	if (address >= 0x8000) {
+        if (m_prgData.size() == 0) {
+            return 0; // No PRG data loaded
+		}
 		return m_prgData[address - 0x8000];
 	}
 	return 0;

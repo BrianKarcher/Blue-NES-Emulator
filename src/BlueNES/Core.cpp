@@ -557,8 +557,6 @@ void Core::RunMessageLoop()
             break;
         }
 
-        PPURenderToBackBuffer();
-
         // 60 FPS cap
         // --- Frame timing ---
         QueryPerformanceCounter(&currentTime);
@@ -589,14 +587,14 @@ void Core::RunMessageLoop()
                 // Check for NMI
 				// We are removing the PPU NMI request and just triggering
 				// an NMI every 30,000 CPU cycles for testing purposes
-                if (cpu.GetCycleCount() >= nextCycleCount) {
-                    cpu.NMI();
-					nextCycleCount += 30000;
-                    // TODO Remove this when the PPU gets integrated.
-                    break;
-				}
+    //            if (cpu.GetCycleCount() >= nextCycleCount) {
+    //                cpu.NMI();
+				//	nextCycleCount += 30000;
+    //                // TODO Remove this when the PPU gets integrated.
+    //                break;
+				//}
                 //if (ppu.NMI() && !cpu.nmiRequested) {
-                    //cpu.NMI();
+                //    cpu.NMI();
                 //}
 			}
             ppu.m_frameComplete = false;

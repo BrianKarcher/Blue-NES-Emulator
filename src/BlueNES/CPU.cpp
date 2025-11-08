@@ -1254,7 +1254,7 @@ void Processor_6502::Clock()
 		case STA_ABSOLUTE:
 		{
 			uint16_t addr = ReadNextWord();
-			if (addr >= 0x0200 && addr <= 0x02FF) {
+			if (addr >= 0x2000 && addr <= 0x2FFF) {
 				int i = 0;
 			}
 			bus->write(addr, m_a);
