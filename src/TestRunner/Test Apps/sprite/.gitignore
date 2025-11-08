@@ -1,1 +1,6 @@
 *.o
+*.dbg
+*.map
+*.lbl
+*.lnk
+*.deb
