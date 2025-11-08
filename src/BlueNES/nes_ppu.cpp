@@ -254,7 +254,8 @@ void NesPPU::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		// m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		m_backBuffer[(m_scanline * 256) + screenX] = 0;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
 			Sprite& sprite = secondaryOAM[i];
@@ -306,6 +307,7 @@ void NesPPU::Clock() {
 	if (m_scanline == 241 && m_cycle == 1) {
 		m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
 		m_frameComplete = true;
+		bus->cpu->NMI();
 	}
 
 	// Pre-render scanline (261)
@@ -398,7 +400,7 @@ void NesPPU::render_frame()
 				bgColor = palette[bgColorIndex]; // Map to actual color from palette
 			}
 			// Set pixel in back buffer
-			m_backBuffer[(screenY * 256) + screenX] = bgColor;
+			//m_backBuffer[(screenY * 256) + screenX] = bgColor;
 			bool foundSprite = false;
 			for (int i = 0; i < 8 && !foundSprite; ++i) {
 				Sprite& sprite = secondaryOAM[i];
@@ -429,7 +431,7 @@ void NesPPU::render_frame()
 					if (spriteColorIndex != 0) { // Non-transparent pixel
 						uint32_t spriteColor = spritePalette[spriteColorIndex];
 						// Handle priority (not implemented yet, assuming sprites are always on top)
-						m_backBuffer[(screenY * 256) + screenX] = spriteColor;
+						//m_backBuffer[(screenY * 256) + screenX] = spriteColor;
 						foundSprite = true;
 					}
 				}
