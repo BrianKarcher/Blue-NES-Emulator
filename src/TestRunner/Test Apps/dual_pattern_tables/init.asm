@@ -85,15 +85,15 @@ sta PPU_ADDRESS
 lda #$ca
 sta PPU_ADDRESS
 
-; Loop:
-;     LDA Message,X     ; Load the byte at Message + X into A
-;     BEQ Done          ; If it's the null terminator, jump to Done
-;     STA PPU_DATA       ; Store the byte in memory at $0200 + Y
-;     INX               ; Increment X to point to the next character in the string
-;     ;INY               ; Increment Y to point to the next memory location
-;     JMP Loop          ; Repeat the loop
+Loop:
+    LDA Message,X     ; Load the byte at Message + X into A
+    BEQ Done          ; If it's the null terminator, jump to Done
+    STA PPU_DATA       ; Store the byte in memory at $0200 + Y
+    INX               ; Increment X to point to the next character in the string
+    ;INY               ; Increment Y to point to the next memory location
+    JMP Loop          ; Repeat the loop
 
-; Done:
+Done:
 
 ; reset scroll location to top-left of screen
 lda #$00

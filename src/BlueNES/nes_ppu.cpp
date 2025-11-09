@@ -242,7 +242,7 @@ void NesPPU::RenderScanline()
 		// Get the color of the specific pixel within the tile
 		int bgPixelInTileX = fineX % TILE_SIZE;
 		int bgPixelInTileY = fineY % TILE_SIZE;
-		uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY);
+		uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
 		// Handle both background and sprite color mapping here since we have to deal with
 		// transparency and priority
 		// Added bonus: Single draw call to set pixel in back buffer
@@ -255,7 +255,7 @@ void NesPPU::RenderScanline()
 		}
 		// Set pixel in back buffer
 		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
-		m_backBuffer[(m_scanline * 256) + screenX] = 0;
+		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
 			Sprite& sprite = secondaryOAM[i];
@@ -282,7 +282,7 @@ void NesPPU::RenderScanline()
 				std::array<uint32_t, 4> spritePalette;
 				get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 				// Get color index from sprite tile
-				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
+				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
 				if (spriteColorIndex != 0) { // Non-transparent pixel
 					uint32_t spriteColor = spritePalette[spriteColorIndex];
 					// Handle priority (not implemented yet, assuming sprites are always on top)
@@ -312,6 +312,7 @@ void NesPPU::Clock() {
 
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
+		hasOverflowBeenSet = false;
 		m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
 		m_frameComplete = false;
 		//m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
@@ -332,7 +333,6 @@ void NesPPU::Clock() {
 
 void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
 {
-	m_ppuStatus &= ~PPUSTATUS_SPRITE_OVERFLOW; // Clear sprite overflow flag
 	for (int i = 0; i < 8; ++i) {
 		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
 	}
@@ -358,7 +358,11 @@ void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
 			}
 			else {
 				// Sprite overflow - more than 8 sprites on this scanline
-				m_ppuStatus |= PPUSTATUS_SPRITE_OVERFLOW;
+				if (!hasOverflowBeenSet) {
+					// Set sprite overflow flag only once per frame
+					hasOverflowBeenSet = true;
+					m_ppuStatus |= PPUSTATUS_SPRITE_OVERFLOW;
+				}
 				break;
 			}
 		}
@@ -424,7 +428,7 @@ void NesPPU::render_frame()
 			// Get the color of the specific pixel within the tile
 			int bgPixelInTileX = fineX % TILE_SIZE;
 			int bgPixelInTileY = fineY % TILE_SIZE;
-			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY);
+			uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
 			// Handle both background and sprite color mapping here since we have to deal with
 			// transparency and priority
 			// Added bonus: Single draw call to set pixel in back buffer
@@ -463,7 +467,7 @@ void NesPPU::render_frame()
 					std::array<uint32_t, 4> spritePalette;
 					get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 					// Get color index from sprite tile
-					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY);
+					uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
 					if (spriteColorIndex != 0) { // Non-transparent pixel
 						uint32_t spriteColor = spritePalette[spriteColorIndex];
 						// Handle priority (not implemented yet, assuming sprites are always on top)
@@ -488,9 +492,11 @@ bool NesPPU::NMI() {
 	return hasVBlank && (m_ppuCtrl & 0x80);
 }
 
-uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY)
+uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite)
 {
-	int tileBase = tileIndex * 16; // 16 bytes per tile
+	// Determine the pattern table base address
+	uint16_t patternTableBase = isSprite ? GetSpritePatternTableBase() : GetBackgroundPatternTableBase();
+	int tileBase = patternTableBase + (tileIndex * 16); // 16 bytes per tile
 
 	uint8_t byte1 = bus->cart->ReadCHR(tileBase + pixelInTileY);     // bitplane 0
 	uint8_t byte2 = bus->cart->ReadCHR(tileBase + pixelInTileY + 8); // bitplane 1

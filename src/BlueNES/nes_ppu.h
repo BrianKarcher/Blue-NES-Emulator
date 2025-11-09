@@ -69,6 +69,13 @@ private:
 	uint8_t m_scrollY = 0;
 	uint8_t m_ppuCtrl = 0;
 	uint8_t m_ppuStatus = 0;
+	uint16_t GetBackgroundPatternTableBase() const {
+		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
+	}
+
+	uint16_t GetSpritePatternTableBase() const {
+		return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
+	}
 	//int scrollY; // Fine Y scrolling (0-239)
 	
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
@@ -88,7 +95,9 @@ private:
 	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
-	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY);
+	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite);
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
 	std::array<Sprite, 8> secondaryOAM{};
+	// Overflow can only be set once per frame
+	bool hasOverflowBeenSet = false;
 };
