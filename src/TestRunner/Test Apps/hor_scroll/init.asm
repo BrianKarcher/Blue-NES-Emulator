@@ -14,6 +14,7 @@ Message:
 
 .segment "ZEROPAGE"
 frame_done:     .res 1
+scroll_x:       .res 1
 
 .segment "HEADER"
 	.byte "NES",26, 2,1, 0,0
@@ -65,7 +66,6 @@ reset:
 
     ; Other things you can do between vblank waits are set up audio
     ; or set up other mapper registers.
-
     jsr clear_nametable
    
 @vblankwait2:
@@ -100,37 +100,28 @@ lda #$00
 sta PPU_SCROLL
 sta PPU_SCROLL
 
-; Initialize OAM
-ldx #$00
-; Technically you only need to clear the Y's but this is easier and only happens once.
-init_oam_loop:
-    lda #$ff
-    sta OAM,x
-    inx
-    bne init_oam_loop
-
-lda #$c0
-sta $0200
-lda #$20
-sta $0201
-lda #%00000110
-sta $0202
-lda #$05
-sta $0203
+; lda #$c0
+; sta $0200
+; lda #$43
+; sta $0201
+; lda #%00000110
+; sta $0202
+; lda #$05
+; sta $0203
 
 ; Set up OAMADDR
-lda #<OAM   ; Low byte of sprite_data address
-sta OAM_ADDRESS           ; Store low byte into OAMADDR
+; lda #<OAM   ; Low byte of sprite_data address
+; sta OAM_ADDRESS           ; Store low byte into OAMADDR
 
-lda #$20            ; High byte of sprite_data address
-sta OAM_ADDRESS           ; Store high byte into OAMADDR
+; lda #$20            ; High byte of sprite_data address
+; sta OAM_ADDRESS           ; Store high byte into OAMADDR
 
 ; Trigger OAMDMA transfer
-lda #%00000001      ; Any non-zero value will initiate DMA transfer
-sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
+;lda #%00000001      ; Any non-zero value will initiate DMA transfer
+;sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
 
-; lda #$80
-lda #%10001000
+lda #$80
+;lda #%10000000
 ;inx        ; now X = 1
 sta $2000  ; enable NMI
 lda #$1e
@@ -150,7 +141,7 @@ sta $4010  ; enable DMC IRQs
 	;inc $00
     jsr wait_frame
     ;inc $00
-    inc $0203
+    ; inc $0203
 jmp @loop
 
 ;palette = $0000
@@ -169,7 +160,7 @@ jmp @loop
     lda #$00
     sta PPU_ADDRESS
     ; load 8 palettes (4 bg, 4 sprite)
-    ldx #$8
+    ldx #$08
     palette_loop:
         ;ldx 0
         lda #$0f ; black
@@ -223,13 +214,20 @@ jmp @loop
     ;sta OAM_ADDRESS           ; Store low byte into OAMADDR
 
     ;lda #$20            ; High byte of sprite_data address
-    lda #$0                     ; Start writing at OAM_ADDRESS 0 in the PPU
-    sta OAM_ADDRESS           ; Store high byte into OAMADDR
-    lda #>OAM                   ; Store high byte into OAM_DMA
-    sta OAM_DMA
+    ; lda #$0                     ; Start writing at OAM_ADDRESS 0 in the PPU
+    ; sta OAM_ADDRESS           ; Store high byte into OAMADDR
+    ; lda #>OAM                   ; Store high byte into OAM_DMA
+    ; sta OAM_DMA
 
     lda #$0
     sta frame_done      ; Ding fries are done
+
+    inc scroll_x
+    lda scroll_x
+    sta PPU_SCROLL ; x scroll
+    lda #$0
+    sta PPU_SCROLL ; y scroll
+
 
     ; Wait for DMA transfer to complete (optional)
     ;wait_dma:
@@ -245,7 +243,7 @@ clear_nametable:
     LDA #$00
     STA $2006
 
-    LDA #$FE        ; value to clear with
+    LDA #$00        ; value to clear with
     LDY #$10        ; 4 KB / 256 bytes per page = 16 pages
 ClearLoop:
     LDX #$00
@@ -256,6 +254,7 @@ PageLoop:
     DEY
     BNE ClearLoop
     RTS
+
 
 .segment "VECTORS"
 	.addr nmi, reset, 0

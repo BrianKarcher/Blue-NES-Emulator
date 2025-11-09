@@ -20,6 +20,7 @@ void Cartridge::LoadROM(const std::string& filePath) {
 	//m_mirrorMode = ines.get_mirror_mode();
 	// Load the cartridge file and initialize PRG/CHR ROM, mirroring mode, etc.
 	m_mirrorMode = MirrorMode::VERTICAL; // Example default
+	//m_mirrorMode = ines.get_mirror_mode();
 }
 
 // Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
