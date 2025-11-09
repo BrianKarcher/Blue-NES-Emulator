@@ -25,7 +25,6 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
     //uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
 	m_runner->GetCore()->cart.LoadROM(testFile);
 
-    bus->cart->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
     bus->cpu->Activate(true);
     //bus->cart->SetCHRRom(buffer, bytesRead);
     //delete[] buffer;
