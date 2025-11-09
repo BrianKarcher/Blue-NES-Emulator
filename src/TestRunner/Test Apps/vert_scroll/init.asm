@@ -15,6 +15,7 @@ Message:
 .segment "ZEROPAGE"
 frame_done:     .res 1
 scroll_y:       .res 1
+ppu_ctrl:      .res 1
 
 .segment "HEADER"
 
@@ -130,6 +131,7 @@ sta PPU_SCROLL
 ;sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
 
 lda #$80
+sta ppu_ctrl
 ;lda #%10000000
 ;inx        ; now X = 1
 sta $2000  ; enable NMI
@@ -138,7 +140,7 @@ sta $2001  ; enable rendering
 lda #$ff
 sta $4010  ; enable DMC IRQs
 
-@loop:
+MainLoop:
 	;ldx #$0
 	;@loop2:
 		; lda #$cf
@@ -149,9 +151,20 @@ sta $4010  ; enable DMC IRQs
 		;bne @loop2
 	;inc $00
     jsr wait_frame
+    inc scroll_y
+    lda scroll_y
+    cmp #$f0           ; Check if we're near the bottom of the nametable (240 lines)
+    bne no_new_page    ; If not, skip the nametable switch
+    ; We're near the bottom, prepare to switch nametables
+    lda ppu_ctrl
+    eor #$02           ; Toggle nametable bit
+    sta ppu_ctrl
+    lda #$00           ; Reset scroll_y when switching nametables
+    sta scroll_y
+    no_new_page:
     ;inc $00
     ; inc $0203
-jmp @loop
+jmp MainLoop
 
 ;palette = $0000
 
@@ -233,10 +246,10 @@ jmp @loop
 
     lda #$0
     sta PPU_SCROLL ; x scroll
-    inc scroll_y
     lda scroll_y
     sta PPU_SCROLL ; y scroll
-
+    lda ppu_ctrl
+    sta $2000
 
     ; Wait for DMA transfer to complete (optional)
     ;wait_dma:

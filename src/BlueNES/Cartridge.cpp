@@ -10,6 +10,7 @@ void Cartridge::LoadROM(const std::string& filePath) {
     INESLoader ines;
     ines_file_t* inesFile = ines.load_data_from_ines(filePath.c_str());
 
+    m_prgData.clear();
     for (int i = 0; i < inesFile->prg_rom->size; i++) {
         m_prgData.push_back(inesFile->prg_rom->data[i]);
 	}
