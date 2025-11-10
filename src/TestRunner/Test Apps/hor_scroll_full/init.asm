@@ -319,9 +319,9 @@ lda boards+1, y
 sta current_high
 
 ; Set PPUCTRL to nametable 0 ($2000)
-lda #$80            ; Enable NMI, nametable 0
-sta ppu_ctrl
-sta $2000
+; lda #$80            ; Enable NMI, nametable 0
+; sta ppu_ctrl
+; sta $2000
 
 lda #>NT0
 sta PPU_ADDRESS
@@ -347,9 +347,9 @@ lda boards+1, y
 sta current_high
 
 ; Switch to nametable 1 before writing to it
-lda #$81            ; Enable NMI, nametable 1
-sta ppu_ctrl
-sta $2000
+; lda #$81            ; Enable NMI, nametable 1
+; sta ppu_ctrl
+; sta $2000
 
 lda #>NT1
 sta PPU_ADDRESS
@@ -359,19 +359,19 @@ sta PPU_ADDRESS
 JSR board_to_ppu_load
 
 ; Switch back to nametable 0
-lda #$80            ; Enable NMI, nametable 0
-sta ppu_ctrl
-sta $2000
+; lda #$80            ; Enable NMI, nametable 0
+; sta ppu_ctrl
+; sta $2000
 
-lda #$20
-sta PPU_ADDRESS
-lda #$00
-sta PPU_ADDRESS
+; lda #$20
+; sta PPU_ADDRESS
+; lda #$00
+; sta PPU_ADDRESS
 
 ; reset scroll location to top-left of screen
-lda #$00
-sta PPU_SCROLL
-sta PPU_SCROLL
+; lda #$00
+; sta PPU_SCROLL
+; sta PPU_SCROLL
 
 ; reset scroll location to top-left of screen
 ; lda #$00
@@ -397,6 +397,10 @@ sta PPU_SCROLL
 ; Trigger OAMDMA transfer
 ;lda #%00000001      ; Any non-zero value will initiate DMA transfer
 ;sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
+
+@vblankwait3:
+    bit $2002
+    bpl @vblankwait3
 
 lda #$80
 ; Ensure our copy of PPUCTRL holds the NMI enable bit and initial nametable

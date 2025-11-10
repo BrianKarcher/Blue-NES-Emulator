@@ -53,6 +53,8 @@ private:
 		uint8_t attributes;
 		bool isSprite0;
 	};
+
+	bool is_failure = false;
 	
 	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 
