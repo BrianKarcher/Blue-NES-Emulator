@@ -106,5 +106,8 @@
     <None Include="roms\vert_scroll.nes">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="roms\hor_scroll_full.nes">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
