@@ -4,6 +4,8 @@
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
 
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
+int cnt = 0;
+int cnt2 = 0;
 
 void Processor_6502::Initialize()
 {
@@ -571,6 +573,9 @@ void Processor_6502::Clock()
 		}
 		case DEY_IMPLIED:
 		{
+			cnt += 1;
+			std::wstring msg = L"DEY\n" + std::to_wstring(cnt);
+			OutputDebugString(msg.c_str());
 			m_y--;
 			SetZero(m_y);
 			SetNegative(m_y);
@@ -1256,6 +1261,14 @@ void Processor_6502::Clock()
 			uint16_t addr = ReadNextWord();
 			if (addr >= 0x2000 && addr <= 0x2FFF) {
 				int i = 0;
+			}
+			if (addr == 0x2007) {
+				cnt2 += 1;
+				std::wstring msg = L"STA\n" + std::to_wstring(cnt2);
+				OutputDebugString(msg.c_str());
+				if (cnt2 == 2000) {
+					int j = 0;
+				}
 			}
 			bus->write(addr, m_a);
 			m_cycle_count += 4;

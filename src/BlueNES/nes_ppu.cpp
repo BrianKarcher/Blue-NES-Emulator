@@ -96,7 +96,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 				vramAddr += 1;
 				return;
 			}
-			vramAddr += m_ppuCtrl & 0x03 ? 1 : 32;
+			vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
 			break;
 	}
 }
@@ -151,7 +151,7 @@ uint8_t NesPPU::read_register(uint16_t addr)
 				vramAddr += 1;
 				return value;
 			}
-			vramAddr += m_ppuCtrl & 0x03 ? 1 : 32;
+			vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
 			return value;
 		}
 	}
@@ -252,7 +252,12 @@ void NesPPU::RenderScanline()
 		int tileCol = fineX / TILE_SIZE;
 		int tileRow = fineY / TILE_SIZE;
 		int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
-
+		if (tileIndex == 0x48) {
+			int test = 0;
+		}
+		else if (tileIndex > 0) {
+			int test = 0;
+		}
 		// Get attribute byte for the tile
 		int attrRow = tileRow / 4;
 		int attrCol = tileCol / 4;
