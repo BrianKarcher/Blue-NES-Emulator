@@ -245,7 +245,7 @@ clear_nametable:
     STA $2006
 
     LDA #$00        ; value to clear with
-    LDY #$10        ; 4 KB / 256 bytes per page = 16 pages
+    LDY #$08        ; 2 KB / 256 bytes per page = 8 pages
 ClearLoop:
     LDX #$00
 PageLoop:

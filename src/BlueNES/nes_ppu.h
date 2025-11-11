@@ -42,6 +42,7 @@ public:
 	void step();
 	void write_register(uint16_t addr, uint8_t value);
 	uint8_t read_register(uint16_t addr);
+	uint8_t ReadVRAM(uint16_t addr);
 	void RenderScanline();
 	void render_frame();
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }

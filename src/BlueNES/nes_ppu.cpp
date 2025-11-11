@@ -38,33 +38,6 @@ void NesPPU::step()
 
 }
 
-void NesPPU::write_vram(uint16_t addr, uint8_t value)
-{
-	addr &= 0x3FFF; // Mask to 14 bits
-	if (addr < 0x2000) {
-		// Write to CHR-RAM (if enabled)
-		bus->cart->WriteCHR(addr, value);
-		// Else ignore write (CHR-ROM is typically read-only)
-		return;
-	} else if (addr < 0x3F00) {
-		// Name tables and attribute tables
-		addr &= 0x2FFF; // Mirror nametables every 4KB
-		addr = bus->cart->MirrorNametable(addr);
-		m_vram[addr] = value;
-		return;
-	} else if (addr < 0x4000) {
-		// Palette RAM (mirrored every 32 bytes)
-		uint8_t paletteAddr = addr & 0x1F;
-		if (paletteAddr % 4 == 0) {
-			// Handle mirroring of the background color by setting the address to 0x3F00
-			paletteAddr = 0;
-		}
-		paletteTable[paletteAddr] = value;
-		InvalidateRect(core->m_hwndPalette, NULL, FALSE); // Update palette window if open
-		return;
-	}
-}
-
 void NesPPU::write_register(uint16_t addr, uint8_t value)
 {
 	// addr is in the range 0x2000 to 0x2007
@@ -118,6 +91,11 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		case PPUDATA: // PPUDATA
 			write_vram(vramAddr, value);
 			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
+			if (vramAddr >= 0x3F00) {
+				// Palette data always increments by 1
+				vramAddr += 1;
+				return;
+			}
 			vramAddr += m_ppuCtrl & 0x03 ? 1 : 32;
 			break;
 	}
@@ -166,31 +144,76 @@ uint8_t NesPPU::read_register(uint16_t addr)
 		case PPUDATA:
 		{
 			// Read from VRAM at current vramAddr
-			uint8_t value = 0;
-			if (vramAddr < 0x2000) {
-				// Reading from CHR-ROM/RAM
-				value = bus->cart->ReadCHR(vramAddr);
-			} else if (vramAddr < 0x3F00) {
-				// Reading from nametables and attribute tables
-				uint16_t mirroredAddr = vramAddr & 0x2FFF; // Mirror nametables every 4KB
-				mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
-				value = m_vram[mirroredAddr];
-			} else if (vramAddr < 0x4000) {
-				// Reading from palette RAM (mirrored every 32 bytes)
-				uint8_t paletteAddr = vramAddr & 0x1F;
-				if (paletteAddr % 4 == 0) {
-					// Handle mirroring of the background color by setting the address to 0x3F00
-					paletteAddr = 0;
-				}
-				value = paletteTable[paletteAddr];
+			uint8_t value = ReadVRAM(vramAddr);
+			// Increment VRAM address based on PPUCTRL setting
+			if (vramAddr >= 0x3F00) {
+				// Palette data always increments by 1
+				vramAddr += 1;
+				return value;
 			}
-			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
-			vramAddr += 1;
+			vramAddr += m_ppuCtrl & 0x03 ? 1 : 32;
 			return value;
 		}
 	}
 
 	return 0;
+}
+
+uint8_t NesPPU::ReadVRAM(uint16_t addr)
+{
+	uint8_t value = 0;
+	if (addr < 0x2000) {
+		// Reading from CHR-ROM/RAM
+		value = bus->cart->ReadCHR(addr);
+	}
+	else if (addr < 0x3F00) {
+		// Reading from nametables and attribute tables
+		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
+		mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
+		value = m_vram[mirroredAddr];
+	}
+	else if (addr < 0x4000) {
+		// Reading from palette RAM (mirrored every 32 bytes)
+		uint8_t paletteAddr = addr & 0x1F;
+		if (paletteAddr % 4 == 0) {
+			// Handle mirroring of the background color by setting the address to 0x3F00
+			paletteAddr = 0;
+		}
+		value = paletteTable[paletteAddr];
+	}
+	
+	return value;
+}
+
+void NesPPU::write_vram(uint16_t addr, uint8_t value)
+{
+	addr &= 0x3FFF; // Mask to 14 bits
+	if (addr < 0x2000) {
+		// Write to CHR-RAM (if enabled)
+		bus->cart->WriteCHR(addr, value);
+		// Else ignore write (CHR-ROM is typically read-only)
+		return;
+	}
+	else if (addr < 0x3F00) {
+		// Name tables and attribute tables
+		addr &= 0x2FFF; // Mirror nametables every 4KB
+		addr = bus->cart->MirrorNametable(addr);
+		m_vram[addr] = value;
+		return;
+	}
+	else if (addr < 0x4000) {
+		// Palette RAM (mirrored every 32 bytes)
+		// 3F00 = 0011 1111 0000 0000
+		// 3F1F = 0011 1111 0001 1111
+		uint8_t paletteAddr = addr & 0x1F; // 0001 1111
+		if (paletteAddr % 4 == 0) {
+			// Handle mirroring of the background color by setting the address to 0x3F00
+			paletteAddr = 0;
+		}
+		paletteTable[paletteAddr] = value;
+		InvalidateRect(core->m_hwndPalette, NULL, FALSE); // Update palette window if open
+		return;
+	}
 }
 
 // OAM DMA - Direct Memory Access for sprites
