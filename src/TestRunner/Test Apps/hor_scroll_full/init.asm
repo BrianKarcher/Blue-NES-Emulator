@@ -401,14 +401,18 @@ JSR board_to_ppu_load
 @vblankwait3:
     bit $2002
     bpl @vblankwait3
-
+; reset scroll location to top-left of screen
+lda #$00
+sta PPU_SCROLL
+sta PPU_SCROLL
 lda #$80
 ; Ensure our copy of PPUCTRL holds the NMI enable bit and initial nametable
 ; bit7 = NMI enable, bits1-0 = base nametable (0 -> $2000)
 sta ppu_ctrl
 ; Enable NMI in the actual PPUCTRL as well
 sta $2000  ; enable NMI
-lda #$1e
+; lda #$1e
+LDA #%00011110  ; Enable bg + sprites, other flags as needed
 sta $2001  ; enable rendering
 lda #$ff
 sta $4010  ; enable DMC IRQs

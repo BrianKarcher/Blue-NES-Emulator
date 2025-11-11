@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <codecvt>
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -57,6 +58,11 @@ HRESULT Core::Initialize()
     wcex.lpszClassName = L"HexWindowClass";
     RegisterClassEx(&wcex);
 
+    // Register the palette window class
+    wcex.lpfnWndProc = PaletteWndProc;
+    wcex.lpszClassName = L"PaletteWindowClass";
+    RegisterClassEx(&wcex);
+
     // In terms of using the correct DPI, to create a window at a specific size
     // like this, the procedure is to first create the window hidden. Then we get
     // the actual DPI from the HWND (which will be assigned by whichever monitor
@@ -97,12 +103,30 @@ HRESULT Core::Initialize()
     if (!m_hwndHex)
         return S_FALSE;
 
+    // Create the palette window
+    m_hwndPalette = CreateWindow(
+        L"PaletteWindowClass",
+        L"Palette Viewer",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        400, // Width
+        300, // Height
+        NULL,
+        NULL,
+        HINST_THISCOMPONENT,
+        this);
+
+    if (!m_hwndPalette)
+        return S_FALSE;
+
     /*bus.cart = &cart;
     bus.cpu = &cpu;
     bus.ppu = &ppu;
     bus.core = this;*/
     bus.Initialize(this);
     ppu.bus = &bus;
+    ppu.core = this;
 	cpu.bus = &bus;
     cpu.Initialize();
     ppu.set_hwnd(m_hwnd);
@@ -114,6 +138,7 @@ HRESULT Core::Initialize()
 
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
 	ShowWindow(m_hwndHex, SW_SHOWNORMAL);
+    ShowWindow(m_hwndPalette, SW_SHOWNORMAL);
     //UpdateWindow(m_hwnd);
 
     return S_OK;
@@ -497,6 +522,114 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     }
 
     return result;
+}
+
+LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    LRESULT result = 0;
+
+    if (msg == WM_CREATE)
+    {
+        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
+        Core* pMain = (Core*)pcs->lpCreateParams;
+
+        ::SetWindowLongPtrW(
+            hwnd,
+            GWLP_USERDATA,
+            reinterpret_cast<LONG_PTR>(pMain)
+        );
+
+        result = 1;
+    }
+    else
+    {
+        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
+            ::GetWindowLongPtrW(
+                hwnd,
+                GWLP_USERDATA
+            )));
+
+        if (pMain)
+        {
+            switch (msg)
+            {
+            case WM_PAINT:
+            {
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hwnd, &ps);
+                pMain->DrawPalette(hwnd, hdc);
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            case WM_DESTROY:
+                ShowWindow(hwnd, SW_HIDE);
+                return 0;
+            }
+        }
+
+        result = DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    return result;
+}
+
+// Function to convert std::string (UTF-8) to std::wstring (UTF-16/UTF-32 depending on platform)
+std::wstring stringToWstring(const std::string& str) {
+    // Using UTF-8 to wide string conversion
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.from_bytes(str);
+}
+
+// Function to convert uint32_t to hex string with zero-padding
+std::string uint32ToHex(uint32_t value) {
+    std::ostringstream oss;
+    oss << std::hex              // use hexadecimal format
+        << std::uppercase        // make letters uppercase (A-F)
+        << std::setw(8)          // width of 8 characters
+        << std::setfill('0')     // pad with '0'
+        << value;
+    return oss.str();
+}
+
+COLORREF ToColorRef(uint32_t argb)
+{
+    BYTE r = (argb >> 16) & 0xFF;
+    BYTE g = (argb >> 8) & 0xFF;
+    BYTE b = (argb) & 0xFF;
+    return RGB(r, g, b); // RGB macro gives 0x00BBGGRR format
+}
+
+void Core::DrawPalette(HWND wnd, HDC hdc)
+{
+    RECT clientRect;
+    GetClientRect(wnd, &clientRect);
+
+    int width = clientRect.right - clientRect.left;
+    int height = clientRect.bottom - clientRect.top;
+
+    int cols = 4; // Number of colors per row
+    int rows = 8; // Total rows (32 colors / 4 per row)
+    int cellWidth = width / cols;
+    int cellHeight = height / rows;
+
+    for (int i = 0; i < 32; ++i)
+    {
+        int x = (i % cols) * cellWidth;
+        int y = (i / cols) * cellHeight;
+
+        uint8_t paletteIndex = ppu.paletteTable[i];
+        uint32_t color = m_nesPalette[paletteIndex & 0x3F];
+        //uint32_t color = m_nesPalette[i];
+        // Debugging: Log palette index and color
+        OutputDebugString((L"Palette Index: " + std::to_wstring(paletteIndex) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
+
+        OutputDebugString((L"x: " + std::to_wstring(x) + L", y: " + std::to_wstring(y) + L", w: " + std::to_wstring(cellWidth) + L", h: " + std::to_wstring(cellHeight) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
+        HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+        RECT rect = { x, y, x + cellWidth, y + cellHeight };
+        FillRect(hdc, &rect, brush);
+        DeleteObject(brush);
+    }
 }
 
 void Core::LoadGame(

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <WinUser.h>
 #include "Bus.h"
+#include "Core.h"
 
 HWND m_hwnd;
 
@@ -59,6 +60,7 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 			paletteAddr = 0;
 		}
 		paletteTable[paletteAddr] = value;
+		InvalidateRect(core->m_hwndPalette, NULL, FALSE); // Update palette window if open
 		return;
 	}
 }
@@ -116,7 +118,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		case PPUDATA: // PPUDATA
 			write_vram(vramAddr, value);
 			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
-			vramAddr += 1;
+			vramAddr += m_ppuCtrl & 0x03 ? 1 : 32;
 			break;
 	}
 }

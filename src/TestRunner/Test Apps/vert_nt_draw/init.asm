@@ -14,21 +14,10 @@ Message:
 
 .segment "ZEROPAGE"
 frame_done:     .res 1
-scroll_y:       .res 1
-ppu_ctrl:       .res 1
+scroll_x:       .res 1
 
 .segment "HEADER"
-
-INES_MAPPER = 0 ; 0 = NROM, 1 = MMC 1
-INES_MIRROR = 0 ; 0 = horizontal mirroring, 1 = vertical mirroring
-INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
-
-.byte 'N', 'E', 'S', $1A ; ID
-.byte $02 ; 16k PRG chunk count
-.byte $01 ; 8k CHR chunk count
-.byte INES_MIRROR | (INES_SRAM << 1) | ((INES_MAPPER & $f) << 4)
-.byte (INES_MAPPER & %11110000)
-.byte $0, $0, $0, $0, $0, $0, $0, $0 ; padding
+	.byte "NES",26, 2,1, 0,0
 
 .segment "STARTUP" ; avoids warning
 
@@ -90,20 +79,22 @@ reset:
 ;sta OAM_DMA
 
 jsr load_palette
-
+lda #%00000100 ; vertical address increment
+sta $2000  ; disable NMI
 lda #$21
 sta PPU_ADDRESS
 lda #$ca
 sta PPU_ADDRESS
-; draw message to nametable
-ldx #$00
-JSR DrawMessage
-ldx #$00
-lda #$29
-sta PPU_ADDRESS
-lda #$cd
-sta PPU_ADDRESS
-JSR DrawMessage
+
+Loop:
+    LDA Message,X     ; Load the byte at Message + X into A
+    BEQ Done          ; If it's the null terminator, jump to Done
+    STA PPU_DATA       ; Store the byte in memory at $0200 + Y
+    INX               ; Increment X to point to the next character in the string
+    ;INY               ; Increment Y to point to the next memory location
+    JMP Loop          ; Repeat the loop
+
+Done:
 
 ; reset scroll location to top-left of screen
 lda #$00
@@ -131,7 +122,6 @@ sta PPU_SCROLL
 ;sta $4014           ; Start DMA transfer to OAM (this transfers all sprite data - 256 bytes - from CPU memory to PPU memory)
 
 lda #$80
-sta ppu_ctrl
 ;lda #%10000000
 ;inx        ; now X = 1
 sta $2000  ; enable NMI
@@ -140,7 +130,7 @@ sta $2001  ; enable rendering
 lda #$ff
 sta $4010  ; enable DMC IRQs
 
-MainLoop:
+@loop:
 	;ldx #$0
 	;@loop2:
 		; lda #$cf
@@ -151,20 +141,9 @@ MainLoop:
 		;bne @loop2
 	;inc $00
     jsr wait_frame
-    inc scroll_y
-    lda scroll_y
-    cmp #$f0           ; Check if we're near the bottom of the nametable (240 lines)
-    bne no_new_page    ; If not, skip the nametable switch
-    ; We're near the bottom, prepare to switch nametables
-    lda ppu_ctrl
-    eor #$02           ; Toggle nametable bit
-    sta ppu_ctrl
-    lda #$00           ; Reset scroll_y when switching nametables
-    sta scroll_y
-    no_new_page:
     ;inc $00
     ; inc $0203
-jmp MainLoop
+jmp @loop
 
 ;palette = $0000
 
@@ -244,12 +223,12 @@ jmp MainLoop
     lda #$0
     sta frame_done      ; Ding fries are done
 
-    lda #$0
+    inc scroll_x
+    lda scroll_x
     sta PPU_SCROLL ; x scroll
-    lda scroll_y
+    lda #$0
     sta PPU_SCROLL ; y scroll
-    lda ppu_ctrl
-    sta $2000
+
 
     ; Wait for DMA transfer to complete (optional)
     ;wait_dma:
@@ -277,16 +256,6 @@ PageLoop:
     BNE ClearLoop
     RTS
 
-DrawMessage:
-    LDA Message,X     ; Load the byte at Message + X into A
-    BEQ Done          ; If it's the null terminator, jump to Done
-    STA PPU_DATA       ; Store the byte in memory at $0200 + Y
-    INX               ; Increment X to point to the next character in the string
-    ;INY               ; Increment Y to point to the next memory location
-    JMP DrawMessage          ; Repeat the loop
-
-Done:
-    RTS
 
 .segment "VECTORS"
 	.addr nmi, reset, 0

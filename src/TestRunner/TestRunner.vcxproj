@@ -182,6 +182,9 @@
     <None Include="roms\dual_pattern_tables.nes" />
     <None Include="roms\hor_scroll.nes" />
     <None Include="roms\hor_scroll_full.nes" />
+    <CopyFileToFolders Include="roms\vert_nt_draw.nes">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="roms\vert_scroll.nes" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

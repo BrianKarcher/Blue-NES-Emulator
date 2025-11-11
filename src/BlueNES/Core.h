@@ -62,12 +62,14 @@ public:
 	void UpdateScrollInfo(HWND hwnd);
 	void RecalcLayout(HWND hwnd);
 	void DrawHexDump(HDC hdc, RECT const& rc);
+	void DrawPalette(HWND wnd, HDC hdc);
 	HFONT hFont = nullptr;
 	HDC memDC = nullptr;
 	HBITMAP memBitmap = nullptr;
 	HBITMAP oldBitmap = nullptr;
 	int bufferWidth = 0, bufferHeight = 0;
 	int lineHeight = 16;
+	HWND m_hwndPalette;
 private:
 	int cpuCycleDebt = 0;
 	int ppuCyclesPerCPUCycle = 3;
@@ -84,6 +86,12 @@ private:
 	static LRESULT CALLBACK HexWndProc(
 		HWND hWnd,
 		UINT message,
+		WPARAM wParam,
+		LPARAM lParam
+	);
+	static LRESULT CALLBACK PaletteWndProc(
+		HWND hwnd,
+		UINT msg,
 		WPARAM wParam,
 		LPARAM lParam
 	);
