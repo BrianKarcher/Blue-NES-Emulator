@@ -60,6 +60,10 @@ public:
 	void Clock();
 	bool m_frameComplete = false;
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
+	uint16_t GetVRAMAddress() const { return vramAddr; }
+	void SetVRAMAddress(uint16_t addr) { vramAddr = addr & 0x3FFF; }
+	uint8_t GetPPUStatus() const { return m_ppuStatus; }
+	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
 private:
 	// Sprite data for current scanline
 	struct Sprite {

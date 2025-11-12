@@ -76,7 +76,15 @@ void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
 }
 
 void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
-    //m_prgData.resize(size);
+    if (m_prgData.size() < size) {
+        m_prgData.resize(size);
+	}
+    // Pad PRG data to at least 32KB
+	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
+    // Even if they're zeroes.
+    if (m_prgData.size() < 0x8000) {
+        m_prgData.resize(0x8000);
+    }
     memcpy(m_prgData.data(), data, size);
 }
 
