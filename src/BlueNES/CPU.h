@@ -169,6 +169,7 @@ class Bus;
 class Processor_6502
 {
 public:
+	Processor_6502();
 	void Initialize();
 	void Clock();
 	uint8_t GetA();
@@ -193,10 +194,15 @@ public:
 	void ClearFlag(uint8_t flag);
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
-private:
-	void ADC(uint8_t operand);
-	//void _and(uint8_t operand);
+
 	uint64_t m_cycle_count = 0;
+	void ADC(uint8_t operand);
+	inline uint8_t ReadNextByte();
+	inline uint8_t ReadNextByte(uint8_t offset);
+private:
+	
+	//void _and(uint8_t operand);
+	
 	// Program counter
 	int m_pc;
 	int m_sp = 0xFD;
@@ -220,8 +226,6 @@ private:
 	void ROR(uint8_t& byte);
 	void SBC(uint8_t operand);
 	bool isActive = false;
-	inline uint8_t ReadNextByte();
-	inline uint8_t ReadNextByte(uint8_t offset);
 	inline uint16_t ReadNextWord();
 	inline uint16_t ReadNextWord(uint8_t offset);
 	inline uint16_t ReadNextWordNoCycle(uint8_t offset);

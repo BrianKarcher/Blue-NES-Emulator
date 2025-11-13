@@ -41,13 +41,28 @@ namespace PPUTest
 			ppu.write_register(PPUADDR, 0x00);
 			Assert::AreEqual((uint16_t)0x2000, ppu.GetVRAMAddress());
 		}
+		TEST_METHOD(TestWritePPUSCROLL)
+		{
+			ppu.write_register(PPUSCROLL, 0x05);
+			ppu.write_register(PPUSCROLL, 0x06);
+			auto [x, y] = ppu.GetPPUScroll();
+			Assert::AreEqual((uint8_t)0x05, x);
+			Assert::AreEqual((uint8_t)0x06, y);
+		}
 		TEST_METHOD(TestWritePPUDATA)
 		{
-			ppu.write_register(PPUADDR, 0x20);
-			ppu.write_register(PPUADDR, 0x00);
+			ppu.SetVRAMAddress(0x2000);
 			ppu.write_register(PPUDATA, 0x55);
 			Assert::AreEqual((uint16_t) 0x2001, ppu.GetVRAMAddress());
-			Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x0000));
+			Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
+		}
+		TEST_METHOD(TestWritePPUDATAVert)
+		{
+			ppu.write_register(PPUCTRL, 0x04); // Set vertical increment
+			ppu.SetVRAMAddress(0x2000);
+			ppu.write_register(PPUDATA, 0x55);
+			Assert::AreEqual((uint16_t)0x2020, ppu.GetVRAMAddress());
+			Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
 		}
 	};
 }

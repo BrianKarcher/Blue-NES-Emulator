@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <stdint.h>
 #include <array>
+#include <utility>
 
 #define NAMETABLE_WIDTH 32
 #define NAMETABLE_HEIGHT 30
@@ -64,6 +65,7 @@ public:
 	void SetVRAMAddress(uint16_t addr) { vramAddr = addr & 0x3FFF; }
 	uint8_t GetPPUStatus() const { return m_ppuStatus; }
 	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
+	std::pair<uint8_t, uint8_t> GetPPUScroll() const { return std::make_pair(m_scrollX, m_scrollY); }
 private:
 	// Sprite data for current scanline
 	struct Sprite {

@@ -6,6 +6,30 @@
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
 int cnt = 0;
 int cnt2 = 0;
+using OpFunc = void(*)(Processor_6502&);
+OpFunc opcodeTable[256];
+
+Processor_6502::Processor_6502() {
+	// Initialize opcode table with function pointers for each opcode
+	for (int i = 0; i < 256; ++i) {
+		opcodeTable[i] = &NOP_Implied; // Default to NOP for unimplemented opcodes
+	}
+	// Map specific opcodes to their corresponding functions
+	opcodeTable[ADC_IMMEDIATE] = &ADC_Immediate;
+	opcodeTable[AND_IMMEDIATE] = &Processor_6502::_and;
+	// Add more opcode mappings as needed
+}
+
+void NOP_Implied(Processor_6502& processor) {
+	// No operation
+	processor.m_cycle_count += 2;
+}
+
+void ADC_Immediate(Processor_6502& processor) {
+	// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
+	processor.ADC(processor.ReadNextByte());
+	processor.m_cycle_count += 2;
+}
 
 void Processor_6502::Initialize()
 {
@@ -60,15 +84,10 @@ void Processor_6502::Clock()
 {
 	if (!isActive) return;
 	uint8_t op = bus->read(m_pc++);
+	opcodeTable[op](*this);
+	// Remove the entire switch statement below and replace it with a function pointer table lookup like above for speed optimization.
 	switch (op)
 	{
-		case ADC_IMMEDIATE:
-		{
-			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-			ADC(ReadNextByte());
-			m_cycle_count += 2;
-			break;
-		}
 		case ADC_ZEROPAGE:
 		{
 			// An instruction using zero page addressing mode has only an 8 bit address operand.
@@ -960,8 +979,7 @@ void Processor_6502::Clock()
 		}
 		case NOP_IMPLIED:
 		{
-			// No operation
-			m_cycle_count += 2;
+			NOP_Implied();
 			break;
 		}
 		case ORA_IMMEDIATE:

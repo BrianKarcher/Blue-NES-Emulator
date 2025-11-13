@@ -185,6 +185,10 @@
     <CopyFileToFolders Include="roms\vert_nt_draw.nes">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="roms\Super Mario Bros.nes">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <None Include="roms\snake.nes" />
     <None Include="roms\vert_scroll.nes" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
