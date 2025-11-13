@@ -169,7 +169,6 @@ class Bus;
 class Processor_6502
 {
 public:
-	Processor_6502();
 	void Initialize();
 	void Clock();
 	uint8_t GetA();
@@ -194,20 +193,10 @@ public:
 	void ClearFlag(uint8_t flag);
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
-
+private:
+	void ADC(uint8_t operand);
+	//void _and(uint8_t operand);
 	uint64_t m_cycle_count = 0;
-	
-	inline uint8_t ReadNextByte();
-	inline uint8_t ReadNextByte(uint8_t offset);
-	inline uint16_t ReadNextWord();
-	inline uint16_t ReadNextWord(uint8_t offset);
-	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
-	inline uint8_t ReadByte(uint16_t addr);
-	inline uint16_t ReadIndexedIndirect();
-	inline uint16_t ReadIndirectIndexedNoCycle();
-	inline uint16_t ReadIndirectIndexed();
-	
-	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 	// Program counter
 	int m_pc;
 	int m_sp = 0xFD;
@@ -219,10 +208,9 @@ public:
 
 	// flags
 	uint8_t m_p;
-	void ADC(uint8_t operand);
-	inline void _and(uint8_t operand);
-	inline void ASL(uint8_t& byte);
-	inline bool NearBranch(uint8_t value);
+	void _and(uint8_t operand);
+	void ASL(uint8_t& byte);
+	bool NearBranch(uint8_t value);
 	void BIT(uint8_t data);
 	void cp(uint8_t value, uint8_t operand);
 	void EOR(uint8_t operand);
@@ -231,17 +219,15 @@ public:
 	void ROL(uint8_t& byte);
 	void ROR(uint8_t& byte);
 	void SBC(uint8_t operand);
-private:
-	
-	//void _and(uint8_t operand);
-	
-	
-	
-
-	
-
-	
 	bool isActive = false;
+	inline uint8_t ReadNextByte();
+	inline uint8_t ReadNextByte(uint8_t offset);
+	inline uint16_t ReadNextWord();
+	inline uint16_t ReadNextWord(uint8_t offset);
+	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
+	inline uint8_t ReadByte(uint16_t addr);
+	inline uint16_t ReadIndexedIndirect();
+	inline uint16_t ReadIndirectIndexedNoCycle();
 	inline void SetZero(uint8_t value);
 	inline void SetNegative(uint8_t value);
 	inline void SetOverflow(bool condition);
@@ -249,4 +235,6 @@ private:
 	inline void SetDecimal(bool condition);
 	inline void SetInterrupt(bool condition);
 	inline void SetBreak(bool condition);
+	inline uint16_t ReadIndirectIndexed();
+	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 };

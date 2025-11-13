@@ -6,407 +6,6 @@
 // Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
 int cnt = 0;
 int cnt2 = 0;
-using OpFunc = void(*)(Processor_6502&);
-OpFunc opcodeTable[256];
-
-Processor_6502::Processor_6502() {
-	// Initialize opcode table with function pointers for each opcode
-	for (int i = 0; i < 256; ++i) {
-		opcodeTable[i] = &NOP_Implied; // Default to NOP for unimplemented opcodes
-	}
-	// Map specific opcodes to their corresponding functions
-	opcodeTable[ADC_IMMEDIATE] = &ADC_Immediate;
-	opcodeTable[ADC_ZEROPAGE] = &ADC_ZeroPage;
-	opcodeTable[ADC_ZEROPAGE_X] = &ADC_ZeroPageX;
-	opcodeTable[ADC_ABSOLUTE] = &ADC_Absolute;
-	opcodeTable[ADC_ABSOLUTE_X] = &ADC_AbsoluteX;
-	opcodeTable[ADC_ABSOLUTE_Y] = &ADC_AbsoluteY;
-	opcodeTable[ADC_INDEXEDINDIRECT] = &ADC_IndexedIndirect;
-	opcodeTable[ADC_INDIRECTINDEXED] = &ADC_IndirectIndexed;
-	opcodeTable[AND_IMMEDIATE] = &AND_Immediate;
-	opcodeTable[AND_ZEROPAGE] = &AND_ZeroPage;
-	opcodeTable[AND_ZEROPAGE_X] = &AND_ZeroPageX;
-	opcodeTable[AND_ABSOLUTE] = &AND_Absolute;
-	opcodeTable[AND_ABSOLUTE_X] = &AND_AbsoluteX;
-	opcodeTable[AND_ABSOLUTE_Y] = &AND_AbsoluteY;
-	opcodeTable[AND_INDEXEDINDIRECT] = &AND_IndexedIndirect;
-	opcodeTable[AND_INDIRECTINDEXED] = &AND_IndirectIndexed;
-	opcodeTable[ASL_ACCUMULATOR] = &ASL_Accumulator;
-	opcodeTable[ASL_ZEROPAGE] = &ASL_ZeroPage;
-	opcodeTable[ASL_ZEROPAGE_X] = &ASL_ZeroPageX;
-	opcodeTable[ASL_ABSOLUTE] = &ASL_Absolute;
-	opcodeTable[ASL_ABSOLUTE_X] = &ASL_AbsoluteX;
-	opcodeTable[BCC_RELATIVE] = &BCC_Relative;
-	opcodeTable[BCS_RELATIVE] = &BCS_Relative;
-	opcodeTable[BEQ_RELATIVE] = &BEQ_Relative;
-	opcodeTable[BIT_ZEROPAGE] = &BIT_ZeroPage;
-	opcodeTable[BIT_ABSOLUTE] = &BIT_Absolute;
-	opcodeTable[BMI_RELATIVE] = &BMI_Relative;
-	opcodeTable[BNE_RELATIVE] = &BNE_Relative;
-	opcodeTable[BPL_RELATIVE] = &BPL_Relative;
-	opcodeTable[BRK_IMPLIED] = &BRK_Implied;
-	opcodeTable[BVC_RELATIVE] = &BVC_Relative;
-	opcodeTable[BVS_RELATIVE] = &BVS_Relative;
-	opcodeTable[CLC_IMPLIED] = &CLC_Implied;
-	opcodeTable[CLD_IMPLIED] = &CLD_Implied;
-	opcodeTable[CLI_IMPLIED] = &CLI_Implied;
-	opcodeTable[CLV_IMPLIED] = &CLV_Implied;
-	opcodeTable[CMP_IMMEDIATE] = &CMP_Immediate;
-	opcodeTable[CMP_ZEROPAGE] = &CMP_ZeroPage;
-	opcodeTable[CMP_ZEROPAGE_X] = &CMP_ZeroPageX;
-	opcodeTable[CMP_ABSOLUTE] = &CMP_Absolute;
-	opcodeTable[CMP_ABSOLUTE_X] = &CMP_AbsoluteX;
-	opcodeTable[CMP_ABSOLUTE_Y] = &CMP_AbsoluteY;
-	// Add more opcode mappings as needed
-}
-
-void NOP_Implied(Processor_6502& processor) {
-	// No operation
-	processor.m_cycle_count += 2;
-}
-
-void ADC_Immediate(Processor_6502& processor) {
-	// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-	processor.ADC(processor.ReadNextByte());
-	processor.m_cycle_count += 2;
-}
-
-void ADC_ZeroPage(Processor_6502& processor) {
-	// An instruction using zero page addressing mode has only an 8 bit address operand.
-	// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
-	// where the most significant byte of the address is always zero.
-	uint8_t operand = processor.ReadByte(processor.ReadNextByte());
-	processor.ADC(operand);
-	processor.m_cycle_count += 3;
-}
-
-void ADC_ZeroPageX(Processor_6502& processor) {
-	// The address to be accessed by an instruction using indexed zero page
-	// addressing is calculated by taking the 8 bit zero page address from the
-	// instruction and adding the current value of the X register to it.
-	// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-	uint8_t operand = processor.ReadByte(processor.ReadNextByte(processor.m_x));
-	processor.ADC(operand);
-	processor.m_cycle_count += 4;
-}
-
-void ADC_Absolute(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord();
-	processor.ADC(processor.ReadByte(memoryLocation));
-	processor.m_cycle_count += 4;
-}
-
-void ADC_AbsoluteX(Processor_6502& processor) {
-	// I'm doing the addition in 8-bit mostly because it makes the page crossing easier
-	// to check to increment the cycle count.
-	// I THINK this is less cycles than if I recorded the bytes in a 16-bit value.
-	// This could all be sped up if I programmed it in Assembly but I don't want my code to be
-	// CPU specific.
-	uint16_t memoryLocation = processor.ReadNextWord(processor.m_x);
-	processor.ADC(processor.ReadByte(memoryLocation));
-	processor.m_cycle_count += 4;
-}
-
-void ADC_AbsoluteY(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord(processor.m_y);
-	processor.ADC(processor.ReadByte(memoryLocation));
-	processor.m_cycle_count += 4;
-}
-
-void ADC_IndexedIndirect(Processor_6502& processor) {
-	uint16_t target_addr = processor.ReadIndexedIndirect();
-	uint8_t operand = processor.ReadByte(target_addr);
-	processor.ADC(operand);
-	processor.m_cycle_count += 6;
-}
-
-void ADC_IndirectIndexed(Processor_6502& processor) {
-	uint16_t target_addr = processor.ReadIndirectIndexed();
-	uint8_t operand = processor.ReadByte(target_addr);
-	processor.ADC(operand);
-	processor.m_cycle_count += 5;
-}
-
-void AND_Immediate(Processor_6502& processor) {
-	// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
-	uint8_t operand = processor.ReadNextByte();
-	processor._and(operand);
-	processor.m_cycle_count += 2;
-}
-
-void AND_ZeroPage(Processor_6502& processor) {
-	// An instruction using zero page addressing mode has only an 8 bit address operand.
-	// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
-	// where the most significant byte of the address is always zero.
-	uint8_t operand = processor.ReadByte(processor.ReadNextByte());
-	processor._and(operand);
-	processor.m_cycle_count += 3;
-}
-
-void AND_ZeroPageX(Processor_6502& processor) {
-	// The address to be accessed by an instruction using indexed zero page
-	// addressing is calculated by taking the 8 bit zero page address from the
-	// instruction and adding the current value of the X register to it.
-	// The address calculation wraps around if the sum of the base address and the register exceed $FF.
-	uint8_t operand = processor.ReadByte(processor.ReadNextByte(processor.m_x));
-	processor._and(operand);
-	processor.m_cycle_count += 4;
-}
-
-void AND_Absolute(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord();
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor._and(operand);
-	processor.m_cycle_count += 4;
-}
-
-void AND_AbsoluteX(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord(processor.m_x);
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor._and(operand);
-	processor.m_cycle_count += 4;
-}
-
-void AND_AbsoluteY(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord(m_y);
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor._and(operand);
-	processor.m_cycle_count += 4;
-}
-
-void AND_IndexedIndirect(Processor_6502& processor) {
-	uint16_t target_addr = processor.ReadIndexedIndirect();
-	uint8_t operand = processor.ReadByte(target_addr);
-	processor._and(operand);
-	processor.m_cycle_count += 6;
-}
-
-void AND_IndirectIndexed(Processor_6502& processor) {
-	uint16_t target_addr = processor.ReadIndirectIndexed();
-	uint8_t operand = processor.ReadByte(target_addr);
-	processor._and(operand);
-	processor.m_cycle_count += 5;
-}
-
-void ASL_Accumulator(Processor_6502& processor) {
-	processor.ASL(processor.m_a);
-	processor.m_cycle_count += 2;
-}
-
-void ASL_ZeroPage(Processor_6502& processor) {
-	uint8_t zp_addr = processor.ReadNextByte();
-	uint8_t data = processor.ReadByte(zp_addr);
-	processor.ASL(data);
-	processor.bus->write(zp_addr, data);
-	processor.m_cycle_count += 5;
-}
-
-void ASL_ZeroPageX(Processor_6502& processor) {
-	uint8_t zp_addr = processor.ReadNextByte(processor.m_x);
-	uint8_t data = processor.ReadByte(zp_addr);
-	processor.ASL(data);
-	processor.bus->write(zp_addr, data);
-	processor.m_cycle_count += 6;
-}
-
-void ASL_Absolute(Processor_6502& processor) {
-	uint16_t addr = processor.ReadNextWord();
-	uint8_t data = processor.ReadByte(addr);
-	processor.ASL(data);
-	processor.bus->write(addr, data);
-	processor.m_cycle_count += 6;
-}
-
-void ASL_AbsoluteX(Processor_6502& processor) {
-	uint16_t addr = processor.ReadNextWord(processor.m_x);
-	uint8_t data = processor.ReadByte(addr);
-	processor.ASL(data);
-	processor.bus->write(addr, data);
-	processor.m_cycle_count += 7;
-}
-
-void BCC_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (!(processor.m_p & FLAG_CARRY)) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BCS_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (processor.m_p & FLAG_CARRY) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BEQ_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (processor.m_p & FLAG_ZERO) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BIT_ZeroPage(Processor_6502& processor) {
-	uint8_t zp_addr = processor.ReadNextByte();
-	uint8_t data = processor.ReadByte(zp_addr);
-	processor.BIT(data);
-	processor.m_cycle_count += 3;
-}
-
-void BIT_Absolute(Processor_6502& processor) {
-	uint16_t addr = processor.ReadNextWord();
-	uint8_t data = processor.ReadByte(addr);
-	processor.BIT(data);
-	processor.m_cycle_count += 4;
-}
-
-void BMI_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (processor.m_p & FLAG_NEGATIVE) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BNE_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (!(processor.m_p & FLAG_ZERO)) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BPL_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (!(processor.m_p & FLAG_NEGATIVE)) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BRK_Implied(Processor_6502& processor) {
-	processor.m_p |= FLAG_BREAK; // Set break flag
-	processor.m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
-	// Push PC and P to stack
-	processor.bus->write(0x0100 + processor.m_sp--, (processor.m_pc >> 8) & 0xFF); // Push high byte of PC
-	processor.bus->write(0x0100 + processor.m_sp--, processor.m_pc & 0xFF);        // Push low byte of PC
-	processor.bus->write(0x0100 + processor.m_sp--, processor.m_p);                // Push processor status
-	// Set PC to NMI vector
-	processor.m_pc = (static_cast<uint16_t>(processor.ReadByte(0xFFFF) << 8)) | processor.ReadByte(0xFFFE);
-	// NMI takes 7 cycles
-	processor.m_cycle_count += 7;
-}
-
-void BVC_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (!(processor.m_p & FLAG_OVERFLOW)) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void BVS_Relative(Processor_6502& processor) {
-	uint8_t offset = processor.ReadNextByte();
-	if (processor.m_p & FLAG_OVERFLOW) {
-		if (processor.NearBranch(offset))
-			processor.m_cycle_count++; // Extra cycle for page crossing
-		processor.m_cycle_count += 3; // Branch taken
-	}
-	else {
-		processor.m_cycle_count += 2; // Branch not taken
-	}
-}
-
-void CLC_Implied(Processor_6502& processor) {
-	processor.m_p &= ~FLAG_CARRY; // Clear carry flag
-	processor.m_cycle_count += 2;
-}
-
-void CLD_Implied(Processor_6502& processor) {
-	processor.m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
-	processor.m_cycle_count += 2;
-}
-
-void CLI_Implied(Processor_6502& processor) {
-	processor.m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
-	processor.m_cycle_count += 2;
-}
-
-void CLV_Implied(Processor_6502& processor) {
-	processor.m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
-	processor.m_cycle_count += 2;
-}
-
-void CMP_Immediate(Processor_6502& processor) {
-	uint8_t operand = processor.ReadNextByte();
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 2;
-}
-
-void CMP_ZeroPage(Processor_6502& processor) {
-	uint8_t operand = processor.ReadByte(processor.ReadNextByte());
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 3;
-}
-
-void CMP_ZeroPageX(Processor_6502& processor) {
-	uint8_t zp_addr = processor.ReadNextByte(processor.m_x);
-	uint8_t operand = processor.ReadByte(zp_addr);
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 4;
-}
-
-void CMP_Absolute(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord();	
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 4;
-}
-
-void CMP_AbsoluteX(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord(processor.m_x);
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 4;
-}
-
-void CMP_AbsoluteY(Processor_6502& processor) {
-	uint16_t memoryLocation = processor.ReadNextWord(processor.m_y);
-	uint8_t operand = processor.ReadByte(memoryLocation);
-	processor.cp(processor.m_a, operand);
-	processor.m_cycle_count += 4;
-}
 
 void Processor_6502::Initialize()
 {
@@ -461,10 +60,397 @@ void Processor_6502::Clock()
 {
 	if (!isActive) return;
 	uint8_t op = bus->read(m_pc++);
-	opcodeTable[op](*this);
-	// Remove the entire switch statement below and replace it with a function pointer table lookup like above for speed optimization.
 	switch (op)
 	{
+		case ADC_IMMEDIATE:
+		{
+			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
+			ADC(ReadNextByte());
+			m_cycle_count += 2;
+			break;
+		}
+		case ADC_ZEROPAGE:
+		{
+			// An instruction using zero page addressing mode has only an 8 bit address operand.
+			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
+			// where the most significant byte of the address is always zero.
+			uint8_t zp_addr = ReadNextByte();
+			ADC(ReadByte(zp_addr));
+			m_cycle_count += 3;
+			break;
+		}
+		case ADC_ZEROPAGE_X:
+		{
+			// The address to be accessed by an instruction using indexed zero page
+			// addressing is calculated by taking the 8 bit zero page address from the
+			// instruction and adding the current value of the X register to it.
+			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t offset = ReadByte(zp_addr);
+			ADC(offset);
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_ABSOLUTE:
+		{
+			uint16_t memoryLocation = ReadNextWord();
+			ADC(bus->read(memoryLocation));
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_ABSOLUTE_X:
+		{
+			// I'm doing the addition in 8-bit mostly because it makes the page crossing easier
+			// to check to increment the cycle count.
+			// I THINK this is less cycles than if I recorded the bytes in a 16-bit value.
+			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
+			// CPU specific.
+			uint16_t memoryLocation = ReadNextWord(m_x);
+			ADC(bus->read(memoryLocation));
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_ABSOLUTE_Y:
+		{
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			ADC(ReadByte(memoryLocation));
+			m_cycle_count += 4;
+			break;
+		}
+		case ADC_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
+			ADC(operand);
+			m_cycle_count += 6;
+			break;
+		}
+		case ADC_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
+			ADC(operand);
+			m_cycle_count += 5;
+			break;
+		}
+		case AND_IMMEDIATE:
+		{
+			// Immediate mode gets the data from ROM, not RAM. It is the next byte after the op code.
+			uint8_t operand = ReadNextByte();
+			_and(operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case AND_ZEROPAGE:
+		{
+			// An instruction using zero page addressing mode has only an 8 bit address operand.
+			// This limits it to addressing only the first 256 bytes of memory (e.g. $0000 to $00FF)
+			// where the most significant byte of the address is always zero.
+			uint8_t operand = ReadByte(ReadNextByte());
+			_and(operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case AND_ZEROPAGE_X:
+		{
+			// The address to be accessed by an instruction using indexed zero page
+			// addressing is calculated by taking the 8 bit zero page address from the
+			// instruction and adding the current value of the X register to it.
+			// The address calculation wraps around if the sum of the base address and the register exceed $FF.
+			uint8_t operand = ReadByte(ReadNextByte(m_x));
+			_and(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case AND_ABSOLUTE:
+		{
+			uint16_t memoryLocation = ReadNextWord();
+			uint8_t operand = ReadByte(memoryLocation);
+			_and(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case AND_ABSOLUTE_X:
+		{
+			uint16_t memoryLocation = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(memoryLocation);
+			_and(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case AND_ABSOLUTE_Y:
+		{
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(memoryLocation);
+			_and(operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case AND_INDEXEDINDIRECT:
+		{
+			uint16_t target_addr = ReadIndexedIndirect();
+			uint8_t operand = ReadByte(target_addr);
+			_and(operand);
+			m_cycle_count += 6;
+			break;
+		}
+		case AND_INDIRECTINDEXED:
+		{
+			uint16_t target_addr = ReadIndirectIndexed();
+			uint8_t operand = ReadByte(target_addr);
+			_and(operand);
+			m_cycle_count += 5;
+			break;
+		}
+		case ASL_ACCUMULATOR:
+		{
+			ASL(m_a);
+			m_cycle_count += 2;
+			break;
+		}
+		case ASL_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			ASL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 5;
+			break;
+		}
+		case ASL_ZEROPAGE_X:
+		{
+			uint8_t zp_addr = ReadNextByte(m_x);
+			uint8_t data = ReadByte(zp_addr);
+			ASL(data);
+			bus->write(zp_addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ASL_ABSOLUTE:
+		{
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = ReadByte(addr);
+			ASL(data);
+			bus->write(addr, data);
+			m_cycle_count += 6;
+			break;
+		}
+		case ASL_ABSOLUTE_X:
+		{
+			uint16_t addr = ReadNextWord(m_x);
+			uint8_t data = ReadByte(addr);
+			ASL(data);
+			bus->write(addr, data);
+			m_cycle_count += 7;
+			break;
+		}
+		case BCC_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (!(m_p & FLAG_CARRY)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BCS_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (m_p & FLAG_CARRY) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BEQ_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (m_p & FLAG_ZERO) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BIT_ZEROPAGE:
+		{
+			uint8_t zp_addr = ReadNextByte();
+			uint8_t data = ReadByte(zp_addr);
+			BIT(data);
+			break;
+		}
+		case BIT_ABSOLUTE:
+		{
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
+			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t data = ReadByte(addr);
+			BIT(data);
+			break;
+		}
+		case BMI_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (m_p & FLAG_NEGATIVE) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BNE_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (!(m_p & FLAG_ZERO)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BPL_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (!(m_p & FLAG_NEGATIVE)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BRK_IMPLIED:
+		{
+			m_p |= FLAG_BREAK; // Set break flag
+			m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
+			// Push PC and P to stack
+			bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
+			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
+			// Set PC to NMI vector
+			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
+			// NMI takes 7 cycles
+			m_cycle_count += 7;
+			break;
+		}
+		case BVC_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (!(m_p & FLAG_OVERFLOW)) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case BVS_RELATIVE:
+		{
+			uint8_t offset = ReadNextByte();
+			if (m_p & FLAG_OVERFLOW) {
+				if (NearBranch(offset))
+					m_cycle_count++; // Extra cycle for page crossing
+				m_cycle_count += 3; // Branch taken
+			}
+			else {
+				m_cycle_count += 2; // Branch not taken
+			}
+			break;
+		}
+		case CLC_IMPLIED:
+		{
+			m_p &= ~FLAG_CARRY; // Clear carry flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLD_IMPLIED:
+		{
+			m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLI_IMPLIED:
+		{
+			m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CLV_IMPLIED:
+		{
+			m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
+			m_cycle_count += 2;
+			break;
+		}
+		case CMP_IMMEDIATE:
+		{
+			uint8_t operand = ReadNextByte();
+			cp(m_a, operand);
+			m_cycle_count += 2;
+			break;
+		}
+		case CMP_ZEROPAGE:
+		{
+			uint8_t operand = ReadByte(ReadNextByte());
+			cp(m_a, operand);
+			m_cycle_count += 3;
+			break;
+		}
+		case CMP_ZEROPAGE_X:
+		{
+			uint8_t operand = ReadByte(ReadNextByte(m_x));
+			cp(m_a, operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE:
+		{
+			uint8_t loByte = ReadNextByte();
+			uint8_t hiByte = ReadNextByte();
+			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
+			uint8_t operand = ReadByte(memoryLocation);
+			cp(m_a, operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE_X:
+		{
+			uint16_t memoryLocation = ReadNextWord(m_x);
+			uint8_t operand = ReadByte(memoryLocation);
+			cp(m_a, operand);
+			m_cycle_count += 4;
+			break;
+		}
+		case CMP_ABSOLUTE_Y:
+		{
+			uint16_t memoryLocation = ReadNextWord(m_y);
+			uint8_t operand = ReadByte(memoryLocation);
+			cp(m_a, operand);
+			m_cycle_count += 4;
+			break;
+		}
 		case CMP_INDEXEDINDIRECT:
 		{
 			uint16_t target_addr = ReadIndexedIndirect();
@@ -974,7 +960,8 @@ void Processor_6502::Clock()
 		}
 		case NOP_IMPLIED:
 		{
-			NOP_Implied();
+			// No operation
+			m_cycle_count += 2;
 			break;
 		}
 		case ORA_IMMEDIATE:
@@ -1640,7 +1627,7 @@ void Processor_6502::ADC(uint8_t operand)
 	}
 }
 
-inline void Processor_6502::_and(uint8_t operand)
+void Processor_6502::_and(uint8_t operand)
 {
 	// AND operation with the accumulator
 	m_a &= operand;
@@ -1660,7 +1647,7 @@ inline void Processor_6502::_and(uint8_t operand)
 	}
 }
 
-inline void Processor_6502::ASL(uint8_t& byte)
+void Processor_6502::ASL(uint8_t& byte)
 {
 	// Set/clear carry flag based on bit 7
 	if (byte & 0x80) {
@@ -1687,7 +1674,7 @@ inline void Processor_6502::ASL(uint8_t& byte)
 	}
 }
 
-inline bool Processor_6502::NearBranch(uint8_t value) {
+bool Processor_6502::NearBranch(uint8_t value) {
 	int8_t offset = static_cast<int8_t>(value); // Convert to signed
 	// Determine if page crossed
 	uint8_t old_pc_hi = (m_pc & 0xFF00) >> 8;

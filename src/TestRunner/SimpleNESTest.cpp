@@ -24,7 +24,9 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
     //const char* testFile = "roms\\vert_scroll.nes";
     //const char* testFile = "roms\\hor_scroll_full.nes";
     //const char* testFile = "roms\\Super Mario Bros.nes";
-    const char* testFile = "roms\\snake.nes";
+    //const char* testFile = "roms\\snake.nes";
+    const char* testFile = "roms\\vert_nt_draw.nes";
+    
     //uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
 	m_runner->GetCore()->cart.LoadROM(testFile);
 
