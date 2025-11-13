@@ -208,6 +208,9 @@ public:
 	inline uint16_t ReadIndirectIndexed();
 	
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
+	// Program counter
+	int m_pc;
+	int m_sp = 0xFD;
 
 	// Registers
 	uint8_t m_a;
@@ -232,9 +235,8 @@ private:
 	
 	//void _and(uint8_t operand);
 	
-	// Program counter
-	int m_pc;
-	int m_sp = 0xFD;
+	
+	
 
 	
 

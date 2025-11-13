@@ -40,6 +40,23 @@ Processor_6502::Processor_6502() {
 	opcodeTable[BCS_RELATIVE] = &BCS_Relative;
 	opcodeTable[BEQ_RELATIVE] = &BEQ_Relative;
 	opcodeTable[BIT_ZEROPAGE] = &BIT_ZeroPage;
+	opcodeTable[BIT_ABSOLUTE] = &BIT_Absolute;
+	opcodeTable[BMI_RELATIVE] = &BMI_Relative;
+	opcodeTable[BNE_RELATIVE] = &BNE_Relative;
+	opcodeTable[BPL_RELATIVE] = &BPL_Relative;
+	opcodeTable[BRK_IMPLIED] = &BRK_Implied;
+	opcodeTable[BVC_RELATIVE] = &BVC_Relative;
+	opcodeTable[BVS_RELATIVE] = &BVS_Relative;
+	opcodeTable[CLC_IMPLIED] = &CLC_Implied;
+	opcodeTable[CLD_IMPLIED] = &CLD_Implied;
+	opcodeTable[CLI_IMPLIED] = &CLI_Implied;
+	opcodeTable[CLV_IMPLIED] = &CLV_Implied;
+	opcodeTable[CMP_IMMEDIATE] = &CMP_Immediate;
+	opcodeTable[CMP_ZEROPAGE] = &CMP_ZeroPage;
+	opcodeTable[CMP_ZEROPAGE_X] = &CMP_ZeroPageX;
+	opcodeTable[CMP_ABSOLUTE] = &CMP_Absolute;
+	opcodeTable[CMP_ABSOLUTE_X] = &CMP_AbsoluteX;
+	opcodeTable[CMP_ABSOLUTE_Y] = &CMP_AbsoluteY;
 	// Add more opcode mappings as needed
 }
 
@@ -251,6 +268,146 @@ void BIT_ZeroPage(Processor_6502& processor) {
 	processor.m_cycle_count += 3;
 }
 
+void BIT_Absolute(Processor_6502& processor) {
+	uint16_t addr = processor.ReadNextWord();
+	uint8_t data = processor.ReadByte(addr);
+	processor.BIT(data);
+	processor.m_cycle_count += 4;
+}
+
+void BMI_Relative(Processor_6502& processor) {
+	uint8_t offset = processor.ReadNextByte();
+	if (processor.m_p & FLAG_NEGATIVE) {
+		if (processor.NearBranch(offset))
+			processor.m_cycle_count++; // Extra cycle for page crossing
+		processor.m_cycle_count += 3; // Branch taken
+	}
+	else {
+		processor.m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void BNE_Relative(Processor_6502& processor) {
+	uint8_t offset = processor.ReadNextByte();
+	if (!(processor.m_p & FLAG_ZERO)) {
+		if (processor.NearBranch(offset))
+			processor.m_cycle_count++; // Extra cycle for page crossing
+		processor.m_cycle_count += 3; // Branch taken
+	}
+	else {
+		processor.m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void BPL_Relative(Processor_6502& processor) {
+	uint8_t offset = processor.ReadNextByte();
+	if (!(processor.m_p & FLAG_NEGATIVE)) {
+		if (processor.NearBranch(offset))
+			processor.m_cycle_count++; // Extra cycle for page crossing
+		processor.m_cycle_count += 3; // Branch taken
+	}
+	else {
+		processor.m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void BRK_Implied(Processor_6502& processor) {
+	processor.m_p |= FLAG_BREAK; // Set break flag
+	processor.m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
+	// Push PC and P to stack
+	processor.bus->write(0x0100 + processor.m_sp--, (processor.m_pc >> 8) & 0xFF); // Push high byte of PC
+	processor.bus->write(0x0100 + processor.m_sp--, processor.m_pc & 0xFF);        // Push low byte of PC
+	processor.bus->write(0x0100 + processor.m_sp--, processor.m_p);                // Push processor status
+	// Set PC to NMI vector
+	processor.m_pc = (static_cast<uint16_t>(processor.ReadByte(0xFFFF) << 8)) | processor.ReadByte(0xFFFE);
+	// NMI takes 7 cycles
+	processor.m_cycle_count += 7;
+}
+
+void BVC_Relative(Processor_6502& processor) {
+	uint8_t offset = processor.ReadNextByte();
+	if (!(processor.m_p & FLAG_OVERFLOW)) {
+		if (processor.NearBranch(offset))
+			processor.m_cycle_count++; // Extra cycle for page crossing
+		processor.m_cycle_count += 3; // Branch taken
+	}
+	else {
+		processor.m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void BVS_Relative(Processor_6502& processor) {
+	uint8_t offset = processor.ReadNextByte();
+	if (processor.m_p & FLAG_OVERFLOW) {
+		if (processor.NearBranch(offset))
+			processor.m_cycle_count++; // Extra cycle for page crossing
+		processor.m_cycle_count += 3; // Branch taken
+	}
+	else {
+		processor.m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void CLC_Implied(Processor_6502& processor) {
+	processor.m_p &= ~FLAG_CARRY; // Clear carry flag
+	processor.m_cycle_count += 2;
+}
+
+void CLD_Implied(Processor_6502& processor) {
+	processor.m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
+	processor.m_cycle_count += 2;
+}
+
+void CLI_Implied(Processor_6502& processor) {
+	processor.m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
+	processor.m_cycle_count += 2;
+}
+
+void CLV_Implied(Processor_6502& processor) {
+	processor.m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
+	processor.m_cycle_count += 2;
+}
+
+void CMP_Immediate(Processor_6502& processor) {
+	uint8_t operand = processor.ReadNextByte();
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 2;
+}
+
+void CMP_ZeroPage(Processor_6502& processor) {
+	uint8_t operand = processor.ReadByte(processor.ReadNextByte());
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 3;
+}
+
+void CMP_ZeroPageX(Processor_6502& processor) {
+	uint8_t zp_addr = processor.ReadNextByte(processor.m_x);
+	uint8_t operand = processor.ReadByte(zp_addr);
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 4;
+}
+
+void CMP_Absolute(Processor_6502& processor) {
+	uint16_t memoryLocation = processor.ReadNextWord();	
+	uint8_t operand = processor.ReadByte(memoryLocation);
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 4;
+}
+
+void CMP_AbsoluteX(Processor_6502& processor) {
+	uint16_t memoryLocation = processor.ReadNextWord(processor.m_x);
+	uint8_t operand = processor.ReadByte(memoryLocation);
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 4;
+}
+
+void CMP_AbsoluteY(Processor_6502& processor) {
+	uint16_t memoryLocation = processor.ReadNextWord(processor.m_y);
+	uint8_t operand = processor.ReadByte(memoryLocation);
+	processor.cp(processor.m_a, operand);
+	processor.m_cycle_count += 4;
+}
+
 void Processor_6502::Initialize()
 {
 	m_pc = 0x8000;
@@ -308,165 +465,6 @@ void Processor_6502::Clock()
 	// Remove the entire switch statement below and replace it with a function pointer table lookup like above for speed optimization.
 	switch (op)
 	{
-		case BIT_ABSOLUTE:
-		{
-			uint8_t loByte = ReadNextByte();
-			uint8_t hiByte = ReadNextByte();
-			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t data = ReadByte(addr);
-			BIT(data);
-			break;
-		}
-		case BMI_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (m_p & FLAG_NEGATIVE) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BNE_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (!(m_p & FLAG_ZERO)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BPL_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (!(m_p & FLAG_NEGATIVE)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BRK_IMPLIED:
-		{
-			m_p |= FLAG_BREAK; // Set break flag
-			m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
-			// Push PC and P to stack
-			bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
-			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
-			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
-			// Set PC to NMI vector
-			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
-			// NMI takes 7 cycles
-			m_cycle_count += 7;
-			break;
-		}
-		case BVC_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (!(m_p & FLAG_OVERFLOW)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BVS_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (m_p & FLAG_OVERFLOW) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case CLC_IMPLIED:
-		{
-			m_p &= ~FLAG_CARRY; // Clear carry flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CLD_IMPLIED:
-		{
-			m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CLI_IMPLIED:
-		{
-			m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CLV_IMPLIED:
-		{
-			m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CMP_IMMEDIATE:
-		{
-			uint8_t operand = ReadNextByte();
-			cp(m_a, operand);
-			m_cycle_count += 2;
-			break;
-		}
-		case CMP_ZEROPAGE:
-		{
-			uint8_t operand = ReadByte(ReadNextByte());
-			cp(m_a, operand);
-			m_cycle_count += 3;
-			break;
-		}
-		case CMP_ZEROPAGE_X:
-		{
-			uint8_t operand = ReadByte(ReadNextByte(m_x));
-			cp(m_a, operand);
-			m_cycle_count += 4;
-			break;
-		}
-		case CMP_ABSOLUTE:
-		{
-			uint8_t loByte = ReadNextByte();
-			uint8_t hiByte = ReadNextByte();
-			uint16_t memoryLocation = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			uint8_t operand = ReadByte(memoryLocation);
-			cp(m_a, operand);
-			m_cycle_count += 4;
-			break;
-		}
-		case CMP_ABSOLUTE_X:
-		{
-			uint16_t memoryLocation = ReadNextWord(m_x);
-			uint8_t operand = ReadByte(memoryLocation);
-			cp(m_a, operand);
-			m_cycle_count += 4;
-			break;
-		}
-		case CMP_ABSOLUTE_Y:
-		{
-			uint16_t memoryLocation = ReadNextWord(m_y);
-			uint8_t operand = ReadByte(memoryLocation);
-			cp(m_a, operand);
-			m_cycle_count += 4;
-			break;
-		}
 		case CMP_INDEXEDINDIRECT:
 		{
 			uint16_t target_addr = ReadIndexedIndirect();
