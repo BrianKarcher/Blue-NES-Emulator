@@ -80,7 +80,10 @@ private:
 	
 	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 
+	// register v in hardware PPU
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
+	// register t in hardware PPU
+	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	// TODO: This can be optimized to use less memory if needed
 	// Change to 0x800 (2 KB)
 	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM

@@ -77,12 +77,13 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			if (!writeToggle)
 			{
 				// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
-				// TODO: Test this to make sure uint16_t cast works as expected
-				vramAddr = (vramAddr & 0x00FF) | (value & 0x3F) << 8; // First write (high byte)
+				tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
+				// vramAddr = (vramAddr & 0x00FF) | (value & 0x3F) << 8; // First write (high byte)
 			}
 			else
 			{
-				vramAddr = (vramAddr & 0xFF00) | value; // Second write (low byte)
+				tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
+				vramAddr = tempVramAddr; // Second write (low byte)
 			}
 			// If the program doesn't do two writes in a row, the behavior is undefined.
 			// It's their fault if their code is broken.

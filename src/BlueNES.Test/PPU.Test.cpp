@@ -38,7 +38,11 @@ namespace PPUTest
 		TEST_METHOD(TestWritePPUADDR)
 		{
 			ppu.write_register(PPUADDR, 0x20);
+			// The first write sets the high byte of the TEMP address
+			// But does not update the actual VRAM address yet
+			Assert::AreEqual((uint16_t)0x0000, ppu.GetVRAMAddress());
 			ppu.write_register(PPUADDR, 0x00);
+			// The second write sets the low byte and updates the VRAM address
 			Assert::AreEqual((uint16_t)0x2000, ppu.GetVRAMAddress());
 		}
 		TEST_METHOD(TestWritePPUSCROLL)
