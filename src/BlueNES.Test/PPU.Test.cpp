@@ -58,6 +58,8 @@ namespace PPUTest
 			ppu.SetVRAMAddress(0x2000);
 			ppu.write_register(PPUDATA, 0x55);
 			Assert::AreEqual((uint16_t) 0x2001, ppu.GetVRAMAddress());
+			// Fill the read buffer
+			ppu.ReadVRAM(0x2000);
 			Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
 		}
 		TEST_METHOD(TestWritePPUDATAVert)
@@ -66,7 +68,32 @@ namespace PPUTest
 			ppu.SetVRAMAddress(0x2000);
 			ppu.write_register(PPUDATA, 0x55);
 			Assert::AreEqual((uint16_t)0x2020, ppu.GetVRAMAddress());
+			// Fill the read buffer
+			ppu.ReadVRAM(0x2000);
 			Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
+		}
+
+		TEST_METHOD(TestReadPPUDATA)
+		{
+			ppu.SetVRAMAddress(0x2000);
+			ppu.write_register(PPUDATA, 0x55);
+			ppu.SetVRAMAddress(0x2000);
+			// First read returns the buffered value (initially 0)
+			Assert::AreEqual((uint8_t)0x00, ppu.read_register(PPUDATA));
+			// Second read returns the actual value
+			Assert::AreEqual((uint8_t)0x55, ppu.read_register(PPUDATA));
+		}
+		TEST_METHOD(TestReadPPUDATAx2)
+		{
+			ppu.SetVRAMAddress(0x2000);
+			ppu.write_register(PPUDATA, 0x55);
+			ppu.write_register(PPUDATA, 0x66);
+			ppu.SetVRAMAddress(0x2000);
+			// First read returns the buffered value (initially 0)
+			Assert::AreEqual((uint8_t)0x00, ppu.read_register(PPUDATA));
+			// Second read returns the actual value
+			Assert::AreEqual((uint8_t)0x55, ppu.read_register(PPUDATA));
+			Assert::AreEqual((uint8_t)0x66, ppu.read_register(PPUDATA));
 		}
 	};
 }

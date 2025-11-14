@@ -171,7 +171,8 @@ uint8_t NesPPU::ReadVRAM(uint16_t addr)
 		// Reading from nametables and attribute tables
 		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
 		mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
-		value = m_vram[mirroredAddr];
+		value = ppuDataBuffer;
+		ppuDataBuffer = m_vram[mirroredAddr];
 	}
 	else if (addr < 0x4000) {
 		// Reading from palette RAM (mirrored every 32 bytes)
@@ -181,6 +182,8 @@ uint8_t NesPPU::ReadVRAM(uint16_t addr)
 			paletteAddr = 0;
 		}
 		value = paletteTable[paletteAddr];
+		// But buffer is filled with the underlying nametable byte
+		ppuDataBuffer = m_vram[addr & 0x2FFF];
 	}
 	
 	return value;
