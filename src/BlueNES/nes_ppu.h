@@ -4,6 +4,8 @@
 #include <array>
 #include <utility>
 
+#define NMI_ENABLE 0x80
+
 #define NAMETABLE_WIDTH 32
 #define NAMETABLE_HEIGHT 30
 #define TILE_SIZE 8

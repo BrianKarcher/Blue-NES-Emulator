@@ -582,8 +582,8 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 
 void Core::LoadGame(const std::wstring& filePath)
 {
-    cpu.PowerOn();
     cart.LoadROM(filePath);
+    cpu.PowerOn();
     isPlaying = true;
 }
 

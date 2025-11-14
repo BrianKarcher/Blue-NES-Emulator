@@ -9,7 +9,7 @@ int cnt2 = 0;
 
 void Processor_6502::PowerOn()
 {
-	m_pc = 0x8000;
+	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
 	m_p = 0;
 	m_a = 0;
 	m_x = 0;

@@ -48,12 +48,6 @@ ines_file_t* INESLoader::load_data_from_ines(const wchar_t* filename) {
     }
 
     // Calculate sizes
-    if (header.prg_rom_size < 2) {
-		MessageBoxA(NULL, "PRG-ROM size is less than 32KB. The emulator requires at least 32KB of PRG-ROM to function properly.", "Error", MB_OK | MB_ICONERROR);
-        printf("Error: PRG-ROM size is less than 32KB\n");
-        fclose(file);
-        return NULL;
-	}
     size_t prg_rom_size = header.prg_rom_size * 16384;  // 16KB units
     size_t chr_rom_size = header.chr_rom_size * 8192;   // 8KB units
     size_t trainer_size = (header.flags6 & 0x04) ? 512 : 0;

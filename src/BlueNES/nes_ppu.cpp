@@ -341,7 +341,10 @@ void NesPPU::Clock() {
 	if (m_scanline == 241 && m_cycle == 1) {
 		m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
 		m_frameComplete = true;
-		bus->cpu->NMI();
+		if (m_ppuCtrl & NMI_ENABLE) {
+			// Trigger NMI if enabled
+			bus->cpu->NMI();
+		}
 	}
 
 	// Pre-render scanline (261)

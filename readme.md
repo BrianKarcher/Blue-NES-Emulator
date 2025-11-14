@@ -12,6 +12,7 @@ TODO:
 Sprite 0 hit
 Audio (A bunch of test ROM's use audio cues)
 MMC1 (lower priority)
+16KB PRG ROM support (higher priority)
 
 
 
