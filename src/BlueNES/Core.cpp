@@ -729,6 +729,7 @@ void Core::RunMessageLoop()
     double targetFrameTime = 1.0 / 60.0;
     double accumulator = 0.0;
 	double elapsedTime = 0.0;
+    double nextUpdate = 0.0;
     int frameCount = 0;
     int nextCycleCount = 30000;
 
@@ -794,10 +795,11 @@ void Core::RunMessageLoop()
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);
+            ReleaseDC(m_hwnd, hdc);
             // --- FPS calculation every second ---
 
             elapsedTime += targetFrameTime;
-            if (elapsedTime >= 1.0) {
+            if (elapsedTime >= nextUpdate) {
 				// Updates the hex window
 				// TODO - Make this more efficient by only updating changed areas
 				// and also in real time rather than once per second
@@ -805,8 +807,7 @@ void Core::RunMessageLoop()
                 double fps = frameCount / elapsedTime;
                 std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
                 SetWindowText(m_hwnd, title.c_str());
-                frameCount = 0;
-                elapsedTime = 0.0;
+				nextUpdate = elapsedTime + 1.0;
             }
         }
         else {
