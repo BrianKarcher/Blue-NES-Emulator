@@ -16,7 +16,7 @@ public:
 		FOUR_SCREEN = 4
 	};
 	Cartridge();
-	void LoadROM(const std::string& filePath);
+	void LoadROM(const std::wstring& filePath);
 	MirrorMode GetMirrorMode();
 	void SetMirrorMode(MirrorMode mirrorMode);
 	// Used for testing

@@ -169,7 +169,8 @@ class Bus;
 class Processor_6502
 {
 public:
-	void Initialize();
+	// Power On and Reset are different
+	void PowerOn();
 	void Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);

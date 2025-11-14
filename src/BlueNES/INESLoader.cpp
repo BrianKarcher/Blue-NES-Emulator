@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <Windows.h>
+#include <fstream>
 
 ines_file_t ines_file;
 
@@ -15,12 +16,13 @@ bool INESLoader::validate_ines_header(const ines_header_t* header) {
 }
 
 // Function to load CHR-ROM data from iNES file
-ines_file_t* INESLoader::load_data_from_ines(const std::string& filename) {
+ines_file_t* INESLoader::load_data_from_ines(const wchar_t* filename) {
     FILE* file = nullptr;
+    errno_t err = _wfopen_s(&file, filename, L"rb");
     
-    if (fopen_s(&file, filename.c_str(), "rb") != 0) {
-        printf("Error: Cannot open file %s\n", filename.c_str());
-        return NULL;
+    if (err != 0 || file == nullptr) {
+        MessageBoxA(NULL, "The specified iNES file does not exist or cannot be accessed.", "Error", MB_OK | MB_ICONERROR);
+        return nullptr;
     }
 
     // Read and validate header

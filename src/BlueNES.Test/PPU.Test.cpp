@@ -25,7 +25,7 @@ namespace PPUTest
 			bus.cpu = &processor;
 			processor.bus = &bus;
 			ppu.bus = &bus;
-			processor.Initialize();
+			processor.PowerOn();
 			processor.Activate(true);
 		}
 

@@ -77,6 +77,7 @@ private:
 	// Draw content.
 	bool DrawToWindow(HDC dc);
 	void PPURenderToBackBuffer();
+	void LoadGame(const std::wstring& filePath);
 	// The windows procedure.
 	static LRESULT CALLBACK MainWndProc(
 		HWND hWnd,

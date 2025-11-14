@@ -6,7 +6,7 @@ Cartridge::Cartridge() {
 
 }
 
-void Cartridge::LoadROM(const std::string& filePath) {
+void Cartridge::LoadROM(const std::wstring& filePath) {
     INESLoader ines;
     ines_file_t* inesFile = ines.load_data_from_ines(filePath.c_str());
 

@@ -7,11 +7,16 @@
 int cnt = 0;
 int cnt2 = 0;
 
-void Processor_6502::Initialize()
+void Processor_6502::PowerOn()
 {
 	m_pc = 0x8000;
 	m_p = 0;
+	m_a = 0;
+	m_x = 0;
+	m_y = 0;
+	m_sp = 0xFD;
 	m_cycle_count = 0;
+	isActive = true;
 }
 
 void Processor_6502::Activate(bool active)
@@ -27,6 +32,7 @@ void Processor_6502::Reset()
 	m_x = 0;
 	m_y = 0;
 	m_p = 0x24; // Set unused flag bit to 1, others to 0
+	m_sp = 0xFD;
 	m_cycle_count = 0;
 }
 

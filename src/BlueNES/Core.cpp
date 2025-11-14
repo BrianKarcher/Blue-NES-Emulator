@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <codecvt>
 #include "resource.h"
+#include <commdlg.h>
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -132,7 +133,6 @@ HRESULT Core::Initialize()
     ppu.bus = &bus;
     ppu.core = this;
 	cpu.bus = &bus;
-    cpu.Initialize();
     ppu.set_hwnd(m_hwnd);
     HDC hdc = GetDC(m_hwnd);
     hdcMem = CreateCompatibleDC(hdc);
@@ -455,6 +455,34 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
     }
 }
 
+bool ShowOpenDialog(HWND hwnd, std::wstring& filePath)
+{
+    OPENFILENAME ofn;
+    wchar_t szFile[MAX_PATH] = { 0 };
+
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hwnd;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(szFile[0]);
+
+    // File filters (each filter is "Name\0Pattern\0")
+    ofn.lpstrFilter = L"All Files\0*.*\0NES ROMs\0*.nes\0";
+    ofn.nFilterIndex = 1;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileName(&ofn))
+    {
+        MessageBox(hwnd, szFile, L"You selected:", MB_OK);
+        filePath = szFile;
+		return true;
+
+        // Example: pass file path to your emulator
+        // LoadRom(szFile);
+    }
+    return false;
+}
+
 LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
@@ -489,6 +517,15 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             case WM_COMMAND:
                 switch (LOWORD(wParam))
                 {
+                case ID_FILE_OPEN:
+                {
+                    std::wstring filePath;
+                    if (ShowOpenDialog(hwnd, filePath))
+                    {
+                        pMain->LoadGame(filePath);
+                    }
+                    break;
+                }
                 case ID_FILE_EXIT:
                     PostQuitMessage(0);
 					break;
@@ -541,6 +578,13 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     }
 
     return result;
+}
+
+void Core::LoadGame(const std::wstring& filePath)
+{
+    cpu.PowerOn();
+    cart.LoadROM(filePath);
+    isPlaying = true;
 }
 
 LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -649,13 +693,6 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
         FillRect(hdc, &rect, brush);
         DeleteObject(brush);
     }
-}
-
-void Core::LoadGame(
-    const std::string& szFileName
-)
-{
-	cart.LoadROM(szFileName);
 }
 
 HWND Core::GetWindowHandle()

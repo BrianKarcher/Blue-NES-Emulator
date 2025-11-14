@@ -22,7 +22,7 @@ namespace BlueNESTest
 			bus.cart = &cart;
 			bus.cpu = &processor;
 			processor.bus = &bus;
-			processor.Initialize();
+			processor.PowerOn();
 			processor.Activate(true);
 		}
 
