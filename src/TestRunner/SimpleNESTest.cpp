@@ -10,6 +10,7 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
 {
     m_runner = &runner;
     m_core = runner.GetCore();
+    m_core->isPlaying = true;
     //oam = m_runner->oam.data();
     // Initialize test environment
     bus = &m_core->bus;
@@ -25,7 +26,8 @@ void SimpleNESTest::Setup(IntegrationRunner& runner)
     //const char* testFile = "roms\\hor_scroll_full.nes";
     //const char* testFile = "roms\\Super Mario Bros.nes";
     //const char* testFile = "roms\\snake.nes";
-    const char* testFile = "roms\\vert_nt_draw.nes";
+    //const char* testFile = "roms\\vert_nt_draw.nes";
+    const char* testFile = "roms\\Donkey Kong.nes";
     
     //uint8_t* buffer = m_runner->LoadFile("test-chr-rom.chr", bytesRead);
 	m_runner->GetCore()->cart.LoadROM(testFile);

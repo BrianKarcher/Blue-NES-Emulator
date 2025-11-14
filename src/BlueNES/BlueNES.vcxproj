@@ -142,6 +142,13 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="CPU.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BlueNES.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\readme.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

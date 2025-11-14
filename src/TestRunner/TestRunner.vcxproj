@@ -179,13 +179,11 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <None Include="roms\Donkey Kong.nes" />
     <None Include="roms\dual_pattern_tables.nes" />
     <None Include="roms\hor_scroll.nes" />
     <None Include="roms\hor_scroll_full.nes" />
     <CopyFileToFolders Include="roms\vert_nt_draw.nes">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="roms\Super Mario Bros.nes">
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <None Include="roms\snake.nes" />

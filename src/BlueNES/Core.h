@@ -70,6 +70,7 @@ public:
 	int bufferWidth = 0, bufferHeight = 0;
 	int lineHeight = 16;
 	HWND m_hwndPalette;
+	bool isPlaying = false;
 private:
 	int cpuCycleDebt = 0;
 	int ppuCyclesPerCPUCycle = 3;

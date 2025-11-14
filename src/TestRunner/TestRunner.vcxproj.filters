@@ -98,9 +98,6 @@
     <CopyFileToFolders Include="roms\vert_nt_draw.nes">
       <Filter>Resource Files</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="roms\Super Mario Bros.nes">
-      <Filter>Resource Files</Filter>
-    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <None Include="roms\dual_pattern_tables.nes">
@@ -116,6 +113,9 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="roms\snake.nes">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="roms\Donkey Kong.nes">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

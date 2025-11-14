@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <codecvt>
+#include "resource.h"
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -86,6 +87,9 @@ HRESULT Core::Initialize()
 
     if (!m_hwnd)
         return S_FALSE;
+
+	HMENU hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
+	SetMenu(m_hwnd, hMenu);
 
     m_hwndHex = CreateWindow(
         L"HexWindowClass",
@@ -296,11 +300,13 @@ LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 HBRUSH bgBrush = (HBRUSH)(COLOR_WINDOW + 1);
                 FillRect(pMain->memDC, &ps.rcPaint, bgBrush);
 
-                SelectObject(pMain->memDC, pMain->hFont);
-                SetBkMode(pMain->memDC, TRANSPARENT);
+                if (pMain->isPlaying) {
+                    SelectObject(pMain->memDC, pMain->hFont);
+                    SetBkMode(pMain->memDC, TRANSPARENT);
 
-                RECT rc = ps.rcPaint;
-				pMain->DrawHexDump(pMain->memDC, rc);
+                    RECT rc = ps.rcPaint;
+                    pMain->DrawHexDump(pMain->memDC, rc);
+                }
 
                 BitBlt(hdc,
                     ps.rcPaint.left, ps.rcPaint.top,
@@ -480,6 +486,14 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
         {
             switch (message)
             {
+            case WM_COMMAND:
+                switch (LOWORD(wParam))
+                {
+                case ID_FILE_EXIT:
+                    PostQuitMessage(0);
+					break;
+                }
+                break;
             case WM_SIZE:
             {
                 UINT width = LOWORD(lParam);
@@ -694,7 +708,10 @@ void Core::RunMessageLoop()
         if (!running) {
             break;
         }
-
+        if (!isPlaying) {
+            // Sleep(100); // Sleep to reduce CPU usage when not playing
+			continue;
+        }
         // 60 FPS cap
         // --- Frame timing ---
         QueryPerformanceCounter(&currentTime);

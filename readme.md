@@ -7,6 +7,14 @@ This is a simple emulator for the NES. I plan to expand it out to be 100% compat
 Maybe's if I have time:
 - Bank switching
 
+TODO:
+1 Byte PPU Read Delay (Requied for Super Mario Brothers and others)
+Sprite 0 hit
+Audio (A bunch of test ROM's use audio cues)
+MMC1 (lower priority)
+
+
+
 Everything I know is from:
 https://www.nesdev.org/wiki/NES_reference_guide
 
