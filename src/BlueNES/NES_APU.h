@@ -955,12 +955,12 @@ private:
         float pulse_out = 0.0f;
         uint8_t pulse_sum = p1 + p2;
         if (pulse_sum > 0) {
-            pulse_out = 95.52f / (8128.0f / pulse_sum + 100.0f);
+            pulse_out = 95.88f / (8128.0f / pulse_sum + 100.0f);
         }
 
         // TND mixing (non-linear)
         float tnd_out = 0.0f;
-        float tnd_sum = (tr / 8227.0f) + (no / 12241.0f) + (dm / 22638.0f);
+        float tnd_sum = (static_cast<float>(tr) / 8227.0f) + (static_cast<float>(no) / 12241.0f) + (static_cast<float>(dm) / 22638.0f);  // Cast for precision
         if (tnd_sum > 0) {
             tnd_out = 159.79f / (1.0f / tnd_sum + 100.0f);
         }
@@ -970,7 +970,7 @@ private:
 
         // The combined range is approximately 0 to 255
         // Normalize to [-1.0, 1.0]
-        return (output / 127.5f) - 1.0f;
+        return output * 1.3f;
     }
 };
 

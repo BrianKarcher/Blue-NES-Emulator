@@ -17,41 +17,48 @@ namespace APUTest
     public:
         TEST_METHOD_INITIALIZE(TestSetup)
         {
-            audioBackend.Initialize();
+            Assert::IsTrue(audioBackend.Initialize(44100, 1), L"Failed to initialize audio backend");
+        }
+
+        TEST_METHOD_CLEANUP(TestCleanup)
+        {
+            audioBackend.Shutdown();
         }
 
         TEST_METHOD(TestAPUTone)
         {
-            static const int TEST_FRAMES = 180; // ~3 seconds
-            uint8_t volume = 0x0F;              // max volume
+            NES_APU apu;
 
-            // Setup pulse channel 1
-            apu.write_register(0x4000, 0x30 | volume); // Duty 50%, constant volume
-            apu.write_register(0x4002, 0xF7);          // Timer low byte
-            apu.write_register(0x4003, 0x03);          // Timer high byte
-            apu.write_register(0x4015, 0x01);          // Enable pulse 1
+            // Setup pulse channel 1 for 440 Hz tone (with halt to prevent decay)
+            const uint16_t timer = 253;  // ~440 Hz: CPU / (16 * (timer + 1))
+            apu.write_register(0x4015, 0x01);          // Enable pulse 1 FIRST
+            apu.write_register(0x4000, 0xBF);          // Duty 50% (0x80), halt (0x20), constant vol 15 (0x1F)
+            apu.write_register(0x4001, 0x00);          // Sweep disabled
+            apu.write_register(0x4002, timer & 0xFF);  // Timer low (0xFD)
+            apu.write_register(0x4003, 0x08);          // Timer high (0) + max length index 1 (254 units)
 
-            // Reload the length counter so the pulse doesn't instantly die
-            apu.reload_length_counter(0, 0x3F); // Channel 0, max length
-
-            // NES CPU / APU constants
-            const float CPU_FREQ = 1789773.0f;     // NTSC CPU freq
-            const float SAMPLE_RATE = 44100.0f;    // Audio backend rate
+            // NES timing constants
+            const float CPU_FREQ = 1789773.0f;
+            const float SAMPLE_RATE = 44100.0f;
             const float CPU_PER_SAMPLE = CPU_FREQ / SAMPLE_RATE;
 
             std::vector<float> buffer;
+            buffer.reserve(735);  // ~1 frame (44100 / 60)
+
             float cpu_accum = 0.0f;
+            static const int TEST_FRAMES = 180;  // ~3 seconds
+
+            Logger::WriteMessage("Playing 440 Hz tone...\n");
 
             for (int f = 0; f < TEST_FRAMES; f++)
             {
-                int samples_per_frame = static_cast<int>(SAMPLE_RATE / 60); // 60 FPS
+                int samples_per_frame = static_cast<int>(SAMPLE_RATE / 60.0f);
                 for (int s = 0; s < samples_per_frame; s++)
                 {
                     cpu_accum += CPU_PER_SAMPLE;
                     while (cpu_accum >= 1.0f)
                     {
-                        apu.step();                 // Clock APU at CPU rate
-                        apu.step_frame_sequencer(); // Advance envelopes / length / sweep
+                        apu.step();
                         cpu_accum -= 1.0f;
                     }
 
@@ -59,12 +66,22 @@ namespace APUTest
                     buffer.push_back(sample);
                 }
 
-                // Submit audio for this frame
                 audioBackend.SubmitSamples(buffer.data(), buffer.size());
                 buffer.clear();
             }
 
-            // Audible tone = pass
+            // Wait for playback to finish (critical to hear full tone)
+            auto start = std::chrono::steady_clock::now();
+            while (audioBackend.GetQueuedSampleCount() > 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start).count() > 5)
+                {
+                    Assert::Fail(L"Timeout waiting for audio to play");
+                }
+            }
+
+            Logger::WriteMessage("Tone finished.\n");
         }
     };
 }
