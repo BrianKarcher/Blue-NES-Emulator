@@ -807,13 +807,14 @@ void Core::RunMessageLoop()
 				cpuCycleDebt++;
 
                 if (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
-					cpuCycleDebt -= ppuCyclesPerCPUCycle;
+					//cpuCycleDebt -= ppuCyclesPerCPUCycle;
                     // Get cycles before instruction
                     uint64_t cyclesBefore = cpu.GetCycleCount();
                     cpu.Clock();
                     // Get cycles after instruction
                     uint64_t cyclesAfter = cpu.GetCycleCount();
                     uint64_t cyclesElapsed = cyclesAfter - cyclesBefore;
+                    cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
                     // *** Step APU for each CPU cycle the instruction took ***
                     double localSamplePos = audioSamplePos;
