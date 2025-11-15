@@ -579,9 +579,6 @@ void Processor_6502::Clock()
 		}
 		case DEY_IMPLIED:
 		{
-			cnt += 1;
-			std::wstring msg = L"DEY\n" + std::to_wstring(cnt);
-			OutputDebugString(msg.c_str());
 			m_y--;
 			SetZero(m_y);
 			SetNegative(m_y);
@@ -1269,9 +1266,6 @@ void Processor_6502::Clock()
 				int i = 0;
 			}
 			if (addr == 0x2007) {
-				cnt2 += 1;
-				std::wstring msg = L"STA\n" + std::to_wstring(cnt2);
-				OutputDebugString(msg.c_str());
 				if (cnt2 == 2000) {
 					int j = 0;
 				}

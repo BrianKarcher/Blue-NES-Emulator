@@ -7,6 +7,7 @@
 
 class NesPPU;
 class Core;
+class NES_APU;
 
 class Bus
 {
@@ -18,6 +19,7 @@ public:
 	// Devices connected to the bus
 	Processor_6502* cpu = nullptr;
 	NesPPU* ppu = nullptr;
+	NES_APU* apu = nullptr;
 	Cartridge* cart = nullptr;
 	Core* core = nullptr;
 

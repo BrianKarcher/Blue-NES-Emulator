@@ -5,6 +5,7 @@
 #include <codecvt>
 #include "resource.h"
 #include <commdlg.h>
+#include "AudioBackend.h"
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -144,6 +145,27 @@ HRESULT Core::Initialize()
 	ShowWindow(m_hwndHex, SW_SHOWNORMAL);
     ShowWindow(m_hwndPalette, SW_SHOWNORMAL);
     //UpdateWindow(m_hwnd);
+
+	audioBackend = new AudioBackend();
+    // Initialize audio backend
+    if (!audioBackend->Initialize(44100, 1)) {  // 44.1kHz, mono
+        // Handle error - audio failed to initialize
+        MessageBox(m_hwnd, L"Failed to initialize audio!", L"Error", MB_OK);
+    }
+
+    // Set up DMC read callback
+    apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+        return bus.read(address);
+    });
+
+    // --- Debug: force a tone on Pulse 1 ---
+    //apu.write_register(0x4000, 0x30); // duty + envelope: constant volume 0x0 / vol 0x0? adjust below
+    //apu.write_register(0x4002, 0xFF); // timer low
+    //apu.write_register(0x4003, 0x07); // timer high -> make very low frequency (adjust)
+    //apu.write_register(0x4015, 0x01); // enable pulse 1
+
+    //// Increase volume to audible: 0x10 sets constant volume, low nibble is volume (0x0 - 0xF).
+    //apu.write_register(0x4000, 0x90); // 1 0 0 1 0000 -> constant volume + volume 0 (tweak to 0x9..0xF)
 
     return S_OK;
 }
@@ -638,11 +660,11 @@ LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 }
 
 // Function to convert std::string (UTF-8) to std::wstring (UTF-16/UTF-32 depending on platform)
-std::wstring stringToWstring(const std::string& str) {
-    // Using UTF-8 to wide string conversion
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes(str);
-}
+//std::wstring stringToWstring(const std::string& str) {
+//    // Using UTF-8 to wide string conversion
+//    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+//    return converter.from_bytes(str);
+//}
 
 // Function to convert uint32_t to hex string with zero-padding
 std::string uint32ToHex(uint32_t value) {
@@ -685,9 +707,9 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
         uint32_t color = m_nesPalette[paletteIndex & 0x3F];
         //uint32_t color = m_nesPalette[i];
         // Debugging: Log palette index and color
-        OutputDebugString((L"Palette Index: " + std::to_wstring(paletteIndex) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
+        //OutputDebugString((L"Palette Index: " + std::to_wstring(paletteIndex) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
 
-        OutputDebugString((L"x: " + std::to_wstring(x) + L", y: " + std::to_wstring(y) + L", w: " + std::to_wstring(cellWidth) + L", h: " + std::to_wstring(cellHeight) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
+        //OutputDebugString((L"x: " + std::to_wstring(x) + L", y: " + std::to_wstring(y) + L", w: " + std::to_wstring(cellWidth) + L", h: " + std::to_wstring(cellHeight) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
         HBRUSH brush = CreateSolidBrush(ToColorRef(color));
         RECT rect = { x, y, x + cellWidth, y + cellHeight };
         FillRect(hdc, &rect, brush);
@@ -731,7 +753,16 @@ void Core::RunMessageLoop()
 	double elapsedTime = 0.0;
     double nextUpdate = 0.0;
     int frameCount = 0;
-    int nextCycleCount = 30000;
+
+    // --- Audio setup ---
+    // Audio sample rate (44.1kHz is standard)
+    const int AUDIO_SAMPLE_RATE = 44100;
+    const double AUDIO_SAMPLE_PERIOD = 1.0 / AUDIO_SAMPLE_RATE;
+    double audioAccumulator = 0.0;
+
+    // Audio buffer for queueing samples
+    std::vector<float> audioBuffer;
+    audioBuffer.reserve(4096);
 
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -747,15 +778,15 @@ void Core::RunMessageLoop()
             break;
         }
         if (!isPlaying) {
-            // Sleep(100); // Sleep to reduce CPU usage when not playing
 			continue;
         }
-        // 60 FPS cap
+        
         // --- Frame timing ---
         QueryPerformanceCounter(&currentTime);
         double deltaTime = (double)(currentTime.QuadPart - lastTime.QuadPart) / frequency.QuadPart;
         lastTime = currentTime;
         accumulator += deltaTime;
+        audioAccumulator += deltaTime;
 
 		// Don't run faster than 60 FPS
         if (accumulator >= targetFrameTime) {
@@ -773,25 +804,34 @@ void Core::RunMessageLoop()
 
                 if (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
 					cpuCycleDebt -= ppuCyclesPerCPUCycle;
+                    // Get cycles before instruction
+                    uint64_t cyclesBefore = cpu.GetCycleCount();
                     cpu.Clock();
-                }
-                //cpu.Clock();
+                    // Get cycles after instruction
+                    uint64_t cyclesAfter = cpu.GetCycleCount();
+                    uint64_t cyclesElapsed = cyclesAfter - cyclesBefore;
 
-                // Check for NMI
-				// We are removing the PPU NMI request and just triggering
-				// an NMI every 30,000 CPU cycles for testing purposes
-    //            if (cpu.GetCycleCount() >= nextCycleCount) {
-    //                cpu.NMI();
-				//	nextCycleCount += 30000;
-    //                // TODO Remove this when the PPU gets integrated.
-    //                break;
-				//}
-                //if (ppu.NMI() && !cpu.nmiRequested) {
-                //    cpu.NMI();
-                //}
+                    // *** Step APU for each CPU cycle the instruction took ***
+                    for (uint64_t i = 0; i < cyclesElapsed; i++) {
+                        apu.step();
+
+                        // Sample audio at regular intervals
+                        if (audioAccumulator >= AUDIO_SAMPLE_PERIOD) {
+                            audioAccumulator -= AUDIO_SAMPLE_PERIOD;
+                            float sample = apu.get_output();
+                            audioBuffer.push_back(sample);
+                        }
+                    }
+                }
 			}
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
+
+            // --- Submit audio samples to your audio system ---
+            if (!audioBuffer.empty()) {
+                audioBackend->SubmitSamples(audioBuffer.data(), audioBuffer.size());
+                audioBuffer.clear();
+            }
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);
@@ -814,4 +854,6 @@ void Core::RunMessageLoop()
 			Sleep(0); // Sleep to yield CPU
         }
     }
+
+    audioBackend->Shutdown();
 }

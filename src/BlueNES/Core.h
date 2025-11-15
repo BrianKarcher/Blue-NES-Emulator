@@ -9,6 +9,7 @@
 #include "bus.h"
 #include "nes_ppu.h"
 #include "CPU.h"
+#include "NES_APU.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -35,10 +36,13 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
+class AudioBackend;
+
 class Core
 {
 public:
 	Core();
+	AudioBackend* audioBackend;
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
 	// Load the game ROM
@@ -53,6 +57,7 @@ public:
 	NesPPU ppu;
 	Cartridge cart;
 	Processor_6502 cpu;
+	NES_APU apu;
 	// Declare a function pointer
 	void (*Update)();
 	// Hex dump window

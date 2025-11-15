@@ -14,6 +14,7 @@ void Bus::Initialize(Core* core)
     this->cpu = &this->core->cpu;
     this->ppu = &this->core->ppu;
     this->cart = &this->core->cart;
+	this->apu = &this->core->apu;
     //this->core->g_bufferSize = cpuRAM.size();
     //this->core->g_buffer = cpuRAM.data();
 }
@@ -32,10 +33,26 @@ uint8_t Bus::read(uint16_t addr)
         // PPU registers, mirrored every 8 bytes
         data = ppu->read_register(0x2000 + (addr & 0x7));
     }
-    else if (addr == 0x4016 || addr == 0x4017)
+    else if (addr >= 0x4000 && addr <= 0x4017)
     {
-        // Controller ports (optional for now)
-        // TODO: implement controller reads
+        // APU and I/O registers
+        if (addr == 0x4015)
+        {
+            // APU Status register (read)
+            data = apu->read_register(addr);
+        }
+        else if (addr == 0x4016 || addr == 0x4017)
+        {
+            // Controller ports
+            // Note: 0x4017 is also the APU frame counter, but reading returns controller data
+            // TODO: implement controller reads
+            data = 0x00;
+        }
+        else
+        {
+            // Other APU registers are write-only, return open bus
+            data = 0x00;
+        }
     }
     else if (addr >= 0x8000)
     {
@@ -45,6 +62,7 @@ uint8_t Bus::read(uint16_t addr)
     else
     {
         // APU, etc. (not implemented yet)
+		data = 0x00;
     }
 
     return data;
@@ -79,8 +97,30 @@ void Bus::write(uint16_t addr, uint8_t data)
     }
     else if (addr >= 0x4000 && addr <= 0x4017)
     {
-        // APU or I/O registers
-        // TODO: handle APU writes
+        wchar_t buf[128];
+        swprintf_s(buf, L"BUS WRITE: %04X <- %02X\n", addr, data);
+        OutputDebugStringW(buf);
+        // APU and I/O registers
+        if (addr >= 0x4000 && addr <= 0x4013)
+        {
+            // APU sound registers
+            apu->write_register(addr, data);
+        }
+        else if (addr == 0x4015)
+        {
+            // APU Status/Control register
+            apu->write_register(addr, data);
+        }
+        else if (addr == 0x4016)
+        {
+            // Controller 1 / APU test register (write)
+            // TODO: implement controller writes (strobe)
+        }
+        else if (addr == 0x4017)
+        {
+            // APU Frame Counter
+            apu->write_register(addr, data);
+        }
     }
     else if (addr >= 0x8000)
     {
