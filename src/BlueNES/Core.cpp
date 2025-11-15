@@ -796,6 +796,10 @@ void Core::RunMessageLoop()
             accumulator -= targetFrameTime;
             frameCount++;
 
+            const double CPU_FREQ = 1789773.0;
+            const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
+            double audioSamplePos = 0.0;  // Per-frame fractional pos
+
             // Run PPU until frame complete (89342 cycles per frame)
             while (!ppu.m_frameComplete) {
                 ppu.Clock();
@@ -812,16 +816,17 @@ void Core::RunMessageLoop()
                     uint64_t cyclesElapsed = cyclesAfter - cyclesBefore;
 
                     // *** Step APU for each CPU cycle the instruction took ***
+                    double localSamplePos = audioSamplePos;
                     for (uint64_t i = 0; i < cyclesElapsed; i++) {
                         apu.step();
-
+                        localSamplePos += 1.0;
                         // Sample audio at regular intervals
-                        if (audioAccumulator >= AUDIO_SAMPLE_PERIOD) {
-                            audioAccumulator -= AUDIO_SAMPLE_PERIOD;
-                            float sample = apu.get_output();
-                            audioBuffer.push_back(sample);
+                        while (localSamplePos >= cyclesPerSample) {
+                            audioBuffer.push_back(apu.get_output());
+                            localSamplePos -= cyclesPerSample;
                         }
                     }
+                    audioSamplePos = localSamplePos;  // Carry fractional over frames
                 }
 			}
             ppu.m_frameComplete = false;

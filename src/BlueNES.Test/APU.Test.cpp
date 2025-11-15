@@ -83,5 +83,64 @@ namespace APUTest
 
             Logger::WriteMessage("Tone finished.\n");
         }
+
+        TEST_METHOD(TestTriangle_440Hz)
+        {
+            NES_APU apu;
+
+            // === Setup Triangle Channel for ~440 Hz ===
+            // freq = CPU / (32 * (timer + 1))
+            // 440 = 1789773 / (32 * (timer + 1)) -> timer = 126
+            const uint16_t timer = 126;
+
+            apu.write_register(0x4015, 0x04);                    // Enable triangle
+            apu.write_register(0x4008, 0x80 | 0x40);             // Control: halt length, reload = 64
+            apu.write_register(0x400A, timer & 0xFF);            // Timer low
+            apu.write_register(0x400B, (timer >> 8) | 0xF8);     // Timer high + max length (31)
+
+            // === Timing ===
+            const float CPU_FREQ = 1789773.0f;
+            const float SAMPLE_RATE = 44100.0f;
+            const float CPU_PER_SAMPLE = CPU_FREQ / SAMPLE_RATE;
+
+            std::vector<float> buffer;
+            buffer.reserve(735);
+
+            float cpu_cycles = 0.0f;
+            const int FRAMES = 240;  // ~4 seconds
+
+            Logger::WriteMessage("Playing 440 Hz triangle wave...\n");
+
+            for (int f = 0; f < FRAMES; ++f)
+            {
+                int samples_per_frame = static_cast<int>(SAMPLE_RATE / 60.0f);
+                for (int s = 0; s < samples_per_frame; ++s)
+                {
+                    cpu_cycles += CPU_PER_SAMPLE;
+                    while (cpu_cycles >= 1.0f)
+                    {
+                        apu.step();
+                        cpu_cycles -= 1.0f;
+                    }
+                    buffer.push_back(apu.get_output());
+                }
+                audioBackend.SubmitSamples(buffer.data(), buffer.size());
+                buffer.clear();
+            }
+
+            // Wait for playback
+            auto start = std::chrono::steady_clock::now();
+            while (audioBackend.GetQueuedSampleCount() > 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if (std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::steady_clock::now() - start).count() > 6)
+                {
+                    Assert::Fail(L"Audio timeout");
+                }
+            }
+
+            Logger::WriteMessage("Triangle wave played.\n");
+        }
     };
 }
