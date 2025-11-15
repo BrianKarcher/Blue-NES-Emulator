@@ -8,6 +8,7 @@
 class NesPPU;
 class Core;
 class NES_APU;
+class Input;
 
 class Bus
 {
@@ -22,6 +23,7 @@ public:
 	NES_APU* apu = nullptr;
 	Cartridge* cart = nullptr;
 	Core* core = nullptr;
+	Input* input = nullptr;
 
 	// 2KB internal RAM (mirrored)
 	std::array<uint8_t, 2048> cpuRAM{};

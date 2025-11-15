@@ -131,6 +131,7 @@
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
+    <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NES_APU.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
@@ -143,6 +144,7 @@
     <ClInclude Include="Core.h" />
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
+    <ClInclude Include="Input.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="NES_APU.h" />
     <ClInclude Include="nes_ppu.h" />

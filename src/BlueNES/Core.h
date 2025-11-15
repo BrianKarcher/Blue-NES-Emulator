@@ -10,6 +10,7 @@
 #include "nes_ppu.h"
 #include "CPU.h"
 #include "NES_APU.h"
+#include "Input.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -58,6 +59,7 @@ public:
 	Cartridge cart;
 	Processor_6502 cpu;
 	NES_APU apu;
+	Input input;
 	// Declare a function pointer
 	void (*Update)();
 	// Hex dump window

@@ -536,6 +536,72 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
         {
             switch (message)
             {
+            case WM_KEYDOWN:
+            {
+                switch (wParam)
+                {
+                case VK_F1:
+                    // Show palette window
+                    ShowWindow(pMain->m_hwndHex, SW_SHOWNORMAL);
+                    break;
+				case 'A': // TODO : Make configurable
+                    pMain->input.ButtonDown(BUTTON_B);
+                    break;
+                case 'S':
+                    pMain->input.ButtonDown(BUTTON_A);
+                    break;
+				case 'Z':
+					pMain->input.ButtonDown(BUTTON_SELECT);
+                    break;
+                case 'X':
+                    pMain->input.ButtonDown(BUTTON_START);
+                    break;
+				case VK_UP:
+                    pMain->input.ButtonDown(BUTTON_UP);
+					break;
+                case VK_DOWN:
+					pMain->input.ButtonDown(BUTTON_DOWN);
+                    break;
+				case VK_LEFT:
+					pMain->input.ButtonDown(BUTTON_LEFT);
+                    break;
+				case VK_RIGHT:
+                    pMain->input.ButtonDown(BUTTON_RIGHT);
+					break;
+                }
+                break;
+			}
+            case WM_KEYUP:
+            {
+                switch (wParam)
+                {
+                case 'A':
+                    pMain->input.ButtonUp(BUTTON_B);
+                    break;
+                case 'S':
+                    pMain->input.ButtonUp(BUTTON_A);
+                    break;
+                case 'Z':
+                    pMain->input.ButtonUp(BUTTON_SELECT);
+                    break;
+                case 'X':
+                    pMain->input.ButtonUp(BUTTON_START);
+                    break;
+                case VK_UP:
+                    pMain->input.ButtonUp(BUTTON_UP);
+                    break;
+                case VK_DOWN:
+                    pMain->input.ButtonUp(BUTTON_DOWN);
+                    break;
+                case VK_LEFT:
+                    pMain->input.ButtonUp(BUTTON_LEFT);
+                    break;
+                case VK_RIGHT:
+                    pMain->input.ButtonUp(BUTTON_RIGHT);
+                    break;
+                }
+                break;
+            }
             case WM_COMMAND:
                 switch (LOWORD(wParam))
                 {
@@ -801,6 +867,7 @@ void Core::RunMessageLoop()
             double audioSamplePos = 0.0;  // Per-frame fractional pos
 
             // Run PPU until frame complete (89342 cycles per frame)
+            int cpuCyclesThisFrame = 0;
             while (!ppu.m_frameComplete) {
                 ppu.Clock();
 				// CPU runs at 1/3 the speed of the PPU
@@ -814,6 +881,7 @@ void Core::RunMessageLoop()
                     // Get cycles after instruction
                     uint64_t cyclesAfter = cpu.GetCycleCount();
                     uint64_t cyclesElapsed = cyclesAfter - cyclesBefore;
+					cpuCyclesThisFrame += (int)cyclesElapsed;
                     cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
                     // *** Step APU for each CPU cycle the instruction took ***
@@ -830,6 +898,7 @@ void Core::RunMessageLoop()
                     audioSamplePos = localSamplePos;  // Carry fractional over frames
                 }
 			}
+			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpuCyclesThisFrame) + L"\n").c_str());
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
 

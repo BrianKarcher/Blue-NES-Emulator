@@ -2,6 +2,7 @@
 #include "nes_ppu.h"
 #include "Cartridge.h"
 #include "Core.h"
+#include "Input.h"
 
 Bus::Bus() {
 	// Constructor implementation (if needed)
@@ -15,6 +16,7 @@ void Bus::Initialize(Core* core)
     this->ppu = &this->core->ppu;
     this->cart = &this->core->cart;
 	this->apu = &this->core->apu;
+	this->input = &this->core->input;
     //this->core->g_bufferSize = cpuRAM.size();
     //this->core->g_buffer = cpuRAM.data();
 }
@@ -41,12 +43,12 @@ uint8_t Bus::read(uint16_t addr)
             // APU Status register (read)
             data = apu->read_register(addr);
         }
-        else if (addr == 0x4016 || addr == 0x4017)
+        else if (addr == 0x4016) {
+			data = input->ReadController1();
+        }
+        else if (addr == 0x4017)
         {
-            // Controller ports
-            // Note: 0x4017 is also the APU frame counter, but reading returns controller data
-            // TODO: implement controller reads
-            data = 0x00;
+			data = input->ReadController2();
         }
         else
         {
@@ -97,9 +99,9 @@ void Bus::write(uint16_t addr, uint8_t data)
     }
     else if (addr >= 0x4000 && addr <= 0x4017)
     {
-        wchar_t buf[128];
-        swprintf_s(buf, L"BUS WRITE: %04X <- %02X\n", addr, data);
-        OutputDebugStringW(buf);
+        //wchar_t buf[128];
+        //swprintf_s(buf, L"BUS WRITE: %04X <- %02X\n", addr, data);
+        //OutputDebugStringW(buf);
         // APU and I/O registers
         if (addr >= 0x4000 && addr <= 0x4013)
         {
@@ -113,6 +115,7 @@ void Bus::write(uint16_t addr, uint8_t data)
         }
         else if (addr == 0x4016)
         {
+            input->Poll();
             // Controller 1 / APU test register (write)
             // TODO: implement controller writes (strobe)
         }
