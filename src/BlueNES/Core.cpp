@@ -811,12 +811,10 @@ void Core::RunMessageLoop()
     MSG msg;
     bool running = true;
     // --- FPS tracking variables ---
-    LARGE_INTEGER frequency, lastTime, currentTime;
+    LARGE_INTEGER frequency, frameStartTime, currentTime;
     QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&lastTime);
+    QueryPerformanceCounter(&frameStartTime);
     double targetFrameTime = 1.0 / 60.0;
-    double accumulator = 0.0;
-	double elapsedTime = 0.0;
     double nextUpdate = 0.0;
     int frameCount = 0;
 
@@ -830,6 +828,9 @@ void Core::RunMessageLoop()
     std::vector<float> audioBuffer;
     audioBuffer.reserve(4096);
 
+    double audioFraction = 0.0;  // Per-frame fractional pos
+    int cpuCycleDebt = 0;
+    const int ppuCyclesPerCPUCycle = 3;
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -846,25 +847,17 @@ void Core::RunMessageLoop()
         if (!isPlaying) {
 			continue;
         }
-        
-        // --- Frame timing ---
-        QueryPerformanceCounter(&currentTime);
-        double deltaTime = (double)(currentTime.QuadPart - lastTime.QuadPart) / frequency.QuadPart;
-        lastTime = currentTime;
-        accumulator += deltaTime;
-        audioAccumulator += deltaTime;
 
-		// Don't run faster than 60 FPS
-        if (accumulator >= targetFrameTime) {
-            if (Update) {
-                Update();
-            }
-            accumulator -= targetFrameTime;
-            frameCount++;
+        if (Update) {
+            Update();
+        }
 
             const double CPU_FREQ = 1789773.0;
             const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
-            double audioSamplePos = 0.0;  // Per-frame fractional pos
+			const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
+
+            // Clear audio buffer for this frame
+            audioBuffer.clear();
 
             // Run PPU until frame complete (89342 cycles per frame)
             int cpuCyclesThisFrame = 0;
@@ -873,7 +866,7 @@ void Core::RunMessageLoop()
 				// CPU runs at 1/3 the speed of the PPU
 				cpuCycleDebt++;
 
-                if (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
+                while (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
 					//cpuCycleDebt -= ppuCyclesPerCPUCycle;
                     // Get cycles before instruction
                     uint64_t cyclesBefore = cpu.GetCycleCount();
@@ -884,50 +877,81 @@ void Core::RunMessageLoop()
 					cpuCyclesThisFrame += (int)cyclesElapsed;
                     cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
-                    // *** Step APU for each CPU cycle the instruction took ***
-                    double localSamplePos = audioSamplePos;
-                    for (uint64_t i = 0; i < cyclesElapsed; i++) {
+                    // Clock APU for each CPU cycle
+                    for (uint64_t i = 0; i < cyclesElapsed; ++i) {
                         apu.step();
-                        localSamplePos += 1.0;
-                        // Sample audio at regular intervals
-                        while (localSamplePos >= cyclesPerSample) {
+
+                        // Generate audio sample based on cycle timing
+                        audioFraction += 1.0;
+                        while (audioFraction >= cyclesPerSample) {
                             audioBuffer.push_back(apu.get_output());
-                            localSamplePos -= cyclesPerSample;
+                            audioFraction -= cyclesPerSample;
                         }
                     }
-                    audioSamplePos = localSamplePos;  // Carry fractional over frames
                 }
 			}
 			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpuCyclesThisFrame) + L"\n").c_str());
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
 
-            // --- Submit audio samples to your audio system ---
-            if (!audioBuffer.empty()) {
+            // Submit the exact samples generated this frame
+            // Check audio queue to prevent unbounded growth
+            size_t queuedSamples = audioBackend->GetQueuedSampleCount();
+            const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
+
+            if (queuedSamples < MAX_QUEUED_SAMPLES) {
                 audioBackend->SubmitSamples(audioBuffer.data(), audioBuffer.size());
-                audioBuffer.clear();
             }
+            else {
+                // Audio queue is too large - skip this frame's audio to catch up
+                OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
+            }
+
+            OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+                L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
+                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);
             ReleaseDC(m_hwnd, hdc);
-            // --- FPS calculation every second ---
+            
+            frameCount++;
+            // Debug output every second
+            QueryPerformanceCounter(&currentTime);
+            double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
 
-            elapsedTime += targetFrameTime;
-            if (elapsedTime >= nextUpdate) {
+            if (timeSinceStart >= 1.0) {
 				// Updates the hex window
 				// TODO - Make this more efficient by only updating changed areas
 				// and also in real time rather than once per second
 				InvalidateRect(m_hwndHex, nullptr, TRUE);
-                double fps = frameCount / elapsedTime;
+                double fps = frameCount / timeSinceStart;
                 std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
+                OutputDebugStringW(title.c_str());
                 SetWindowText(m_hwnd, title.c_str());
-				nextUpdate = elapsedTime + 1.0;
+                frameStartTime = currentTime;
+                frameCount = 0;
             }
-        }
-        else {
-			Sleep(0); // Sleep to yield CPU
-        }
+
+            // === FRAME PACING: Wait for correct frame time ===
+            LARGE_INTEGER frameEndTime;
+            QueryPerformanceCounter(&frameEndTime);
+
+            double frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+            double timeToWait = targetFrameTime * frameCount - frameTimeElapsed;
+
+            if (timeToWait > 0.001) { // If more than 1ms to wait
+                DWORD sleepMs = (DWORD)((timeToWait - 0.001) * 1000.0); // Sleep for most of it
+                if (sleepMs > 0) {
+                    Sleep(sleepMs);
+                }
+
+                // Busy wait for the remaining time for accuracy
+                do {
+                    QueryPerformanceCounter(&frameEndTime);
+                    frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+                } while (frameTimeElapsed < targetFrameTime * frameCount);
+            }
     }
 
     audioBackend->Shutdown();

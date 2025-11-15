@@ -79,8 +79,6 @@ public:
 	HWND m_hwndPalette;
 	bool isPlaying = false;
 private:
-	int cpuCycleDebt = 0;
-	int ppuCyclesPerCPUCycle = 3;
 	// Draw content.
 	bool DrawToWindow(HDC dc);
 	void PPURenderToBackBuffer();

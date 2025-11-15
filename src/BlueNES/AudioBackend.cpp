@@ -159,7 +159,7 @@ void AudioBackend::SubmitBuffer()
     xaudioBuffer.AudioBytes = SAMPLES_PER_BUFFER * sizeof(float);
     xaudioBuffer.pAudioData = reinterpret_cast<const BYTE*>(buffer.data.data());
     xaudioBuffer.pContext = &m_buffers[m_currentBuffer]; // Pass buffer pointer as context
-
+    xaudioBuffer.Flags = 0;
     m_sourceVoice->SubmitSourceBuffer(&xaudioBuffer);
 }
 

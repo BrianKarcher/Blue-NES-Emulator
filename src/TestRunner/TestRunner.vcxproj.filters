@@ -55,6 +55,9 @@
     <ClCompile Include="..\BlueNES\NES_APU.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\Input.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h">
@@ -91,6 +94,9 @@
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\NES_APU.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Input.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>

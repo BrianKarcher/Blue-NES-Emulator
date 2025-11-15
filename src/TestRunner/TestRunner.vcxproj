@@ -138,6 +138,7 @@
     <ClCompile Include="..\BlueNES\Core.cpp" />
     <ClCompile Include="..\BlueNES\CPU.cpp" />
     <ClCompile Include="..\BlueNES\INESLoader.cpp" />
+    <ClCompile Include="..\BlueNES\Input.cpp" />
     <ClCompile Include="..\BlueNES\NES_APU.cpp" />
     <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
     <ClCompile Include="IntegrationRunner.cpp" />
@@ -152,6 +153,7 @@
     <ClInclude Include="..\BlueNES\Core.h" />
     <ClInclude Include="..\BlueNES\CPU.h" />
     <ClInclude Include="..\BlueNES\INESLoader.h" />
+    <ClInclude Include="..\BlueNES\Input.h" />
     <ClInclude Include="..\BlueNES\NES_APU.h" />
     <ClInclude Include="..\BlueNES\nes_ppu.h" />
     <ClInclude Include="IntegrationRunner.h" />
