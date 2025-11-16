@@ -29,10 +29,10 @@ Core::Core() :
     bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Core::PPURenderToBackBuffer()
-{
-    ppu.render_frame();
-}
+//void Core::PPURenderToBackBuffer()
+//{
+//    ppu.render_frame();
+//}
 
 HRESULT Core::Initialize()
 {
@@ -789,6 +789,7 @@ HWND Core::GetWindowHandle()
 
 bool Core::DrawToWindow(HDC hdc)
 {
+    //ppu.framebuffer.fill(0xff0f0f0f);
     // Copy back buffer to bitmap
     SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
     // Stretch blit to window (3x scale)
@@ -889,7 +890,7 @@ void Core::RunMessageLoop()
                     }
                 }
 			}
-			//OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
+			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
 
@@ -906,9 +907,9 @@ void Core::RunMessageLoop()
                 OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
             }
 
-            /*OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+            OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
                 L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());*/
+                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);
@@ -926,7 +927,6 @@ void Core::RunMessageLoop()
 				InvalidateRect(m_hwndHex, nullptr, TRUE);
                 double fps = frameCount / timeSinceStart;
                 std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
-                //OutputDebugStringW(title.c_str());
                 SetWindowText(m_hwnd, title.c_str());
                 frameStartTime = currentTime;
                 frameCount = 0;

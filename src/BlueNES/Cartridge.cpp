@@ -97,6 +97,9 @@ void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
 }
 
 uint8_t Cartridge::ReadPRG(uint16_t address) {
+    if (m_prgData.size() == 0) {
+        return 0;
+    }
     // If 16 KB PRG ROM, mirror it
     if (m_prgData.size() == 0x4000) {
         // For 16KB PRG-ROM, mask to 14 bits (16KB = 0x4000 bytes)

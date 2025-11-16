@@ -19,8 +19,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     {
         integrationRunner.Initialize(&core);
         // Register tests
-		//auto scrollTest = new VertScrollTest();
-        auto scrollTest = new SimpleNESTest();
+		auto scrollTest = new VertScrollTest();
+        //auto scrollTest = new SimpleNESTest();
 		scrollTest->Setup(integrationRunner);
         integrationRunner.RegisterTest(scrollTest);
 

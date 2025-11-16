@@ -136,6 +136,7 @@
     <ClCompile Include="NES_APU.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
     <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="PPU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AudioBackend.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="NES_APU.h" />
     <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="CPU.h" />
+    <ClInclude Include="PPU.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

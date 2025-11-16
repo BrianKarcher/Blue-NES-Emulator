@@ -201,7 +201,7 @@ private:
 	uint64_t m_cycle_count = 0;
 	// Program counter
 	int m_pc;
-	int m_sp = 0xFD;
+	uint8_t m_sp = 0xFD;
 
 	// Registers
 	uint8_t m_a;

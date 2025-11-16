@@ -25,9 +25,6 @@
     <ClCompile Include="..\BlueNES\Cartridge.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
-    <ClCompile Include="..\BlueNES\nes_ppu.cpp">
-      <Filter>EmulatorCore</Filter>
-    </ClCompile>
     <ClCompile Include="IntegrationRunner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -58,15 +55,15 @@
     <ClCompile Include="..\BlueNES\Input.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\nes_ppu.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Cartridge.h">
-      <Filter>EmulatorCore</Filter>
-    </ClInclude>
-    <ClInclude Include="..\BlueNES\nes_ppu.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="IntegrationRunner.h">
@@ -97,6 +94,9 @@
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Input.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\nes_ppu.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>

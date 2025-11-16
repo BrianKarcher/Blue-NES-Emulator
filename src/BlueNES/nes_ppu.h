@@ -24,14 +24,6 @@
 #define PPUMASK_SPRITEENABLED 0x10
 #define PPUMASK_RENDERINGEITHER PPUMASK_BACKGROUNDENABLED | PPUMASK_SPRITEENABLED
 
-#define INTERNAL_NAMETABLE 0b000110000000000
-#define INTERNAL_NAMETABLE_X 0b000010000000000
-#define INTERNAL_NAMETABLE_Y 0b000100000000000
-#define INTERNAL_COARSE_X 0b000000000011111
-#define INTERNAL_COARSE_Y 0b000001111100000
-#define INTERNAL_FINE_Y 0b111000000000000
-#define INTERNAL_VERTICALBITS 0b111101111100000
-
 // NES color palette (64 colors)
 static constexpr uint32_t m_nesPalette[64] = {
 	0xFF666666, 0xFF002A88, 0xFF1412A7, 0xFF3B00A4, 0xFF5C007E, 0xFF6E0040, 0xFF6C0600, 0xFF561D00,
@@ -80,9 +72,7 @@ public:
 	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
 	std::pair<uint8_t, uint8_t> GetPPUScroll() const { return std::make_pair(m_scrollX, m_scrollY); }
 
-	void RenderTick();
-	void IncrementX();
-	void IncrementY();
+	uint8_t m_ppuMask = 0;
 private:
 	// Sprite data for current scanline
 	struct Sprite {
@@ -94,26 +84,13 @@ private:
 	};
 
 	bool is_failure = false;
-	
+
 	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 
-	// Internal registers
-	// v and t are described as follows:
-	// yyy NN YYYYY XXXXX
-	// ||| || ||||| ++++ + --coarse X scroll
-	// ||| || ++++ + --------coarse Y scroll
-	// ||| ++--------------nametable select
-	// ++ + ---------------- - fine Y scroll
-	uint16_t m_v; // Current VRAM address (15 bits)
-	uint16_t m_t; // Temporary VRAM address (15 bits); can also be thought of as the address of the top left onscreen tile.
-	uint8_t m_x; // Fine X scroll
-	bool m_w = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
-
-	// TODO : Delete the next two registers as we are implementing them properly.
 	// register v in hardware PPU
-	//uint16_t vramAddr = 0; // Current VRAM address (15 bits)
-	//// register t in hardware PPU
-	//uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
+	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
+	// register t in hardware PPU
+	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
 
 	// TODO: This can be optimized to use less memory if needed
@@ -124,8 +101,10 @@ private:
 	std::array<uint32_t, 256 * 240> m_backBuffer;
 	int m_cycle = 0; // Current PPU cycle (0-340)
 	int m_scanline = 0; // Current PPU scanline (0-261)
+	uint8_t m_scrollX = 0;
+	uint8_t m_scrollY = 0;
 	uint8_t m_ppuCtrl = 0;
-	uint8_t m_ppuMask = 0;
+	
 	uint8_t m_ppuStatus = 0;
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
@@ -136,12 +115,14 @@ private:
 	}
 	//int scrollY; // Fine Y scrolling (0-239)
 
+	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
+
 	void write_vram(uint16_t addr, uint8_t value);
 	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
 	void render_nametable();
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite);
-	
+
 	std::array<Sprite, 8> secondaryOAM{};
 	// Overflow can only be set once per frame
 	bool hasOverflowBeenSet = false;

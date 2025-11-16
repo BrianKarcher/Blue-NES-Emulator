@@ -20,6 +20,7 @@ void VertScrollTest::Setup(IntegrationRunner& runner)
 	ppu = &m_core->ppu;
 
 	m_ppuCtrl = 0x00;
+    ppu->m_ppuMask = 0xFF;
 	m_scrollY = 0;
     m_success = false;
     size_t bytesRead;
@@ -127,7 +128,9 @@ void VertScrollTest::Setup(IntegrationRunner& runner)
     oam[15] = 128; // X position
     m_runner->PerformDMA();
     //ppu.oam
-    ppu->render_frame();
+    //ppu->render_frame();
+    m_core->isPlaying = true;
+    bus->cpu->Activate(true);
 }
 
 void VertScrollTest::Update()
