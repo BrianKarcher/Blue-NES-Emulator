@@ -38,24 +38,26 @@ static constexpr uint32_t m_nesPalette[64] = {
 
 class Bus;
 class Core;
+class Renderer;
 
 class NesPPU
 {
 public:
 	NesPPU();
 	~NesPPU();
+	Renderer* renderer;
 	void reset();
 	void step();
 	void write_register(uint16_t addr, uint8_t value);
 	uint8_t read_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
-	void RenderScanline();
-	void render_frame();
-	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
+	
+	//void render_frame();
+	
 	void set_hwnd(HWND hwnd);
 	// For testing, may create a window and render CHR-ROM data
-	void render_chr_rom();
-	void render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
+	//void render_chr_rom();
+	//void render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 
 	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
@@ -64,28 +66,29 @@ public:
 	Core* core;
 	bool NMI();
 	void Clock();
-	bool m_frameComplete = false;
+	
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
 	uint16_t GetVRAMAddress() const { return vramAddr; }
 	void SetVRAMAddress(uint16_t addr) { vramAddr = addr & 0x3FFF; }
 	uint8_t GetPPUStatus() const { return m_ppuStatus; }
 	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
-	std::pair<uint8_t, uint8_t> GetPPUScroll() const { return std::make_pair(m_scrollX, m_scrollY); }
+	const std::array<uint32_t, 256 * 240>& get_back_buffer();
+	
 
 	uint8_t m_ppuMask = 0;
-private:
-	// Sprite data for current scanline
-	struct Sprite {
-		uint8_t x;
-		uint8_t y;
-		uint8_t tileIndex;
-		uint8_t attributes;
-		bool isSprite0;
-	};
+	uint8_t m_ppuStatus = 0;
+	uint8_t m_ppuCtrl = 0;
+	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM
+	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
+	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite);
+	bool isFrameComplete();
+	void setFrameComplete(bool complete);
+	void Initialize(Bus* bus, Core* core);
 
+private:
 	bool is_failure = false;
 
-	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
+	
 
 	// register v in hardware PPU
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
@@ -93,19 +96,16 @@ private:
 	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
 
-	// TODO: This can be optimized to use less memory if needed
-	// Change to 0x800 (2 KB)
-	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM
+	
 
 	// Back buffer for rendering (256x240 pixels, RGBA)
-	std::array<uint32_t, 256 * 240> m_backBuffer;
-	int m_cycle = 0; // Current PPU cycle (0-340)
-	int m_scanline = 0; // Current PPU scanline (0-261)
-	uint8_t m_scrollX = 0;
-	uint8_t m_scrollY = 0;
-	uint8_t m_ppuCtrl = 0;
 	
-	uint8_t m_ppuStatus = 0;
+	
+	
+	
+	
+	
+	
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
 	}
@@ -118,13 +118,11 @@ private:
 	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
 
 	void write_vram(uint16_t addr, uint8_t value);
-	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
-	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
-	void render_nametable();
-	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite);
+	
+	
+	//void render_nametable();
+	
 
-	std::array<Sprite, 8> secondaryOAM{};
-	// Overflow can only be set once per frame
-	bool hasOverflowBeenSet = false;
-	bool hasSprite0HitBeenSet = false;
+	
+	
 };

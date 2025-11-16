@@ -131,8 +131,7 @@ HRESULT Core::Initialize()
     bus.ppu = &ppu;
     bus.core = this;*/
     bus.Initialize(this);
-    ppu.bus = &bus;
-    ppu.core = this;
+    ppu.Initialize(&bus, this);
 	cpu.bus = &bus;
     ppu.set_hwnd(m_hwnd);
     HDC hdc = GetDC(m_hwnd);
@@ -862,7 +861,7 @@ void Core::RunMessageLoop()
 
             // Run PPU until frame complete (89342 cycles per frame)
             int cpuCyclesThisFrame = 0;
-            while (!ppu.m_frameComplete) {
+            while (!ppu.isFrameComplete()) {
                 ppu.Clock();
 				// CPU runs at 1/3 the speed of the PPU
 				cpuCycleDebt++;
@@ -891,8 +890,8 @@ void Core::RunMessageLoop()
                 }
 			}
 			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-            ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
+            ppu.setFrameComplete(false);
 
             // Submit the exact samples generated this frame
             // Check audio queue to prevent unbounded growth
