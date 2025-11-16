@@ -33,4 +33,5 @@ private:
 	std::vector<uint8_t> m_prgData;
 	std::vector<uint8_t> m_chrData;
 	MirrorMode m_mirrorMode;
+	bool isCHRWritable;
 };

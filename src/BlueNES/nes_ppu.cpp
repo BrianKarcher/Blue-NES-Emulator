@@ -48,7 +48,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			m_ppuCtrl = value;
 			break;
 		case PPUMASK: // PPUMASK
-			// Handle PPUMASK write here
+			m_ppuMask = value;
 			break;
 		case PPUSTATUS: // PPUSTATUS (read-only)
 			// Ignore writes to PPUSTATUS
@@ -112,7 +112,7 @@ uint8_t NesPPU::read_register(uint16_t addr)
 		}
 		case PPUMASK:
 		{
-			// Handle PPUMASK read here (not typically readable, return 0)
+			// not typically readable, return 0
 			return 0;
 		}
 		case PPUSTATUS:
@@ -183,7 +183,9 @@ uint8_t NesPPU::ReadVRAM(uint16_t addr)
 		}
 		value = paletteTable[paletteAddr];
 		// But buffer is filled with the underlying nametable byte
-		ppuDataBuffer = m_vram[addr & 0x2FFF];
+		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
+		mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
+		ppuDataBuffer = m_vram[mirroredAddr];
 	}
 	
 	return value;
@@ -288,7 +290,9 @@ void NesPPU::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		if (m_ppuMask & PPUMASK_BACKGROUNDENABLED) {
+			m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+		}
 		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
 		bool foundSprite = false;
 		for (int i = 0; i < 8 && !foundSprite; ++i) {
@@ -320,7 +324,18 @@ void NesPPU::RenderScanline()
 				if (spriteColorIndex != 0) { // Non-transparent pixel
 					uint32_t spriteColor = spritePalette[spriteColorIndex];
 					// Handle priority (not implemented yet, assuming sprites are always on top)
-					m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+					if (sprite.isSprite0 && m_ppuMask & PPUMASK_RENDERINGEITHER) {
+						// Sprite 0 hit detection
+						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
+						// any opaque pixel of background, regardless of sprite priority.
+						if (!hasSprite0HitBeenSet && bgColorIndex != 0) {
+							hasSprite0HitBeenSet = true;
+							m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
+						}
+					}
+					if (m_ppuMask & PPUMASK_SPRITEENABLED) {
+						m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+					}
 					foundSprite = true;
 				}
 			}
@@ -332,6 +347,8 @@ void NesPPU::Clock() {
 	// Emulate one PPU clock cycle here
 	if (m_scanline >= 0 && m_scanline < 240) {
 		if (m_cycle == 256) {
+			//OutputDebugStringW((L"Rendering scanline " + std::to_wstring(m_scanline)
+			//	+ L" at CPU Cycle " + std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
 			// TODO: Pixel by pixel rendering can be implemented here for more accuracy
 			RenderScanline();
 		}
@@ -343,16 +360,23 @@ void NesPPU::Clock() {
 		m_frameComplete = true;
 		if (m_ppuCtrl & NMI_ENABLE) {
 			// Trigger NMI if enabled
+			//OutputDebugStringW((L"Triggering NMI at CPU cycle "
+			//	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
 			bus->cpu->NMI();
 		}
 	}
 
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
+		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+
+		//OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
+		//	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
 		hasOverflowBeenSet = false;
+		hasSprite0HitBeenSet = false;
 		m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
 		m_frameComplete = false;
-		//m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+		m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
 	}
 
 	// Advance cycle and scanline counters
@@ -391,6 +415,7 @@ void NesPPU::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
 				newOam[spriteCount].tileIndex = oam[i * 4 + 1];
 				newOam[spriteCount].attributes = oam[i * 4 + 2];
 				newOam[spriteCount].x = oam[i * 4 + 3];
+				newOam[spriteCount].isSprite0 = (i == 0); // Mark if this is sprite 0
 				spriteCount++;
 			}
 			else {

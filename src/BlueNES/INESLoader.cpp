@@ -40,13 +40,6 @@ ines_file_t* INESLoader::load_data_from_ines(const wchar_t* filename) {
     }
 	ines_file.header = &header;
 
-    // Check if CHR-ROM exists
-    if (header.chr_rom_size == 0) {
-        printf("Error: No CHR-ROM data in file\n");
-        fclose(file);
-        return NULL;
-    }
-
     // Calculate sizes
     size_t prg_rom_size = header.prg_rom_size * 16384;  // 16KB units
     size_t chr_rom_size = header.chr_rom_size * 8192;   // 8KB units
@@ -88,23 +81,29 @@ ines_file_t* INESLoader::load_data_from_ines(const wchar_t* filename) {
         return NULL;
     }
 
-    chr_data->data = (uint8_t*)malloc(chr_rom_size);
-    if (!chr_data->data) {
-		MessageBoxA(NULL, "Failed to allocate memory for CHR-ROM data.", "Error", MB_OK | MB_ICONERROR);
-        printf("Error: Cannot allocate memory for CHR-ROM data\n");
-        free(chr_data);
-        fclose(file);
-        return NULL;
+    if (chr_rom_size == 0) {
+        // CHR-RAM
+        chr_data->data = nullptr;
     }
+    else {
+        chr_data->data = (uint8_t*)malloc(chr_rom_size);
+        if (!chr_data->data) {
+            MessageBoxA(NULL, "Failed to allocate memory for CHR-ROM data.", "Error", MB_OK | MB_ICONERROR);
+            printf("Error: Cannot allocate memory for CHR-ROM data\n");
+            free(chr_data);
+            fclose(file);
+            return NULL;
+        }
 
-    // Read CHR-ROM data
-    if (fread(chr_data->data, chr_rom_size, 1, file) != 1) {
-		MessageBoxA(NULL, "Failed to read CHR-ROM data from the file.", "Error", MB_OK | MB_ICONERROR);
-        printf("Error: Cannot read CHR-ROM data\n");
-        free(chr_data->data);
-        free(chr_data);
-        fclose(file);
-        return NULL;
+        // Read CHR-ROM data
+        if (fread(chr_data->data, chr_rom_size, 1, file) != 1) {
+            MessageBoxA(NULL, "Failed to read CHR-ROM data from the file.", "Error", MB_OK | MB_ICONERROR);
+            printf("Error: Cannot read CHR-ROM data\n");
+            free(chr_data->data);
+            free(chr_data);
+            fclose(file);
+            return NULL;
+        }
     }
 
     fclose(file);

@@ -59,13 +59,12 @@ void Processor_6502::NMI() {
 
 /// <summary>
 /// Speed is paramount so we try to reduce function hops as much as feasible while keeping the code readable.
-/// And yes, I realize that the loop in the Run() function is an extra hop to RunStep(). I'm keeping that hop to
-/// make testing easier.
 /// </summary>
-void Processor_6502::Clock()
+uint8_t Processor_6502::Clock()
 {
-	if (!isActive) return;
+	if (!isActive) return 0;
 	uint8_t op = bus->read(m_pc++);
+	uint64_t cyclesBefore = m_cycle_count;
 	switch (op)
 	{
 		case ADC_IMMEDIATE:
@@ -1397,6 +1396,9 @@ void Processor_6502::Clock()
 			break;
 		}
 	}
+	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
+	cyclesThisFrame += cyclesPassed;
+	return cyclesPassed;
 }
 
 uint8_t Processor_6502::GetSP()

@@ -171,7 +171,7 @@ class Processor_6502
 public:
 	// Power On and Reset are different
 	void PowerOn();
-	void Clock();
+	uint8_t Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);
 	uint8_t GetX();
@@ -194,6 +194,7 @@ public:
 	void ClearFlag(uint8_t flag);
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
+	int cyclesThisFrame;
 private:
 	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);

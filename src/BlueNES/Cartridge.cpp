@@ -15,9 +15,17 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
         m_prgData.push_back(inesFile->prg_rom->data[i]);
 	}
     m_chrData.clear();
-    for (int i = 0; i < inesFile->chr_rom->size; i++) {
-        m_chrData.push_back(inesFile->chr_rom->data[i]);
+    if (inesFile->chr_rom->size == 0) {
+		isCHRWritable = true;
+        // No CHR ROM present; allocate 8KB of CHR RAM
+        m_chrData.resize(0x2000, 0);
 	}
+    else {
+        isCHRWritable = false;
+        for (int i = 0; i < inesFile->chr_rom->size; i++) {
+            m_chrData.push_back(inesFile->chr_rom->data[i]);
+        }
+    }
 	m_mirrorMode = inesFile->header->flags6 & 0x01 ? VERTICAL : HORIZONTAL;
 }
 
@@ -120,6 +128,9 @@ uint8_t Cartridge::ReadCHR(uint16_t address) {
 
 // TODO: Support CHR-RAM vs CHR-ROM distinction
 void Cartridge::WriteCHR(uint16_t address, uint8_t data) {
+    if (!isCHRWritable) {
+        return; // Ignore writes if CHR is ROM
+	}
 	if (address < 0x2000) {
 		m_chrData[address] = data;
 	}

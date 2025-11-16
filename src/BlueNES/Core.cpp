@@ -495,7 +495,6 @@ bool ShowOpenDialog(HWND hwnd, std::wstring& filePath)
 
     if (GetOpenFileName(&ofn))
     {
-        MessageBox(hwnd, szFile, L"You selected:", MB_OK);
         filePath = szFile;
 		return true;
 
@@ -858,6 +857,7 @@ void Core::RunMessageLoop()
 
             // Clear audio buffer for this frame
             audioBuffer.clear();
+            cpu.cyclesThisFrame = 0;
 
             // Run PPU until frame complete (89342 cycles per frame)
             int cpuCyclesThisFrame = 0;
@@ -870,11 +870,10 @@ void Core::RunMessageLoop()
 					//cpuCycleDebt -= ppuCyclesPerCPUCycle;
                     // Get cycles before instruction
                     uint64_t cyclesBefore = cpu.GetCycleCount();
-                    cpu.Clock();
+                    uint64_t cyclesElapsed = cpu.Clock();
                     // Get cycles after instruction
                     uint64_t cyclesAfter = cpu.GetCycleCount();
-                    uint64_t cyclesElapsed = cyclesAfter - cyclesBefore;
-					cpuCyclesThisFrame += (int)cyclesElapsed;
+                    cyclesAfter - cyclesBefore;
                     cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
                     // Clock APU for each CPU cycle
@@ -890,7 +889,7 @@ void Core::RunMessageLoop()
                     }
                 }
 			}
-			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpuCyclesThisFrame) + L"\n").c_str());
+			//OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
             ppu.m_frameComplete = false;
             cpu.nmiRequested = false;
 
@@ -907,9 +906,9 @@ void Core::RunMessageLoop()
                 OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
             }
 
-            OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+            /*OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
                 L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
+                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());*/
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);
@@ -927,7 +926,7 @@ void Core::RunMessageLoop()
 				InvalidateRect(m_hwndHex, nullptr, TRUE);
                 double fps = frameCount / timeSinceStart;
                 std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
-                OutputDebugStringW(title.c_str());
+                //OutputDebugStringW(title.c_str());
                 SetWindowText(m_hwnd, title.c_str());
                 frameStartTime = currentTime;
                 frameCount = 0;

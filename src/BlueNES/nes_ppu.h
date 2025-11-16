@@ -20,6 +20,9 @@
 #define PPUSTATUS_VBLANK 0x80
 #define PPUSTATUS_SPRITE0_HIT 0x40
 #define PPUSTATUS_SPRITE_OVERFLOW 0x20
+#define PPUMASK_BACKGROUNDENABLED 0x08
+#define PPUMASK_SPRITEENABLED 0x10
+#define PPUMASK_RENDERINGEITHER PPUMASK_BACKGROUNDENABLED | PPUMASK_SPRITEENABLED
 
 // NES color palette (64 colors)
 static constexpr uint32_t m_nesPalette[64] = {
@@ -99,6 +102,7 @@ private:
 	uint8_t m_scrollX = 0;
 	uint8_t m_scrollY = 0;
 	uint8_t m_ppuCtrl = 0;
+	uint8_t m_ppuMask = 0;
 	uint8_t m_ppuStatus = 0;
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
@@ -120,4 +124,5 @@ private:
 	std::array<Sprite, 8> secondaryOAM{};
 	// Overflow can only be set once per frame
 	bool hasOverflowBeenSet = false;
+	bool hasSprite0HitBeenSet = false;
 };
