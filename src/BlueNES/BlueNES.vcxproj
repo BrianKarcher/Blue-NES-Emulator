@@ -138,6 +138,7 @@
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="PPU.cpp" />
     <ClCompile Include="RendererSlow.cpp" />
+    <ClCompile Include="RendererWithReg.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AudioBackend.h" />
@@ -154,6 +155,7 @@
     <ClInclude Include="PPU.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererSlow.h" />
+    <ClInclude Include="RendererWithReg.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

@@ -93,18 +93,7 @@
 //    
 //    uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
 //
-//    // Internal registers
-//    // v and t are described as follows:
-//    // yyy NN YYYYY XXXXX
-//    // ||| || ||||| ++++ + --coarse X scroll
-//    // ||| || ++++ + --------coarse Y scroll
-//    // ||| ++--------------nametable select
-//    // ++ + ---------------- - fine Y scroll
-//    // Loopy registers
-//    uint16_t v = 0;   // current VRAM address (15 bits)
-//    uint16_t t = 0;   // temporary VRAM address (15 bits)
-//    uint8_t x = 0;    // fine X (0..7)
-//    bool w = false;   // first/second write toggle
+
 //
 //    uint8_t m_ppuCtrl = 0;
 //	uint8_t m_ppuMask = 0;

@@ -31,8 +31,7 @@
 //	switch (addr) {
 //		case PPUCTRL:
 //			m_ppuCtrl = value;
-//			// Set nametable bits in register t
-//			t = (t & ~INTERNAL_NAMETABLE) | ((m_ppuCtrl & 0x03) << 10);
+
 //			break;
 //		case PPUMASK: // PPUMASK
 //			m_ppuMask = value;
@@ -50,18 +49,12 @@
 //			// Handle PPUSCROLL write here
 //			if (!w)
 //			{
-//				// First write sets horizontal scroll
-//				t = (t & ~INTERNAL_COARSE_X) | (value >> 3);
-//				x = value & 0x07;
+
 //				//tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
 //			}
 //			else
 //			{
-//				// Second write sets vertical scroll
-//				// Fine Y
-//				t = (t & ~INTERNAL_FINE_Y) | ((value & 0x07) << 12);
-//				// Coarse Y
-//				t = (t & ~INTERNAL_COARSE_Y) | ((value & 0x1F) << 5);
+
 //			}
 //			// Note that writeToggle is shared with PPUADDR
 //			// I retain to mimic hardware behavior
@@ -72,9 +65,6 @@
 //			// Games need to update PPUSCROLL and PPUCTRL after writing to PPUADDR
 //			if (!w)
 //			{
-//				t = (t & ~0b11111100000000) | ((value & 0b111111) << 8);
-//				// Zero this bit for reasons unknown
-//				t = (t & ~0b100000000000000);
 //
 //				// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
 //				//tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
@@ -82,9 +72,7 @@
 //			}
 //			else
 //			{
-//				t = (t & ~0b11111111) | ((value & 0b11111111));
-//				//tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
-//				v = t;
+
 //			}
 //			// If the program doesn't do two writes in a row, the behavior is undefined.
 //			// It's their fault if their code is broken.
@@ -227,40 +215,7 @@
 //
 //
 //
-//// ---------------- Loopy helpers ----------------
-//void PPU::incrementX() {
-//    // if coarse X == 31: coarse X = 0, switch horizontal nametable
-//    if ((v & 0x001F) == 31) {
-//        v &= ~0x001F;
-//        v ^= 0x0400;
-//    }
-//    else {
-//        v += 1;
-//    }
-//}
-//
-//void PPU::incrementY() {
-//    // if fine Y < 7 -> fine Y++
-//    if ((v & 0x7000) != 0x7000) {
-//        v += 0x1000; // fine Y++
-//    }
-//    else {
-//        // fine Y = 0
-//        v &= ~0x7000;
-//        uint16_t y = (v & 0x03E0) >> 5; // coarse Y
-//        if (y == 29) {
-//            y = 0;
-//            v ^= 0x0800; // switch vertical nametable
-//        }
-//        else if (y == 31) {
-//            y = 0; // overflow to 0, no nametable switch
-//        }
-//        else {
-//            y++;
-//        }
-//        v = (v & ~0x03E0) | (y << 5);
-//    }
-//}
+
 //
 //void PPU::copyHorizontalBitsFromTtoV() {
 //    v = (v & ~0x041F) | (t & 0x041F);

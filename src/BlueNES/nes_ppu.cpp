@@ -55,6 +55,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	switch (addr) {
 	case PPUCTRL:
 		m_ppuCtrl = value;
+		renderer->SetPPUCTRL(value);
 		break;
 	case PPUMASK: // PPUMASK
 		m_ppuMask = value;
@@ -65,11 +66,10 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	case OAMADDR: // OAMADDR
 		oamAddr = value;
 		break;
-	case OAMDATA: // OAMDATA
+	case OAMDATA:
 		oam[oamAddr++] = value;
 		break;
-	case PPUSCROLL: // PPUSCROLL
-		// Handle PPUSCROLL write here
+	case PPUSCROLL:
 		if (!writeToggle)
 		{
 			renderer->SetScrollX(value); // First write sets horizontal scroll
@@ -87,12 +87,14 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		{
 			// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
 			tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
+			renderer->SetPPUAddrHigh(value);
 			// vramAddr = (vramAddr & 0x00FF) | (value & 0x3F) << 8; // First write (high byte)
 		}
 		else
 		{
 			tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
 			vramAddr = tempVramAddr; // Second write (low byte)
+			renderer->SetPPUAddrLow(value);
 		}
 		// If the program doesn't do two writes in a row, the behavior is undefined.
 		// It's their fault if their code is broken.
