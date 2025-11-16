@@ -346,6 +346,8 @@ void NesPPU::RenderScanline()
 void NesPPU::Clock() {
 	// Emulate one PPU clock cycle here
 	if (m_scanline >= 0 && m_scanline < 240) {
+		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 		if (m_cycle == 256) {
 			//OutputDebugStringW((L"Rendering scanline " + std::to_wstring(m_scanline)
 			//	+ L" at CPU Cycle " + std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
@@ -366,8 +368,14 @@ void NesPPU::Clock() {
 		}
 	}
 
+	if (m_scanline == 50 && m_cycle == 1) {
+		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+	}
+
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
+		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
 		//OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
