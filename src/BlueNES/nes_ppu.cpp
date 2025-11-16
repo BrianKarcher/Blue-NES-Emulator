@@ -46,6 +46,8 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	switch (addr) {
 		case PPUCTRL:
 			m_ppuCtrl = value;
+			// Set nametable bits in register t
+			m_t = (m_t & ~INTERNAL_NAMETABLE) | ((m_ppuCtrl & 0x03) << 10);
 			break;
 		case PPUMASK: // PPUMASK
 			m_ppuMask = value;
@@ -61,43 +63,58 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 			break;
 		case PPUSCROLL: // PPUSCROLL
 			// Handle PPUSCROLL write here
-			if (!writeToggle)
+			if (!m_w)
 			{
-				m_scrollX = value; // First write sets horizontal scroll
+				// First write sets horizontal scroll
+				m_t = (m_t & ~INTERNAL_COARSE_X) | (value >> 3);
+				m_x = m_scrollX & 0x07;
+				//tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
 			}
 			else
 			{
-				m_scrollY = value; // Second write sets vertical scroll
+				// Second write sets vertical scroll
+				// Fine Y
+				m_t = (m_t & ~INTERNAL_FINE_Y) | ((m_scrollY & 0x07) << 12);
+				// Coarse Y
+				m_t = (m_t & ~INTERNAL_COARSE_Y) | ((m_scrollY & 0x1F) << 5);
 			}
 			// Note that writeToggle is shared with PPUADDR
 			// I retain to mimic hardware behavior
-			writeToggle = !writeToggle;
+			m_w = !m_w;
 			break;
 		case PPUADDR: // PPUADDR
-			if (!writeToggle)
+			// PPUADDR corrupts the t register.
+			// Games need to update PPUSCROLL and PPUCTRL after writing to PPUADDR
+			if (!m_w)
 			{
+				m_t = (m_t & ~0b11111100000000) | ((value & 0b111111) << 8);
+				// Zero this bit for reasons unknown
+				m_t = (m_t & ~0b100000000000000);
+
 				// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
-				tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
+				//tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
 				// vramAddr = (vramAddr & 0x00FF) | (value & 0x3F) << 8; // First write (high byte)
 			}
 			else
 			{
-				tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
-				vramAddr = tempVramAddr; // Second write (low byte)
+				m_t = (m_t & ~0b11111111) | ((value & 0b11111111));
+				//tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
+				m_v = m_t;
 			}
 			// If the program doesn't do two writes in a row, the behavior is undefined.
 			// It's their fault if their code is broken.
-			writeToggle = !writeToggle;
+			m_w = !m_w;
 			break;
 		case PPUDATA: // PPUDATA
+			uint16_t vramAddr = m_v & 0b11111111111111;
 			write_vram(vramAddr, value);
 			// Increment VRAM address based on PPUCTRL setting (TODO: not implemented yet, default to 1)
 			if (vramAddr >= 0x3F00) {
 				// Palette data always increments by 1
-				vramAddr += 1;
+				m_v += 1;
 				return;
 			}
-			vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
+			m_v += m_ppuCtrl & 0x04 ? 32 : 1;
 			break;
 	}
 }
@@ -117,7 +134,7 @@ uint8_t NesPPU::read_register(uint16_t addr)
 		}
 		case PPUSTATUS:
 		{
-			writeToggle = false; // Reset write toggle on reading PPUSTATUS
+			m_w = false; // Reset write toggle on reading PPUSTATUS
 			// Return PPU status register value and clear VBlank flag
 			uint8_t status = m_ppuStatus;
 			m_ppuStatus &= ~PPUSTATUS_VBLANK;
@@ -144,15 +161,16 @@ uint8_t NesPPU::read_register(uint16_t addr)
 		}
 		case PPUDATA:
 		{
+			uint16_t vramAddr = m_v & 0b11111111111111;
 			// Read from VRAM at current vramAddr
 			uint8_t value = ReadVRAM(vramAddr);
 			// Increment VRAM address based on PPUCTRL setting
 			if (vramAddr >= 0x3F00) {
 				// Palette data always increments by 1
-				vramAddr += 1;
+				m_v += 1;
 				return value;
 			}
-			vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
+			m_v += m_ppuCtrl & 0x04 ? 32 : 1;
 			return value;
 		}
 	}
@@ -233,113 +251,148 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 //	oamAddr &= 0xFF;
 //}
 
-void NesPPU::RenderScanline()
-{
-	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
-	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
-	int fineY = (m_scanline + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
-	// Render a single scanline to the back buffer here
-	for (int screenX = 0; screenX < 256; ++screenX)
-	{
-		int fineX = (scrollX + screenX) % (NAMETABLE_WIDTH * TILE_SIZE);
-		// Compute the base nametable index based on coarse scroll
-		uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
-		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
+//void NesPPU::RenderScanline()
+//{
+//	int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
+//	int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
+//	int fineY = (m_scanline + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
+//	// Render a single scanline to the back buffer here
+//	for (int screenX = 0; screenX < 256; ++screenX)
+//	{
+//		int fineX = (scrollX + screenX) % (NAMETABLE_WIDTH * TILE_SIZE);
+//		// Compute the base nametable index based on coarse scroll
+//		uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
+//		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
+//
+//		// Determine which nametable we’re in (0–3)
+//		uint8_t nametableSelect = (m_ppuCtrl & 0x03);
+//		if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
+//		if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
+//
+//		uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+//		nametableAddr = bus->cart->MirrorNametable(nametableAddr);
+//
+//		// Convert to tile coordinates
+//		int tileCol = fineX / TILE_SIZE;
+//		int tileRow = fineY / TILE_SIZE;
+//		int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
+//		if (tileIndex == 0x48) {
+//			int test = 0;
+//		}
+//		else if (tileIndex > 0) {
+//			int test = 0;
+//		}
+//		// Get attribute byte for the tile
+//		int attrRow = tileRow / 4;
+//		int attrCol = tileCol / 4;
+//		uint8_t attributeByte = m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
+//
+//		uint8_t paletteIndex = 0;
+//		get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
+//
+//		std::array<uint32_t, 4> palette;
+//		get_palette(paletteIndex, palette); // For now we don't use the colors
+//
+//		// Get the color of the specific pixel within the tile
+//		int bgPixelInTileX = fineX % TILE_SIZE;
+//		int bgPixelInTileY = fineY % TILE_SIZE;
+//		uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
+//		// Handle both background and sprite color mapping here since we have to deal with
+//		// transparency and priority
+//		// Added bonus: Single draw call to set pixel in back buffer
+//		uint32_t bgColor = 0;
+//		if (bgColorIndex == 0) {
+//			bgColor = m_nesPalette[paletteTable[0]]; // Transparent color (background color)
+//		}
+//		else {
+//			bgColor = palette[bgColorIndex]; // Map to actual color from palette
+//		}
+//		// Set pixel in back buffer
+//		if (m_ppuMask & PPUMASK_BACKGROUNDENABLED) {
+//			m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+//		}
+//		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
+//		bool foundSprite = false;
+//		for (int i = 0; i < 8 && !foundSprite; ++i) {
+//			Sprite& sprite = secondaryOAM[i];
+//			if (sprite.y >= 0xF0) {
+//				continue; // Empty sprite slot
+//			}
+//			int spriteY = sprite.y + 1; // Adjust for off-by-one
+//			int spriteX = sprite.x;
+//			if (screenX >= spriteX && screenX < (spriteX + 8)) {
+//				// Sprite pixel coordinates
+//				int spritePixelX = screenX - spriteX;
+//				int spritePixelY = m_scanline - spriteY;
+//
+//				bool flipHorizontal = sprite.attributes & 0x40;
+//				bool flipVertical = sprite.attributes & 0x80;
+//				if (flipHorizontal) {
+//					spritePixelX = 7 - spritePixelX;
+//				}
+//				if (flipVertical) {
+//					spritePixelY = 7 - spritePixelY;
+//				}
+//				// Get sprite palette
+//				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
+//				std::array<uint32_t, 4> spritePalette;
+//				get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+//				// Get color index from sprite tile
+//				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
+//				if (spriteColorIndex != 0) { // Non-transparent pixel
+//					uint32_t spriteColor = spritePalette[spriteColorIndex];
+//					// Handle priority (not implemented yet, assuming sprites are always on top)
+//					if (sprite.isSprite0 && m_ppuMask & PPUMASK_RENDERINGEITHER) {
+//						// Sprite 0 hit detection
+//						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
+//						// any opaque pixel of background, regardless of sprite priority.
+//						if (!hasSprite0HitBeenSet && bgColorIndex != 0) {
+//							hasSprite0HitBeenSet = true;
+//							m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
+//						}
+//					}
+//					if (m_ppuMask & PPUMASK_SPRITEENABLED) {
+//						m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+//					}
+//					foundSprite = true;
+//				}
+//			}
+//		}
+//	}
+//}
 
-		// Determine which nametable we’re in (0–3)
-		uint8_t nametableSelect = (m_ppuCtrl & 0x03);
-		if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
-		if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
+void NesPPU::RenderTick() {
 
-		uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
-		nametableAddr = bus->cart->MirrorNametable(nametableAddr);
+}
 
-		// Convert to tile coordinates
-		int tileCol = fineX / TILE_SIZE;
-		int tileRow = fineY / TILE_SIZE;
-		int tileIndex = m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
-		if (tileIndex == 0x48) {
-			int test = 0;
+void NesPPU::IncrementX() {
+	if ((m_v & 0x001F) == 31) {
+		m_v &= ~0x001F;        // coarse X = 0
+		m_v ^= 0x0400;         // switch horizontal nametable
+	}
+	else {
+		m_v += 1;              // coarse X++
+	}
+}
+
+void NesPPU::IncrementY() {
+	if ((m_v & 0x7000) != 0x7000) {
+		m_v += 0x1000;                     // fine Y++
+	}
+	else {
+		m_v &= ~0x7000;                    // fine Y = 0
+		int y = (m_v & 0x03E0) >> 5;       // coarse Y
+		if (y == 29) {
+			y = 0;
+			m_v ^= 0x0800;                // switch vertical nametable
 		}
-		else if (tileIndex > 0) {
-			int test = 0;
-		}
-		// Get attribute byte for the tile
-		int attrRow = tileRow / 4;
-		int attrCol = tileCol / 4;
-		uint8_t attributeByte = m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
-
-		uint8_t paletteIndex = 0;
-		get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
-
-		std::array<uint32_t, 4> palette;
-		get_palette(paletteIndex, palette); // For now we don't use the colors
-
-		// Get the color of the specific pixel within the tile
-		int bgPixelInTileX = fineX % TILE_SIZE;
-		int bgPixelInTileY = fineY % TILE_SIZE;
-		uint8_t bgColorIndex = get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
-		// Handle both background and sprite color mapping here since we have to deal with
-		// transparency and priority
-		// Added bonus: Single draw call to set pixel in back buffer
-		uint32_t bgColor = 0;
-		if (bgColorIndex == 0) {
-			bgColor = m_nesPalette[paletteTable[0]]; // Transparent color (background color)
+		else if (y == 31) {
+			y = 0;                      // overflow, no nametable switch
 		}
 		else {
-			bgColor = palette[bgColorIndex]; // Map to actual color from palette
+			y++;
 		}
-		// Set pixel in back buffer
-		if (m_ppuMask & PPUMASK_BACKGROUNDENABLED) {
-			m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
-		}
-		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
-		bool foundSprite = false;
-		for (int i = 0; i < 8 && !foundSprite; ++i) {
-			Sprite& sprite = secondaryOAM[i];
-			if (sprite.y >= 0xF0) {
-				continue; // Empty sprite slot
-			}
-			int spriteY = sprite.y + 1; // Adjust for off-by-one
-			int spriteX = sprite.x;
-			if (screenX >= spriteX && screenX < (spriteX + 8)) {
-				// Sprite pixel coordinates
-				int spritePixelX = screenX - spriteX;
-				int spritePixelY = m_scanline - spriteY;
-
-				bool flipHorizontal = sprite.attributes & 0x40;
-				bool flipVertical = sprite.attributes & 0x80;
-				if (flipHorizontal) {
-					spritePixelX = 7 - spritePixelX;
-				}
-				if (flipVertical) {
-					spritePixelY = 7 - spritePixelY;
-				}
-				// Get sprite palette
-				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
-				std::array<uint32_t, 4> spritePalette;
-				get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
-				// Get color index from sprite tile
-				uint8_t spriteColorIndex = get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
-				if (spriteColorIndex != 0) { // Non-transparent pixel
-					uint32_t spriteColor = spritePalette[spriteColorIndex];
-					// Handle priority (not implemented yet, assuming sprites are always on top)
-					if (sprite.isSprite0 && m_ppuMask & PPUMASK_RENDERINGEITHER) {
-						// Sprite 0 hit detection
-						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
-						// any opaque pixel of background, regardless of sprite priority.
-						if (!hasSprite0HitBeenSet && bgColorIndex != 0) {
-							hasSprite0HitBeenSet = true;
-							m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
-						}
-					}
-					if (m_ppuMask & PPUMASK_SPRITEENABLED) {
-						m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
-					}
-					foundSprite = true;
-				}
-			}
-		}
+		m_v = (m_v & ~0x03E0) | (y << 5);
 	}
 }
 
@@ -348,11 +401,25 @@ void NesPPU::Clock() {
 	if (m_scanline >= 0 && m_scanline < 240) {
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
-		if (m_cycle == 256) {
+		if (m_cycle < 256) {
+			RenderTick();
+		}
+		else if (m_cycle == 256) {
+			// Increment vertical position in v
+			//if (m_ppuMask & PPUMASK_BACKGROUNDENABLED) {
+				IncrementY();
+			//}
 			//OutputDebugStringW((L"Rendering scanline " + std::to_wstring(m_scanline)
 			//	+ L" at CPU Cycle " + std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
 			// TODO: Pixel by pixel rendering can be implemented here for more accuracy
-			RenderScanline();
+			//RenderScanline();
+		}
+		else if (m_cycle == 257) {
+			// Copy x nametable bit from t to v
+			m_v = (m_v & ~INTERNAL_NAMETABLE_X) | ((m_t & INTERNAL_NAMETABLE_X));
+			// Copy coarse X from t to v
+			m_v = (m_v & ~INTERNAL_COARSE_X) | ((m_t & INTERNAL_COARSE_X));
+			// m_t = (m_t & ~INTERNAL_FINE_Y) | ((m_scrollY & 0x07) << 12);
 		}
 	}
 
@@ -373,18 +440,25 @@ void NesPPU::Clock() {
 	}
 
 	// Pre-render scanline (261)
-	if (m_scanline == 261 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+	if (m_scanline == 261) {
+		if (m_cycle == 1) {
+			OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
-		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+			//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
-		//OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
-		//	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
-		hasOverflowBeenSet = false;
-		hasSprite0HitBeenSet = false;
-		m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
-		m_frameComplete = false;
-		m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+			//OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
+			//	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
+			hasOverflowBeenSet = false;
+			hasSprite0HitBeenSet = false;
+			m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
+			m_frameComplete = false;
+			m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+		}
+		else if (m_cycle == 280) {
+			// Copy vertical bits from t to v
+			m_v = (m_v & ~INTERNAL_VERTICALBITS) | ((m_t & INTERNAL_VERTICALBITS));
+			// m_t = (m_t & ~INTERNAL_FINE_Y) | ((m_scrollY & 0x07) << 12);
+		}
 	}
 
 	// Advance cycle and scanline counters
