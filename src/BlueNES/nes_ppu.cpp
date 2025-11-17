@@ -59,6 +59,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		break;
 	case PPUMASK: // PPUMASK
 		m_ppuMask = value;
+		renderer->SetPPUMask(value);
 		break;
 	case PPUSTATUS: // PPUSTATUS (read-only)
 		// Ignore writes to PPUSTATUS

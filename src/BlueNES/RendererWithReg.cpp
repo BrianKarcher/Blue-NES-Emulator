@@ -137,7 +137,7 @@ void RendererWithReg::clock() {
 	}
 	//    // On dot 256: increment Y
     if (rendering && m_cycle == 256 && (visibleScanline)) {
-        incrementY();
+        //incrementY();
     }
 
     // On dot 257: copy horizontal bits from t to v and start sprite evaluation
@@ -247,6 +247,7 @@ void RendererWithReg::incrementY() {
 
 void RendererWithReg::RenderScanline()
 {
+	//return;
 	int scrollX = (v & 0b11111) << 3 | (x & 0b111);
 	int scrollY = ((v & 0b1111100000) >> 2) | ((v & 0b111000000000000) >> 12);
 	OutputDebugStringW((L"scrollX: " + std::to_wstring(scrollX) + L", scrollY: " + std::to_wstring(scrollY)).c_str());
@@ -256,7 +257,7 @@ void RendererWithReg::RenderScanline()
 	// Render a single scanline to the back buffer here
 	for (int screenX = 0; screenX < 256; ++screenX)
 	{
-		int fineX = (scrollX + screenX) % (NAMETABLE_WIDTH * TILE_SIZE);
+		int fineX = (screenX + scrollX) % (NAMETABLE_WIDTH * TILE_SIZE);
 		// Compute the base nametable index based on coarse scroll
 		uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
 		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
@@ -305,7 +306,7 @@ void RendererWithReg::RenderScanline()
 			bgColor = palette[bgColorIndex]; // Map to actual color from palette
 		}
 		// Set pixel in back buffer
-		if (ppu->m_ppuMask & PPUMASK_BACKGROUNDENABLED) {
+		if (ppumask & PPUMASK_BACKGROUNDENABLED) {
 			m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
 		}
 		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
@@ -339,7 +340,7 @@ void RendererWithReg::RenderScanline()
 				if (spriteColorIndex != 0) { // Non-transparent pixel
 					uint32_t spriteColor = spritePalette[spriteColorIndex];
 					// Handle priority (not implemented yet, assuming sprites are always on top)
-					if (sprite.isSprite0 && ppu->m_ppuMask & PPUMASK_RENDERINGEITHER) {
+					if (sprite.isSprite0 && ppumask & PPUMASK_RENDERINGEITHER) {
 						// Sprite 0 hit detection
 						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
 						// any opaque pixel of background, regardless of sprite priority.
@@ -348,7 +349,7 @@ void RendererWithReg::RenderScanline()
 							ppu->m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
 						}
 					}
-					if (ppu->m_ppuMask & PPUMASK_SPRITEENABLED) {
+					if (ppumask & PPUMASK_SPRITEENABLED) {
 						m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
 					}
 					foundSprite = true;
