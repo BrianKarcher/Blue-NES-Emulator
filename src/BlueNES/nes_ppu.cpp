@@ -222,8 +222,12 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 		// 3F1F = 0011 1111 0001 1111
 		uint8_t paletteAddr = addr & 0x1F; // 0001 1111
 		if (paletteAddr % 4 == 0) {
-			// Handle mirroring of the background color by setting the address to 0x3F00
-			paletteAddr = 0;
+			// Handle special mirroring of background color entries
+			// These 4 addresses mirror to their lower counterparts
+			if (paletteAddr == 0x10) paletteAddr = 0x00;
+			if (paletteAddr == 0x14) paletteAddr = 0x04;
+			if (paletteAddr == 0x18) paletteAddr = 0x08;
+			if (paletteAddr == 0x1C) paletteAddr = 0x0C;
 		}
 		paletteTable[paletteAddr] = value;
 		InvalidateRect(core->m_hwndPalette, NULL, FALSE); // Update palette window if open
