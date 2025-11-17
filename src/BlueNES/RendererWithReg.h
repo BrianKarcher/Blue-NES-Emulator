@@ -22,12 +22,13 @@ public:
 	RendererWithReg();
 	void Initialize(NesPPU* ppu);
 	void SetPPUCTRL(uint8_t value);
-	uint8_t GetScrollX() { return m_scrollX; }
-	uint8_t GetScrollY() { return m_scrollY; }
+	uint8_t GetScrollX() { return (v & 0b11111) << 3 | (x & 0b111); }
+	uint8_t GetScrollY() { return ((v & 0b1111100000) >> 2) | ((v & 0b111000000000000) >> 12); }
 	void SetScrollX(uint8_t value);
 	void SetScrollY(uint8_t value);
 	void SetPPUAddrHigh(uint8_t value);
 	void SetPPUAddrLow(uint8_t value);
+	void SetPPUMask(uint8_t value) { ppumask = value; }
 	//std::pair<uint8_t, uint8_t> GetPPUScroll() const { return std::make_pair(m_scrollX, m_scrollY); }
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void reset() {
@@ -71,9 +72,16 @@ private:
 	Bus* bus;
 	NesPPU* ppu;
 	std::array<uint32_t, 256 * 240> m_backBuffer;
+	uint8_t ppumask = 0;
 	// Overflow can only be set once per frame
 	bool hasOverflowBeenSet = false;
 	bool hasSprite0HitBeenSet = false;
 	std::array<Sprite, 8> secondaryOAM{};
 	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
+	//    // Internal helpers
+	inline bool renderingEnabled() const { return (ppumask & 0x18) != 0; } // bg or sprites
+	inline bool bgEnabled() const { return (ppumask & 0x08) != 0; }
+	inline bool spriteEnabled() const { return (ppumask & 0x10) != 0; }
+	void copyHorizontalBitsFromTtoV();
+	void copyVerticalBitsFromTtoV();
 };

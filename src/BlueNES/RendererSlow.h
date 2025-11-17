@@ -26,6 +26,7 @@ public:
 	void clock();
 	bool isFrameComplete() { return m_frameComplete; }
 	void setFrameComplete(bool complete) { m_frameComplete = complete; }
+	void SetPPUMask(uint8_t value) { }
 
 private:
 	// Sprite data for current scanline

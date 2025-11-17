@@ -89,6 +89,10 @@ void RendererWithReg::SetPPUAddrLow(uint8_t value) {
 //}
 
 void RendererWithReg::clock() {
+	bool rendering = renderingEnabled();
+    bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
+    bool preRenderLine = (m_scanline == 261);
+ 
 	// Emulate one PPU clock cycle here
 	if (m_scanline >= 0 && m_scanline < 240) {
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
@@ -114,12 +118,12 @@ void RendererWithReg::clock() {
 	}
 
 	if (m_scanline == 50 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
 	}
 
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
 
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
@@ -131,18 +135,40 @@ void RendererWithReg::clock() {
 		m_frameComplete = false;
 		m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
 	}
+	//    // On dot 256: increment Y
+    if (rendering && m_cycle == 256 && (visibleScanline)) {
+        incrementY();
+    }
+
+    // On dot 257: copy horizontal bits from t to v and start sprite evaluation
+    if (rendering && m_cycle == 257) {
+        copyHorizontalBitsFromTtoV();
+        // evaluate sprites (we do simple eager eval; full timing consumes 64 cycles 257..320)
+		EvaluateSprites(m_scanline, secondaryOAM);
+    }
+
+    // Pre-render only: dots 280..304 copy vertical bits from t to v
+    if (preRenderLine && m_cycle >= 280 && m_cycle <= 304 && rendering) {
+        copyVerticalBitsFromTtoV();
+    }
 
 	// Advance cycle and scanline counters
 	m_cycle++;
 	if (m_cycle > 340) {
-		// As per hardware behavior, evaluate sprites for the next scanline here
-		EvaluateSprites(m_scanline, secondaryOAM);
 		m_cycle = 0;
 		m_scanline++;
 		if (m_scanline > 261) {
 			m_scanline = 0;
 		}
 	}
+}
+
+void RendererWithReg::copyHorizontalBitsFromTtoV() {
+    v = (v & ~0x041F) | (t & 0x041F);
+}
+
+void RendererWithReg::copyVerticalBitsFromTtoV() {
+    v = (v & ~0x7BE0) | (t & 0x7BE0);
 }
 
 void RendererWithReg::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)

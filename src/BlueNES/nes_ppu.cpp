@@ -4,7 +4,7 @@
 #include <WinUser.h>
 #include "Bus.h"
 #include "Core.h"
-#include "RendererSlow.h"
+#include "RendererWithReg.h"
 
 HWND m_hwnd;
 
@@ -27,7 +27,7 @@ NesPPU::~NesPPU()
 void NesPPU::Initialize(Bus* bus, Core* core) {
 	this->bus = bus;
 	this->core = core;
-	renderer = new RendererSlow();
+	renderer = new RendererWithReg();
 	renderer->Initialize(this);
 }
 
