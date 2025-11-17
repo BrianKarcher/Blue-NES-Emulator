@@ -263,7 +263,8 @@ void RendererWithReg::RenderScanline()
 		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
 
 		// Determine which nametable we’re in (0–3)
-		uint8_t nametableSelect = (ppu->m_ppuCtrl & 0x03);
+		//uint8_t nametableSelect = (ppu->m_ppuCtrl & 0x03);
+		uint8_t nametableSelect = (v & INTERNAL_NAMETABLE) >> 10;
 		if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
 		if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
 
