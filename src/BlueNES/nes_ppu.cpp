@@ -5,15 +5,12 @@
 #include "Bus.h"
 #include "Core.h"
 #include "RendererWithReg.h"
+#include "RendererSlow.h"
 
 HWND m_hwnd;
 
-NesPPU::NesPPU()
-{
-	
-	
+NesPPU::NesPPU() {
 	oam.fill(0xFF);
-	
 	m_ppuCtrl = 0;
 	oamAddr = 0;
 }
@@ -282,6 +279,10 @@ uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTil
 	}
 
 	return colorIndex;
+}
+
+void NesPPU::SetPPUStatus(uint8_t flag) {
+	m_ppuStatus |= flag;
 }
 
 void NesPPU::get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors)

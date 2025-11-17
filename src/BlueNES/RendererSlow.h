@@ -27,6 +27,8 @@ public:
 	bool isFrameComplete() { return m_frameComplete; }
 	void setFrameComplete(bool complete) { m_frameComplete = complete; }
 	void SetPPUMask(uint8_t value) { }
+	void SetPPUAddrHigh(uint8_t value) {}
+	void SetPPUAddrLow(uint8_t value) {}
 
 private:
 	// Sprite data for current scanline

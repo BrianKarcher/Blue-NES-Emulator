@@ -84,6 +84,7 @@ public:
 	bool isFrameComplete();
 	void setFrameComplete(bool complete);
 	void Initialize(Bus* bus, Core* core);
+	void SetPPUStatus(uint8_t flag);
 
 private:
 	bool is_failure = false;

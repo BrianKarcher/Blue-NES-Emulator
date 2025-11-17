@@ -61,6 +61,9 @@
     <ClCompile Include="..\BlueNES\RendererSlow.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\RendererWithReg.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h">
@@ -106,6 +109,9 @@
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\RendererSlow.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\RendererWithReg.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>

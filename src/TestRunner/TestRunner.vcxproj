@@ -142,6 +142,7 @@
     <ClCompile Include="..\BlueNES\NES_APU.cpp" />
     <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
     <ClCompile Include="..\BlueNES\RendererSlow.cpp" />
+    <ClCompile Include="..\BlueNES\RendererWithReg.cpp" />
     <ClCompile Include="IntegrationRunner.cpp" />
     <ClCompile Include="IntegrationTest.cpp" />
     <ClCompile Include="SimpleNESTest.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="..\BlueNES\nes_ppu.h" />
     <ClInclude Include="..\BlueNES\Renderer.h" />
     <ClInclude Include="..\BlueNES\RendererSlow.h" />
+    <ClInclude Include="..\BlueNES\RendererWithReg.h" />
     <ClInclude Include="IntegrationRunner.h" />
     <ClInclude Include="IntegrationTest.h" />
     <ClInclude Include="SimpleNESTest.h" />

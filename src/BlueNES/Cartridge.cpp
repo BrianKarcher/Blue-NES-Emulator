@@ -40,13 +40,13 @@ uint16_t Cartridge::MirrorNametable(uint16_t addr) {
     // Map logical nametable to physical VRAM based on mirror mode
     switch (m_mirrorMode) {
     case HORIZONTAL:
-        // $2000=$2400, $2800=$2C00
+        // $2000=$2400 (NT1), $2800=$2C00 (NT2)
         // Tables 0,1 map to first 1KB, tables 2,3 map to second 1KB
         table = (table & 0x02) >> 1;
         break;
 
     case VERTICAL:
-        // $2000=$2800, $2400=$2C00
+        // $2000=$2800 (NT1), $2400=$2C00 (NT2)
         // Tables 0,2 map to first 1KB, tables 1,3 map to second 1KB
         table = table & 0x01;
         break;

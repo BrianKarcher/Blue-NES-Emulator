@@ -30,7 +30,8 @@ void RendererWithReg::SetScrollY(uint8_t value) {
 	// Fine Y
 	t = (t & ~INTERNAL_FINE_Y) | ((value & 0x07) << 12);
 	// Coarse Y
-	t = (t & ~INTERNAL_COARSE_Y) | ((value & 0x1F) << 5);
+	uint8_t courseY = value >> 3;
+	t = (t & ~INTERNAL_COARSE_Y) | (courseY << 5);
 }
 
 void RendererWithReg::SetPPUAddrHigh(uint8_t value) {
@@ -250,113 +251,165 @@ void RendererWithReg::RenderScanline()
 	//return;
 	int scrollX = (v & 0b11111) << 3 | (x & 0b111);
 	int scrollY = ((v & 0b1111100000) >> 2) | ((v & 0b111000000000000) >> 12);
-	OutputDebugStringW((L"scrollX: " + std::to_wstring(scrollX) + L", scrollY: " + std::to_wstring(scrollY)).c_str());
+	// OutputDebugStringW((L"scrollX: " + std::to_wstring(scrollX) + L", scrollY: " + std::to_wstring(scrollY) + L"\n").c_str());
 	//int scrollX = m_scrollX & 0xFF; // Fine X scrolling (0-255)
 	//int scrollY = m_scrollY & 0xFF; // Fine Y scrolling (0-239)
 	int fineY = (m_scanline + scrollY) % (NAMETABLE_HEIGHT * TILE_SIZE); // Wrap around vertically
 	// Render a single scanline to the back buffer here
 	for (int screenX = 0; screenX < 256; ++screenX)
 	{
-		int fineX = (screenX + scrollX) % (NAMETABLE_WIDTH * TILE_SIZE);
-		// Compute the base nametable index based on coarse scroll
-		uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
-		uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
-
-		// Determine which nametable we’re in (0–3)
-		//uint8_t nametableSelect = (ppu->m_ppuCtrl & 0x03);
-		uint8_t nametableSelect = (v & INTERNAL_NAMETABLE) >> 10;
-		if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
-		if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
-
-		uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
-		nametableAddr = bus->cart->MirrorNametable(nametableAddr);
-
-		// Convert to tile coordinates
-		int tileCol = fineX / TILE_SIZE;
-		int tileRow = fineY / TILE_SIZE;
-		int tileIndex = ppu->m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
-		if (tileIndex == 0x48) {
-			int test = 0;
-		}
-		else if (tileIndex > 0) {
-			int test = 0;
-		}
-		// Get attribute byte for the tile
-		int attrRow = tileRow / 4;
-		int attrCol = tileCol / 4;
-		uint8_t attributeByte = ppu->m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
-
-		uint8_t paletteIndex = 0;
-		get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
-
-		std::array<uint32_t, 4> palette;
-		ppu->get_palette(paletteIndex, palette); // For now we don't use the colors
-
-		// Get the color of the specific pixel within the tile
-		int bgPixelInTileX = fineX % TILE_SIZE;
-		int bgPixelInTileY = fineY % TILE_SIZE;
-		uint8_t bgColorIndex = ppu->get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
-		// Handle both background and sprite color mapping here since we have to deal with
-		// transparency and priority
-		// Added bonus: Single draw call to set pixel in back buffer
+		uint8_t bgPaletteIndex = 0;
 		uint32_t bgColor = 0;
-		if (bgColorIndex == 0) {
-			bgColor = m_nesPalette[ppu->paletteTable[0]]; // Transparent color (background color)
+		bool bgOpaque = false;
+		if (bgEnabled()) {
+			int fineX = (screenX + scrollX) % (NAMETABLE_WIDTH * TILE_SIZE);
+			// Compute the base nametable index based on coarse scroll
+			uint16_t coarseX = (scrollX + screenX) / (NAMETABLE_WIDTH * TILE_SIZE);
+			uint16_t coarseY = (scrollY + m_scanline) / (NAMETABLE_HEIGHT * TILE_SIZE);
+
+			// Determine which nametable we’re in (0–3)
+			//uint8_t nametableSelect = (ppu->m_ppuCtrl & 0x03);
+			uint8_t nametableSelect = (v & INTERNAL_NAMETABLE) >> 10;
+			if (coarseX % 2) nametableSelect ^= 1;       // Switch horizontally
+			if (coarseY % 2) nametableSelect ^= 2;       // Switch vertically
+
+			uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+			nametableAddr = bus->cart->MirrorNametable(nametableAddr);
+
+			// Convert to tile coordinates
+			int tileCol = fineX / TILE_SIZE;
+			int tileRow = fineY / TILE_SIZE;
+			int tileIndex = ppu->m_vram[nametableAddr + tileRow * NAMETABLE_WIDTH + tileCol];
+			if (tileIndex == 0x48) {
+				int test = 0;
+			}
+			else if (tileIndex > 0) {
+				int test = 0;
+			}
+			// Get attribute byte for the tile
+			int attrRow = tileRow / 4;
+			int attrCol = tileCol / 4;
+			uint8_t attributeByte = ppu->m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
+
+			uint8_t paletteIndex = 0;
+			get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
+
+			std::array<uint32_t, 4> palette;
+			ppu->get_palette(paletteIndex, palette); // For now we don't use the colors
+
+			// Get the color of the specific pixel within the tile
+			int bgPixelInTileX = fineX % TILE_SIZE;
+			int bgPixelInTileY = fineY % TILE_SIZE;
+			uint8_t bgColorIndex = ppu->get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
+			// Handle both background and sprite color mapping here since we have to deal with
+			// transparency and priority
+			// Added bonus: Single draw call to set pixel in back buffer
+			if (bgColorIndex % 4 == 0) {
+				bgColor = m_nesPalette[ppu->paletteTable[0]]; // Transparent color (background color)
+				bgOpaque = false;
+			}
+			else {
+				bgColor = palette[bgColorIndex]; // Map to actual color from palette
+				bgOpaque = true;
+			}
+			// Set pixel in back buffer
+			/*if (ppumask & PPUMASK_BACKGROUNDENABLED) {
+				m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
+			}*/
+		}
+
+		// Sprite pixel (simplified): we check secondaryOAM sprites for an opaque pixel at current x
+		uint8_t spritePaletteIndex = 0;
+		uint32_t spriteColor = 0;
+		bool spriteOpaque = false;
+		bool spritePriorityBehind = false;
+		bool spriteIsZero = false;
+
+		if (spriteEnabled()) {
+			for (int i = 0; i < 8; ++i) {
+				Sprite& sprite = secondaryOAM[i];
+				if (sprite.y >= 0xF0) {
+					continue; // Empty sprite slot
+				}
+				int spriteY = sprite.y + 1; // Adjust for off-by-one
+				int spriteX = sprite.x;
+				if (screenX >= spriteX && screenX < (spriteX + 8)) {
+					// Sprite pixel coordinates
+					int spritePixelX = screenX - spriteX;
+					int spritePixelY = m_scanline - spriteY;
+
+					bool flipHorizontal = sprite.attributes & 0x40;
+					bool flipVertical = sprite.attributes & 0x80;
+					if (flipHorizontal) {
+						spritePixelX = 7 - spritePixelX;
+					}
+					if (flipVertical) {
+						spritePixelY = 7 - spritePixelY;
+					}
+					// Get sprite palette
+					uint8_t paletteIndex = sprite.attributes & 0x03;
+					std::array<uint32_t, 4> spritePalette;
+					ppu->get_palette(paletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+					// Get color index from sprite tile
+					uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
+					if (spriteColorIndex != 0) { // Non-transparent pixel
+						spritePaletteIndex = spriteColorIndex;
+						spriteOpaque = true;
+						spritePriorityBehind = (sprite.attributes & 0x20) != 0;
+						spriteColor = spritePalette[spriteColorIndex];
+						// Handle priority (not implemented yet, assuming sprites are always on top)
+						if (sprite.isSprite0) {
+							spriteIsZero = true;
+							// Sprite 0 hit detection
+							// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
+							// any opaque pixel of background, regardless of sprite priority.
+							/*if (!hasSprite0HitBeenSet && bgPaletteIndex != 0) {
+								hasSprite0HitBeenSet = true;
+								ppu->m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
+							}*/
+						}
+						//if (ppumask & PPUMASK_SPRITEENABLED) {
+						//	m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+						//}
+						break;
+					}
+				}
+			}
+		}
+
+		// Sprite0 hit: If sprite0 overlaps non-transparent background and both BG and sprites are enabled,
+		// and x != 255, and sprite0 hasn't been flagged yet.
+		if (!hasSprite0HitBeenSet && spriteIsZero && bgOpaque && spriteOpaque && bgEnabled() && spriteEnabled() && x != 255) {
+			// Determine if sprite belonged to primary OAM index 0 on this scanline -- we simplified above
+			// In a full implementation you should check whether that opaque sprite corresponds to original OAM slot 0.
+			hasSprite0HitBeenSet = true;
+			ppu->SetPPUStatus(0x40); // set Sprite 0 Hit
+		}
+
+		// Final pixel selection: sprite over bg depending on priority
+		uint8_t finalPalette = 0;
+		uint32_t finalColor = 0;
+		if (spriteOpaque && (!bgOpaque || !spritePriorityBehind)) {
+			// sprite wins
+			finalPalette = spritePaletteIndex;
+			finalColor = spriteColor;
 		}
 		else {
-			bgColor = palette[bgColorIndex]; // Map to actual color from palette
+			finalPalette = bgPaletteIndex;
+			finalColor = bgColor;
 		}
-		// Set pixel in back buffer
-		if (ppumask & PPUMASK_BACKGROUNDENABLED) {
-			m_backBuffer[(m_scanline * 256) + screenX] = bgColor;
-		}
-		//m_backBuffer[(m_scanline * 256) + screenX] = 0;
-		bool foundSprite = false;
-		for (int i = 0; i < 8 && !foundSprite; ++i) {
-			Sprite& sprite = secondaryOAM[i];
-			if (sprite.y >= 0xF0) {
-				continue; // Empty sprite slot
-			}
-			int spriteY = sprite.y + 1; // Adjust for off-by-one
-			int spriteX = sprite.x;
-			if (screenX >= spriteX && screenX < (spriteX + 8)) {
-				// Sprite pixel coordinates
-				int spritePixelX = screenX - spriteX;
-				int spritePixelY = m_scanline - spriteY;
 
-				bool flipHorizontal = sprite.attributes & 0x40;
-				bool flipVertical = sprite.attributes & 0x80;
-				if (flipHorizontal) {
-					spritePixelX = 7 - spritePixelX;
-				}
-				if (flipVertical) {
-					spritePixelY = 7 - spritePixelY;
-				}
-				// Get sprite palette
-				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
-				std::array<uint32_t, 4> spritePalette;
-				ppu->get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
-				// Get color index from sprite tile
-				uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
-				if (spriteColorIndex != 0) { // Non-transparent pixel
-					uint32_t spriteColor = spritePalette[spriteColorIndex];
-					// Handle priority (not implemented yet, assuming sprites are always on top)
-					if (sprite.isSprite0 && ppumask & PPUMASK_RENDERINGEITHER) {
-						// Sprite 0 hit detection
-						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
-						// any opaque pixel of background, regardless of sprite priority.
-						if (!hasSprite0HitBeenSet && bgColorIndex != 0) {
-							hasSprite0HitBeenSet = true;
-							ppu->m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
-						}
-					}
-					if (ppumask & PPUMASK_SPRITEENABLED) {
-						m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
-					}
-					foundSprite = true;
-				}
-			}
+		// Convert palette index to color (here we just read a byte from paletteTable and write to framebuffer)
+		if (finalPalette != 0) {
+			int i = 0;
 		}
+		//uint8_t color = paletteTable[finalPalette & 0x1F];
+		// For demonstration store color value as ARGB-like 32-bit; user must map palette to RGB
+		//uint32_t pixel32 = 0xFF000000 | (color * 0x010101); // grayish mapping; replace with actual palette RGB
+		//uint32_t pixel32 = m_nesPalette[color];
+		//if (x >= 0 && x < 256 && y >= 0 && y < 240) {
+		m_backBuffer[(m_scanline * 256) + screenX] = finalColor;
+		//}
 	}
 }
 
