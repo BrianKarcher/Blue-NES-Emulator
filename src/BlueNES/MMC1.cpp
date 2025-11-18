@@ -95,12 +95,16 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
 		if (chrROMMode == 0) {
 			// 8 KB mode
-			val >>= 1;
+			// Ignore low bit;
+			val &= ~1;
 		}
 		chr0Addr = CHR_SMALL * val;
 	}
 	// CHR Bank 1
 	else if (addr >= 0xC000 && addr <= 0xDFFF) {
+		if (chrROMMode == 0) {
+			return;
+		}
 		chr1Addr = CHR_SMALL * val;
 	}
 	// PRG Bank
@@ -109,6 +113,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		val &= 0b1111;
 		if (prgROMMode == 0 || prgROMMode == 1) {
 			// Lower bit of bank number is ignored.
+			val &= ~1;
 			prg0Addr = PRG_SMALL * (val >> 1);
 			//prg1Addr = prg0Addr + PRG_SMALL;
 		}
@@ -120,7 +125,8 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 			if (val > 3) {
 				int i = 0;
 			}
-			val %= (maxPRGBanks);
+			//val %= (maxPRGBanks);
+			//uint32_t prg_mask = prg_size - 1;
 			prg0Addr = PRG_SMALL * val;
 			prg1Addr = (maxPRGBanks - 1) * PRG_SMALL;
 		}
@@ -134,17 +140,38 @@ uint8_t MMC1::readPRGROM(uint16_t address) {
 
 	if (prgROMMode == 0 || prgROMMode == 1) {
 		// 32KB mode
-		int addr = prg0Addr + (address - 0x8000);
+		int addr = prg0Addr + (address & 0x7FFF);
 		return cartridge->m_prgRomData[addr];
 	}
-	else if (address >= 0x8000 && address < 0x8000 + 0x4000) {
-		uint32_t addr = prg0Addr + (address - 0x8000);
-		return cartridge->m_prgRomData[addr];
+	else if (prgROMMode == 2) {
+		// Fix first bank at $8000, switch 16KB bank at $C000
+		if (address < 0xC000) {
+			return cartridge->m_prgRomData[address & 0x3FFF];
+		}
+		else {
+			//bankOffset = prgBank * 0x4000;
+			return cartridge->m_prgRomData[prg1Addr + (address & 0x3FFF)];
+		}
 	}
-	else if (address >= 0xC000) {
-		uint32_t addr = prg1Addr + (address - 0xC000);
-		return cartridge->m_prgRomData[addr];
+	else if (prgROMMode == 3) {
+		// Switch 16KB bank at $8000, fix last bank at $C000
+		if (address < 0xC000) {
+			return cartridge->m_prgRomData[prg0Addr + (address & 0x3FFF)];
+		}
+		else {
+			//bankOffset = prgBank * 0x4000;
+			uint32_t prgAddress = (maxPRGBanks - 1) * PRG_SMALL;
+			return cartridge->m_prgRomData[prgAddress + (address & 0x3FFF)];
+		}
 	}
+	//else if (address >= 0x8000 && address < 0x8000 + 0x4000) {
+	//	uint32_t addr = prg0Addr + (address - 0x8000);
+	//	return cartridge->m_prgRomData[addr];
+	//}
+	//else if (address >= 0xC000) {
+	//	uint32_t addr = prg1Addr + (address & 0x3FFF);
+	//	return cartridge->m_prgRomData[addr];
+	//}
 	return 0;
 }
 
