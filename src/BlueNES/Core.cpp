@@ -444,9 +444,12 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
                 if (base + b > 0x2000) {
                     int i = 0;
                 }
-                swprintf_s(tmp, L"%02X ", bus.read(base + b));
+                //swprintf_s(tmp, L"%02X ", bus.read(base + b));
                 //swprintf_s(tmp, L"%02X ", ppu.ReadVRAM(base + b));
-                hexs += tmp;
+                if (base + b < cart.m_chrData.size()) {
+                    swprintf_s(tmp, L"%02X ", cart.m_chrData[base + b]);
+                    hexs += tmp;
+                }
             }
             else
             {
@@ -462,8 +465,12 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
         {
             if (base + b < g_bufferSize)
             {
-                uint8_t v = bus.read(base + b); //g_buffer[base + b];
+                uint8_t v = 0;
+                //uint8_t v = bus.read(base + b); //g_buffer[base + b];
                 //uint8_t v = ppu.ReadVRAM(base + b); //g_buffer[base + b];
+                if (base + b < cart.m_chrData.size()) {
+                    v = cart.m_chrData[base + b];
+                }
                 if (v >= 0x20 && v <= 0x7E) ascii.push_back(static_cast<wchar_t>(v));
                 else ascii.push_back(L'.');
             }
@@ -889,7 +896,7 @@ void Core::RunMessageLoop()
                     }
                 }
 			}
-			OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
+			//OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
             cpu.nmiRequested = false;
             ppu.setFrameComplete(false);
 
@@ -903,12 +910,12 @@ void Core::RunMessageLoop()
             }
             else {
                 // Audio queue is too large - skip this frame's audio to catch up
-                OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
+                //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
             }
 
-            OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
-                L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-                L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
+            //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+            //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
+            //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
 
 			HDC hdc = GetDC(m_hwnd);
             DrawToWindow(hdc);

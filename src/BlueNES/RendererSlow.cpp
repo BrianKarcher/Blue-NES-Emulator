@@ -91,12 +91,12 @@ void RendererSlow::clock() {
 	}
 
 	if (m_scanline == 50 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 	}
 
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 

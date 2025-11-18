@@ -119,12 +119,12 @@ void RendererWithReg::clock() {
 	}
 
 	if (m_scanline == 50 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
+		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
 	}
 
 	// Pre-render scanline (261)
 	if (m_scanline == 261 && m_cycle == 1) {
-		OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
+		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
 
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 
@@ -134,7 +134,8 @@ void RendererWithReg::clock() {
 		hasSprite0HitBeenSet = false;
 		ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
 		m_frameComplete = false;
-		m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+		//m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+		OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
 	}
 	//    // On dot 256: increment Y
     if (rendering && m_cycle == 256 && (visibleScanline)) {

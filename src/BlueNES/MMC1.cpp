@@ -36,7 +36,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val) {
 		shiftRegister >>= 1;
 		shiftRegister |= ((val & 1) << 4);
 	}
-	OutputDebugStringW((L"MMC " + std::to_wstring(addr) + L" " + std::to_wstring(val) + L" " + std::to_wstring(shiftRegister) + L"\n").c_str());
+	//OutputDebugStringW((L"MMC " + std::to_wstring(addr) + L" " + std::to_wstring(val) + L" " + std::to_wstring(shiftRegister) + L"\n").c_str());
 }
 
 void MMC1::processShift(uint16_t addr, uint8_t val) {
@@ -118,7 +118,11 @@ void MMC1::writePRGROM(uint16_t address, uint8_t data) {
 }
 
 uint8_t MMC1::readCHR(uint16_t address) {
-	if (address < 0x1000) {
+	if (chrROMMode == 0) {
+		// 8 KB mode
+		return cartridge->m_chrData[chr0Addr + address];
+	}
+	else if (address < 0x1000) {
 		return cartridge->m_chrData[chr0Addr + address];
 	}
 	else if (address < 0x2000) {
@@ -132,10 +136,16 @@ void MMC1::writeCHR(uint16_t address, uint8_t data) {
 	if (!cartridge->isCHRWritable) {
 		return; // Ignore writes if CHR is ROM
 	}
-	if (address < 0x1000) {
+	if (chrROMMode == 0) {
+		// 8 KB mode
+		cartridge->m_chrData[chr0Addr + address] = data;
+		return;
+	}
+	else if (address < 0x1000) {
 		cartridge->m_chrData[chr0Addr + address] = data;
 	}
 	else if (address < 0x2000) {
-		cartridge->m_chrData[chr1Addr + (address - 0x1000)] = data;
+		uint16_t addr = chr1Addr + (address - 0x1000);
+		cartridge->m_chrData[addr] = data;
 	}
 }

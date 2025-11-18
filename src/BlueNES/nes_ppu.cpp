@@ -52,6 +52,7 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 	switch (addr) {
 	case PPUCTRL:
 		m_ppuCtrl = value;
+		//OutputDebugStringW((L"PPUCTRL: " + std::to_wstring(value) + L"\n").c_str());
 		renderer->SetPPUCTRL(value);
 		break;
 	case PPUMASK: // PPUMASK
@@ -266,6 +267,9 @@ bool NesPPU::NMI() {
 
 uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite)
 {
+	if (isSprite) {
+		int i = 0;
+	}
 	// Determine the pattern table base address
 	uint16_t patternTableBase = isSprite ? GetSpritePatternTableBase() : GetBackgroundPatternTableBase();
 	int tileBase = patternTableBase + (tileIndex * 16); // 16 bytes per tile

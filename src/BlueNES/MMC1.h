@@ -3,7 +3,7 @@
 #include "Mapper.h"
 #include "INESLoader.h"
 
-#define CHR_SMALL 4048 // 4k
+#define CHR_SMALL 0x1000 // 4k
 #define PRG_SMALL 0x4000 // 16k
 
 class Cartridge;
