@@ -27,6 +27,7 @@ private:
 	uint32_t chr1Addr;
 	uint32_t prg0Addr;
 	uint32_t prg1Addr;
+	uint8_t maxPRGBanks;
 	Cartridge* cartridge;
 	//ines_file_t* inesFile;
 };
