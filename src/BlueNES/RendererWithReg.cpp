@@ -185,7 +185,7 @@ void RendererWithReg::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam
 		if (spriteY > 0xF0) {
 			continue; // Empty sprite slot
 		}
-		int spriteHeight = 8; // For now, assume 8x8 sprites. TODO: Support 8x16 sprites.
+		int spriteHeight = (ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) == 0 ? 8 : 16;
 		if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
 			if (m_scanline == 0) {
 				int test = 0;
@@ -345,14 +345,23 @@ void RendererWithReg::RenderScanline()
 						spritePixelX = 7 - spritePixelX;
 					}
 					if (flipVertical) {
-						spritePixelY = 7 - spritePixelY;
+						int spriteHeight = 7;
+						if ((ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) != 0) {
+							spriteHeight = 15;
+						}
+						spritePixelY = spriteHeight - spritePixelY;
 					}
 					// Get sprite palette
 					uint8_t paletteIndex = sprite.attributes & 0x03;
 					std::array<uint32_t, 4> spritePalette;
 					ppu->get_palette(paletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
 					// Get color index from sprite tile
-					uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
+					uint8_t tileIndex = sprite.tileIndex + (spritePixelY < 8 ? 0 : 1);
+					if (spritePixelY >= 8) {
+						// 8x16 support.
+						spritePixelY -= 8;
+					}
+					uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(tileIndex, spritePixelX, spritePixelY, true);
 					if (spriteColorIndex != 0) { // Non-transparent pixel
 						spritePaletteIndex = spriteColorIndex;
 						spriteOpaque = true;
