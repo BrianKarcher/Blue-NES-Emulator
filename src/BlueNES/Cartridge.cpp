@@ -1,6 +1,9 @@
 #include "Cartridge.h"
 #include <string>
 #include "INESLoader.h"
+#include "NROM.h"
+#include "Mapper.h"
+#include "MMC1.h"
 
 Cartridge::Cartridge() {
 
@@ -8,25 +11,42 @@ Cartridge::Cartridge() {
 
 void Cartridge::LoadROM(const std::wstring& filePath) {
     INESLoader ines;
-    ines_file_t* inesFile = ines.load_data_from_ines(filePath.c_str());
+    ines_file_t inesFile;
+    ines.load_data_from_ines(filePath.c_str(), inesFile);
 
-    m_prgData.clear();
-    for (int i = 0; i < inesFile->prg_rom->size; i++) {
-        m_prgData.push_back(inesFile->prg_rom->data[i]);
+    m_prgRomData.clear();
+    for (int i = 0; i < inesFile.prg_rom->size; i++) {
+        m_prgRomData.push_back(inesFile.prg_rom->data[i]);
 	}
     m_chrData.clear();
-    if (inesFile->chr_rom->size == 0) {
+    if (inesFile.chr_rom->size == 0) {
 		isCHRWritable = true;
         // No CHR ROM present; allocate 8KB of CHR RAM
         m_chrData.resize(0x2000, 0);
 	}
     else {
         isCHRWritable = false;
-        for (int i = 0; i < inesFile->chr_rom->size; i++) {
-            m_chrData.push_back(inesFile->chr_rom->data[i]);
+        for (int i = 0; i < inesFile.chr_rom->size; i++) {
+            m_chrData.push_back(inesFile.chr_rom->data[i]);
         }
     }
-	m_mirrorMode = inesFile->header->flags6 & 0x01 ? VERTICAL : HORIZONTAL;
+	m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
+    uint8_t mapperNum = inesFile.header.flags6 >> 4;
+    m_prgRamData.clear();
+    m_prgRamData.resize(0x2000);
+    
+    if (mapper)
+        delete mapper;
+
+    switch (mapperNum) {
+    case 0:
+        mapper = new NROM(this);
+        break;
+    case 1:
+        mapper = new MMC1(this, inesFile);
+        break;
+    }
+    
 }
 
 // Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
@@ -84,57 +104,39 @@ void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
 }
 
 void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
-    if (m_prgData.size() < size) {
-        m_prgData.resize(size);
+    if (m_prgRomData.size() < size) {
+        m_prgRomData.resize(size);
 	}
     // Pad PRG data to at least 32KB
 	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
     // Even if they're zeroes.
-    if (m_prgData.size() < 0x8000) {
-        m_prgData.resize(0x8000);
+    if (m_prgRomData.size() < 0x8000) {
+        m_prgRomData.resize(0x8000);
     }
-    memcpy(m_prgData.data(), data, size);
+    memcpy(m_prgRomData.data(), data, size);
+}
+
+uint8_t Cartridge::ReadPRGRAM(uint16_t address) {
+    return m_prgRamData[address - 0x6000];
+}
+
+void Cartridge::WritePRGRAM(uint16_t address, uint8_t data) {
+    m_prgRamData[address - 0x6000] = data;
 }
 
 uint8_t Cartridge::ReadPRG(uint16_t address) {
-    if (m_prgData.size() == 0) {
-        return 0;
-    }
-    // If 16 KB PRG ROM, mirror it
-    if (m_prgData.size() == 0x4000) {
-        // For 16KB PRG-ROM, mask to 14 bits (16KB = 0x4000 bytes)
-        return m_prgData[address & 0x3FFF];
-    }
-	if (address >= 0x8000) {
-  //      if (m_prgData.size() == 0) {
-  //          return 0; // No PRG data loaded
-		//}
-		return m_prgData[address - 0x8000];
-	}
-	return 0;
+    return mapper->readPRGROM(address);
 }
 
-void Cartridge::WritePRG(uint16_t address, uint8_t data)
-{
-    // Typically, PRG ROM is not writable. This is a placeholder for mappers that support it.
-    if (address >= 0x8000) {
-        m_prgData[address - 0x8000] = data;
-	}
+void Cartridge::WritePRG(uint16_t address, uint8_t data) {
+    mapper->writePRGROM(address, data);
 }
 
 uint8_t Cartridge::ReadCHR(uint16_t address) {
-	if (address < 0x2000) {
-		return m_chrData[address];
-	}
-	return 0;
+    return mapper->readCHR(address);
 }
 
 // TODO: Support CHR-RAM vs CHR-ROM distinction
 void Cartridge::WriteCHR(uint16_t address, uint8_t data) {
-    if (!isCHRWritable) {
-        return; // Ignore writes if CHR is ROM
-	}
-	if (address < 0x2000) {
-		m_chrData[address] = data;
-	}
+    mapper->writeCHR(address, data);
 }

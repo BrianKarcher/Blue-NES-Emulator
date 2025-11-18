@@ -30,7 +30,7 @@ typedef struct {
 typedef struct {
     uint8_t* data;          // Raw iNES file data
     size_t size;            // Size in bytes
-    ines_header_t* header;   // Parsed iNES header
+    ines_header_t header;   // Parsed iNES header
 	// TODO : Support banks for mapping
 	prg_rom_data_t* prg_rom; // PRG-ROM data
     chr_rom_data_t* chr_rom; // CHR-ROM data
@@ -43,7 +43,7 @@ typedef struct {
 class INESLoader
 {
 public:
-    ines_file_t* load_data_from_ines(const wchar_t* filename);
+    void load_data_from_ines(const wchar_t* filename, ines_file_t& ines_file);
 
 private:
     bool validate_ines_header(const ines_header_t* header);

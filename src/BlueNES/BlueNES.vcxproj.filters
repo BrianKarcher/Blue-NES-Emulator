@@ -60,6 +60,9 @@
     <ClCompile Include="MMC1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="NROM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -111,6 +114,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMC1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NROM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

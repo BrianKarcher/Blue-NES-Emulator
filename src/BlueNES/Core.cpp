@@ -444,8 +444,8 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
                 if (base + b > 0x2000) {
                     int i = 0;
                 }
-                //swprintf_s(tmp, L"%02X ", bus.read(base + b));
-                swprintf_s(tmp, L"%02X ", ppu.ReadVRAM(base + b));
+                swprintf_s(tmp, L"%02X ", bus.read(base + b));
+                //swprintf_s(tmp, L"%02X ", ppu.ReadVRAM(base + b));
                 hexs += tmp;
             }
             else
@@ -462,8 +462,8 @@ void Core::DrawHexDump(HDC hdc, RECT const& rc)
         {
             if (base + b < g_bufferSize)
             {
-                //uint8_t v = bus.read(base + b); //g_buffer[base + b];
-                uint8_t v = ppu.ReadVRAM(base + b); //g_buffer[base + b];
+                uint8_t v = bus.read(base + b); //g_buffer[base + b];
+                //uint8_t v = ppu.ReadVRAM(base + b); //g_buffer[base + b];
                 if (v >= 0x20 && v <= 0x7E) ascii.push_back(static_cast<wchar_t>(v));
                 else ascii.push_back(L'.');
             }

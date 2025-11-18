@@ -137,6 +137,7 @@
     <ClCompile Include="NES_APU.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
     <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="NROM.cpp" />
     <ClCompile Include="PPU.cpp" />
     <ClCompile Include="RendererSlow.cpp" />
     <ClCompile Include="RendererWithReg.cpp" />
@@ -150,10 +151,12 @@
     <ClInclude Include="INESLoader.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="Mapper.h" />
     <ClInclude Include="MMC1.h" />
     <ClInclude Include="NES_APU.h" />
     <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="CPU.h" />
+    <ClInclude Include="NROM.h" />
     <ClInclude Include="PPU.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererSlow.h" />

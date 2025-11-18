@@ -56,6 +56,9 @@ uint8_t Bus::read(uint16_t addr)
             data = 0x00;
         }
     }
+    else if (addr >= 0x6000 && addr < 0x8000) {
+        data = cart->ReadPRGRAM(addr);
+    }
     else if (addr >= 0x8000)
     {
         // Cartridge space (PRG ROM/RAM)
@@ -124,6 +127,9 @@ void Bus::write(uint16_t addr, uint8_t data)
             // APU Frame Counter
             apu->write_register(addr, data);
         }
+    }
+    else if (addr >= 0x6000 && addr < 0x8000) {
+        cart->WritePRGRAM(addr, data);
     }
     else if (addr >= 0x8000)
     {
