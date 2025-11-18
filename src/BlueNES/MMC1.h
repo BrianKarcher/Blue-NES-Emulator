@@ -3,8 +3,8 @@
 #include "Mapper.h"
 #include "INESLoader.h"
 
-#define CHR_SMALL 0x1000 // 4k
-#define PRG_SMALL 0x4000 // 16k
+#define CHR_BANK_SIZE 0x1000 // 4k
+#define PRG_BANK_SIZE 0x4000 // 16k
 
 class Cartridge;
 
@@ -18,16 +18,27 @@ public:
 	uint8_t readCHR(uint16_t address);
 	void writeCHR(uint16_t address, uint8_t data);
 private:
-	uint8_t nametableMode;
-	uint8_t prgROMMode;
-	uint8_t chrROMMode;
+	//uint8_t nametableMode;
+	//uint8_t prgROMMode;
+	//uint8_t chrROMMode;
+	uint8_t controlReg = 0x0C;   // default after reset usually 0x0C (mirroring = 0x0, PRG mode = 3)
 	uint8_t shiftRegister;
 	void processShift(uint16_t addr, uint8_t val);
-	uint32_t chr0Addr;
-	uint32_t chr1Addr;
-	uint32_t prg0Addr;
-	uint32_t prg1Addr;
-	uint8_t maxPRGBanks;
+	void recomputeMappings();
+	//uint32_t chr0Addr;
+	//uint32_t chr1Addr;
+	//uint32_t prg0Addr;
+	//uint32_t prg1Addr;
+	uint8_t prgBankCount;
+	uint8_t chrBankCount;
+	uint8_t chrBank0Reg = 0;
+	uint8_t chrBank1Reg = 0;
+	uint8_t prgBankReg = 0;
+	// Current mapped addresses (in bytes)
+	uint32_t prg0Addr = 0; // maps to CPU 0x8000-0xBFFF
+	uint32_t prg1Addr = 0; // maps to CPU 0xC000-0xFFFF
+	uint32_t chr0Addr = 0; // maps to PPU 0x0000-0x0FFF
+	uint32_t chr1Addr = 0; // maps to PPU 0x1000-0x1FFF
 	Cartridge* cartridge;
 	//ines_file_t* inesFile;
 };
