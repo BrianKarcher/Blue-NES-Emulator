@@ -6,6 +6,12 @@
 #define CHR_BANK_SIZE 0x1000 // 4k
 #define PRG_BANK_SIZE 0x4000 // 16k
 
+enum BoardType {
+	SAROM,
+	SNROM,
+	GenericMMC1
+};
+
 class Cartridge;
 
 class MMC1 : public Mapper
@@ -17,6 +23,8 @@ public:
 	void writePRGROM(uint16_t address, uint8_t data);
 	uint8_t readCHR(uint16_t address);
 	void writeCHR(uint16_t address, uint8_t data);
+	void dbg(const wchar_t* fmt, ...) const;
+	BoardType boardType;
 private:
 	//uint8_t nametableMode;
 	//uint8_t prgROMMode;
@@ -41,4 +49,5 @@ private:
 	uint32_t chr1Addr = 0; // maps to PPU 0x1000-0x1FFF
 	Cartridge* cartridge;
 	//ines_file_t* inesFile;
+	bool debug = false;
 };

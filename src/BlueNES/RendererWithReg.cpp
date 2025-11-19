@@ -135,7 +135,7 @@ void RendererWithReg::clock() {
 		ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
 		m_frameComplete = false;
 		//m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
-		OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
+		//OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
 	}
 	//    // On dot 256: increment Y
     if (rendering && m_cycle == 256 && (visibleScanline)) {

@@ -1,5 +1,6 @@
 #include "CPU.h"
 #include "Bus.h"
+#include <Windows.h>
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
 
@@ -9,7 +10,11 @@ int cnt2 = 0;
 
 void Processor_6502::PowerOn()
 {
-	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
+	m_pc = 0xFFFC;
+	uint8_t resetLo = ReadNextByte();
+	m_pc = 0xFFFD;
+	uint8_t resHi = ReadNextByte();
+	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
 	m_p = 0;
 	m_a = 0;
 	m_x = 0;
@@ -63,7 +68,7 @@ void Processor_6502::NMI() {
 uint8_t Processor_6502::Clock()
 {
 	if (!isActive) return 0;
-	uint8_t op = bus->read(m_pc++);
+	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
 	switch (op)
 	{
@@ -1411,8 +1416,20 @@ void Processor_6502::SetSP(uint8_t sp)
 	m_sp = sp;
 }
 
+// ---------------- Debug helper ----------------
+void dbg(const wchar_t* fmt, ...) {
+	//if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+}
+
 inline uint8_t Processor_6502::ReadNextByte()
 {
+	//dbg(L"0x%02X ", bus->read(m_pc));
 	return bus->read(m_pc++);
 }
 
@@ -1460,7 +1477,7 @@ inline uint16_t Processor_6502::ReadNextWordNoCycle(uint8_t offset)
 
 inline uint16_t Processor_6502::ReadIndexedIndirect()
 {
-	uint8_t zp_base = bus->read(m_pc++);
+	uint8_t zp_base = ReadNextByte();
 	// Add X register to base (with zp wraparound)
 	uint8_t zp_addr = (zp_base + m_x) & 0xFF;
 	uint8_t addr_lo = bus->read(zp_addr);
@@ -1470,7 +1487,7 @@ inline uint16_t Processor_6502::ReadIndexedIndirect()
 
 inline uint16_t Processor_6502::ReadIndirectIndexed()
 {
-	uint8_t zp_base = bus->read(m_pc++);
+	uint8_t zp_base = ReadNextByte();
 	uint8_t addr_lo = bus->read(zp_base);
 	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
 	// Add Y register to the low byte of the address
@@ -1484,7 +1501,7 @@ inline uint16_t Processor_6502::ReadIndirectIndexed()
 
 inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
 {
-	uint8_t zp_base = bus->read(m_pc++);
+	uint8_t zp_base = ReadNextByte();
 	uint8_t addr_lo = bus->read(zp_base);
 	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
 	// Add Y register to the low byte of the address

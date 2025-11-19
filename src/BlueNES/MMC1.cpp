@@ -14,17 +14,45 @@ MMC1::MMC1(Cartridge* cartridge, const ines_file_t& inesFile) {
 	chrBank1Reg = 0;
 	prgBankReg = 0;
 	prgBankCount = inesFile.header.prg_rom_size;
+	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
+	chrBankCount = inesFile.header.chr_rom_size * 2;
+	// Detect board type from PRG/CHR configuration
+	if (prgBankCount == 4 && chrBankCount == 4) {
+		boardType = BoardType::SAROM;   // 64KB PRG, 16KB CHR-ROM
+	}
+	else if (prgBankCount == 8 && chrBankCount == 0) {
+		boardType = BoardType::SNROM;   // 128KB PRG, CHR-RAM
+	}
+	else {
+		boardType = BoardType::GenericMMC1;
+	}
 	this->cartridge = cartridge;
 	//this->inesFile = inesFile;
 	// Initial mapping.
 	recomputeMappings();
 }
 
+// ---------------- Debug helper ----------------
+void MMC1::dbg(const wchar_t* fmt, ...) const {
+	if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+}
+
 void MMC1::writeRegister(uint16_t addr, uint8_t val) {
+	// Debug print
+	std::string bits = std::bitset<8>(shiftRegister).to_string();
+	std::wstring wbits(bits.begin(), bits.end());
+	dbg(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
+		addr, val, wbits.c_str());
 	wchar_t buffer[60];
 	//std::wstring bits = std::to_wstring(std::bitset<8>(shiftRegister).to_string());
-	swprintf_s(buffer, L"MMC 0x%08X %S %S\n", addr, std::bitset<8>(val).to_string().c_str(), std::bitset<8>(shiftRegister).to_string().c_str());  // 8-digit uppercase hex
-	OutputDebugStringW(buffer);
+	//swprintf_s(buffer, L"MMC 0x%08X %S %S\n", addr, std::bitset<8>(val).to_string().c_str(), std::bitset<8>(shiftRegister).to_string().c_str());  // 8-digit uppercase hex
+	//OutputDebugStringW(buffer);
 	//OutputDebugStringW((L"MMC " + std::to_wstring(addr) + L" " + std::to_wstring(val) + L" " + std::to_wstring(shiftRegister) + L"\n").c_str());
 	// High bit resets the shift register.
 	if (val & 0x80) {
@@ -66,6 +94,10 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val) {
 
 void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// Control register
+	std::string bits = std::bitset<8>(val).to_string();
+	std::wstring wbits(bits.begin(), bits.end());
+	dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
+		addr, wbits.c_str(), val);
 	if (addr >= 0x8000 && addr <= 0x9FFF) {
 		// Control register (mirroring + PRG mode + CHR mode)
 		controlReg = val & 0x1F;
@@ -100,6 +132,12 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		// PRG bank register
 		prgBankReg = val & 0x0F; // only low 4 bits used for PRG bank
 	}
+	// --- Clamp CHR bank values for SAROM ---
+	if (boardType == BoardType::SAROM) {
+		// SAROM only has 16KB of CHR-ROM
+		chrBank0Reg &= 0x04;
+		chrBank1Reg &= 0x04;
+	}
 	recomputeMappings();
 }
 
@@ -111,83 +149,76 @@ void MMC1::recomputeMappings()
 	const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
 
 	// -------- CHR mapping --------
+	// Remove the early return - always compute banking even for CHR-RAM!
 	if (chrBankCount == 0) {
-		// CHR-RAM case (no CHR data present). Keep addresses at 0; reads/writes should go to CHR-RAM you provide
+		// CHR-RAM: always 8KB, no real banking
 		chr0Addr = 0;
 		chr1Addr = 0x1000;
 	}
-	else {
-		if (chrMode == 0) {
-			// 8 KB mode: ignore low bit of chrBank0Reg
-			uint32_t bank4k = (chrBank0Reg & 0x1E); // even index only
-			chr0Addr = bank4k * CHR_BANK_SIZE;      // maps to 0x0000-0x0FFF
-			chr1Addr = chr0Addr + CHR_BANK_SIZE;    // maps to 0x1000-0x1FFF
-		}
-		else {
-			// 4 KB mode: two independent 4KB banks
-			uint32_t bank0 = chrBank0Reg;
-			uint32_t bank1 = chrBank1Reg;
-			// wrap to available banks
-			if (chrBankCount > 0) {
-				bank0 %= std::max<size_t>(1, chrBankCount);
-				bank1 %= std::max<size_t>(1, chrBankCount);
-			}
-			chr0Addr = bank0 * CHR_BANK_SIZE;
-			chr1Addr = bank1 * CHR_BANK_SIZE;
-		}
-	}
-
-	// -------- PRG mapping --------
-	// prgBanks16k == number of 16KB banks in PRG ROM
-	if (prgBankCount == 0) {
-		prg0Addr = prg1Addr = 0;
+	else if (chrMode == 0) {
+		// 8KB mode
+		uint32_t bank8k = chrBank0Reg;
+		if (boardType == BoardType::SAROM)
+			bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
+		bank8k %= chrBankCount;
+		chr0Addr = bank8k * 0x2000;
+		chr1Addr = chr0Addr + 0x1000;
 	}
 	else {
-		if (prgMode == 0 || prgMode == 1) {
-			// 32 KB switching: ignore low bit of prgBankReg
-			uint32_t bank16k = (prgBankReg & 0x0E); // force even bank (pair)
-			bank16k %= std::max<size_t>(1, prgBankCount); // guard wrap
-			prg0Addr = bank16k * PRG_BANK_SIZE;      // maps to 0x8000-0xBFFF
-			prg1Addr = prg0Addr + PRG_BANK_SIZE;     // maps to 0xC000-0xFFFF
-		}
-		else if (prgMode == 2) {
-			// fix first bank at 0x8000, switch 16KB bank at 0xC000
-			prg0Addr = 0;
-			{
-				uint32_t bank = prgBankReg % std::max<size_t>(1, prgBankCount);
-				prg1Addr = bank * PRG_BANK_SIZE;
-			}
-		}
-		else { // prgMode == 3
-			// fix last bank at 0xC000, switch 16KB bank at 0x8000
-			uint32_t lastBank = (prgBankCount == 0 ? 0 : (prgBankCount - 1));
-			prg1Addr = lastBank * PRG_BANK_SIZE;
-			{
-				uint32_t bank = prgBankReg % std::max<size_t>(1, prgBankCount);
-				prg0Addr = bank * PRG_BANK_SIZE;
-			}
-		}
+		// 4KB mode
+		uint32_t bank0 = chrBank0Reg % chrBankCount;
+		uint32_t bank1 = chrBank1Reg % chrBankCount;
+		chr0Addr = bank0 * 0x1000;
+		chr1Addr = bank1 * 0x1000;
 	}
 
-	//dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
-	//dbg(L"  PRG addrs: prg0=0x%06X prg1=0x%06X (prgBanks16k=%zu)\n", prg0Addr, prg1Addr, prgBanks16k);
-	//dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBanks4k=%zu)\n", chr0Addr, chr1Addr, chrBanks4k);
+	// ------------ PRG BANKING ------------
+	uint32_t prgMax = prgBankCount - 1;
+	uint32_t bank = prgBankReg & prgMax;
+	uint32_t lastBankStart = (prgBankCount - 1) * 0x4000;
+
+	switch (prgMode) {
+
+	case 0:
+	case 1:
+		// 32 KB mode
+	{
+		prg0Addr = ((prgBankReg & 0xFE) % prgBankCount) * 0x4000;  // even bank
+		prg1Addr = prg0Addr + 0x4000;
+	}
+	break;
+
+	case 2:
+		// First 16KB fixed at $8000
+		prg0Addr = 0;
+		prg1Addr = (prgBankReg % prgBankCount) * 0x4000;
+		break;
+
+	case 3:
+	default:
+		// Last 16KB fixed at $C000
+		prg0Addr = (prgBankReg % prgBankCount) * 0x4000;
+		prg1Addr = lastBankStart;
+		break;
+	}
+
+	dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
+	dbg(L"  PRG addrs: prg0=0x%06X prg1=0x%06X (prgBankCount=%d)\n", prg0Addr, prg1Addr, prgBankCount);
+	dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
 uint8_t MMC1::readPRGROM(uint16_t addr) {
 	// Expect addr in 0x8000 - 0xFFFF
 	if (addr < 0x8000) return 0xFF; // open bus / not mapped by mapper
 
-	if (addr < 0xC000) {
-		uint32_t offset = prg0Addr + (addr - 0x8000);
-		offset %= (cartridge->m_prgRomData.size() == 0 ? 1 : cartridge->m_prgRomData.size());
-		return cartridge->m_prgRomData[offset];
-	}
-	else {
-		uint32_t offset = prg1Addr + (addr - 0xC000);
-		offset %= (cartridge->m_prgRomData.size() == 0 ? 1 : cartridge->m_prgRomData.size());
-		return cartridge->m_prgRomData[offset];
-	}
+	uint32_t offset;
+	if (addr < 0xC000)
+		offset = prg0Addr + (addr & 0x3FFF);
+	else
+		offset = prg1Addr + (addr & 0x3FFF);
+
+	offset %= cartridge->m_prgRomData.size();
+	return cartridge->m_prgRomData[offset];
 }
 
 void MMC1::writePRGROM(uint16_t address, uint8_t data) {
@@ -199,18 +230,14 @@ void MMC1::writePRGROM(uint16_t address, uint8_t data) {
 }
 
 uint8_t MMC1::readCHR(uint16_t addr) {
-	// Expect addr 0x0000..0x1FFF
 	addr &= 0x1FFF;
-	if (addr < 0x1000) {
-		uint32_t offset = chr0Addr + addr;
-		offset %= (cartridge->m_chrData.size() == 0 ? 1 : cartridge->m_chrData.size());
-		return cartridge->m_chrData.empty() ? 0 : cartridge->m_chrData[offset];
-	}
-	else {
-		uint32_t offset = chr1Addr + (addr - 0x1000);
-		offset %= (cartridge->m_chrData.size() == 0 ? 1 : cartridge->m_chrData.size());
-		return cartridge->m_chrData.empty() ? 0 : cartridge->m_chrData[offset];
-	}
+	uint32_t offset = (addr < 0x1000) ? (chr0Addr + addr) : (chr1Addr + (addr - 0x1000));
+
+	if (cartridge->m_chrData.empty())
+		return 0;
+
+	offset %= cartridge->m_chrData.size();
+	return cartridge->m_chrData[offset];
 }
 
 // TODO: Support CHR-RAM vs CHR-ROM distinction
