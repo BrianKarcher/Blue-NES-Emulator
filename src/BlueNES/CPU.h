@@ -169,6 +169,7 @@ class Bus;
 class Processor_6502
 {
 public:
+	Processor_6502();
 	// Power On and Reset are different
 	void PowerOn();
 	uint8_t Clock();
@@ -195,6 +196,7 @@ public:
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
 	int cyclesThisFrame;
+	std::array<std::string, 256 > instructionMap;
 private:
 	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);
@@ -207,6 +209,8 @@ private:
 	uint8_t m_a;
 	uint8_t m_x;
 	uint8_t m_y;
+
+	void buildMap();
 
 	// flags
 	uint8_t m_p;

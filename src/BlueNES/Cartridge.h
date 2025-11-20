@@ -6,6 +6,8 @@
 #include <vector>
 #include "Mapper.h"
 
+class Processor_6502;
+
 class Cartridge
 {
 public:
@@ -36,7 +38,9 @@ public:
 	void WriteCHR(uint16_t address, uint8_t data);
 	uint8_t ReadPRGRAM(uint16_t address);
 	void WritePRGRAM(uint16_t address, uint8_t data);
-
+	Processor_6502* cpu;
+	void SetPrgRamEnabled(bool enable);
+	bool isPrgRamEnabled = true;
 private:
 	MirrorMode m_mirrorMode;
 	Mapper* mapper;

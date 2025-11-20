@@ -15,6 +15,7 @@ void Bus::Initialize(Core* core)
     this->cpu = &this->core->cpu;
     this->ppu = &this->core->ppu;
     this->cart = &this->core->cart;
+    this->cart->cpu = this->cpu;
 	this->apu = &this->core->apu;
 	this->input = &this->core->input;
     //this->core->g_bufferSize = cpuRAM.size();

@@ -7,9 +7,9 @@ class Cartridge;
 class NROM : public Mapper {
 public:
 	NROM(Cartridge* cartridge);
-	void writeRegister(uint16_t addr, uint8_t val);
+	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	uint8_t readPRGROM(uint16_t address);
-	void writePRGROM(uint16_t address, uint8_t data);
+	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	uint8_t readCHR(uint16_t address);
 	void writeCHR(uint16_t address, uint8_t data);
 private:

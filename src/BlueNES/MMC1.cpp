@@ -4,8 +4,10 @@
 #include <Windows.h>
 #include <string>
 #include <bitset>
+#include "CPU.h"
 
-MMC1::MMC1(Cartridge* cartridge, const ines_file_t& inesFile) {
+MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, const ines_file_t& inesFile) {
+	this->cpu = cpu;
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
 	shiftRegister = 0b10000;
 	// init registers to reset-like defaults
@@ -43,12 +45,18 @@ void MMC1::dbg(const wchar_t* fmt, ...) const {
 	OutputDebugStringW(buf);
 }
 
-void MMC1::writeRegister(uint16_t addr, uint8_t val) {
+void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
+	// Ignore writes that happen too close together (within 2 CPU cycles)
+	if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
+		dbg(L"MMC1: Ignoring consecutive-cycle write\n");
+		return;
+	}
+	lastWriteCycle = currentCycle;
 	// Debug print
-	std::string bits = std::bitset<8>(shiftRegister).to_string();
-	std::wstring wbits(bits.begin(), bits.end());
-	dbg(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
-		addr, val, wbits.c_str());
+	//std::string bits = std::bitset<8>(shiftRegister).to_string();
+	//std::wstring wbits(bits.begin(), bits.end());
+	//dbg(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
+	//	addr, val, wbits.c_str());
 	wchar_t buffer[60];
 	//std::wstring bits = std::to_wstring(std::bitset<8>(shiftRegister).to_string());
 	//swprintf_s(buffer, L"MMC 0x%08X %S %S\n", addr, std::bitset<8>(val).to_string().c_str(), std::bitset<8>(shiftRegister).to_string().c_str());  // 8-digit uppercase hex
@@ -58,6 +66,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val) {
 	if (val & 0x80) {
 		shiftRegister = 0b10000;
 		controlReg |= 0x0C; // set PRG mode bits to 11 (mode 3) as hardware typically does on reset
+		//dbg(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
 		recomputeMappings();
 		return;
 	}
@@ -96,8 +105,8 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// Control register
 	std::string bits = std::bitset<8>(val).to_string();
 	std::wstring wbits(bits.begin(), bits.end());
-	dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
-		addr, wbits.c_str(), val);
+	//dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
+	//	addr, wbits.c_str(), val);
 	if (addr >= 0x8000 && addr <= 0x9FFF) {
 		// Control register (mirroring + PRG mode + CHR mode)
 		controlReg = val & 0x1F;
@@ -130,6 +139,11 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// PRG Bank
 	else if (addr >= 0xE000 && addr <= 0xFFFF) {
 		// PRG bank register
+		if ((val & 0x0F) > 4) {
+			int i = 0;
+		}
+		dbg(L"Changing prg bank to %d\n", val & 0x0F);
+		cartridge->SetPrgRamEnabled((val & 0b10000) == 0 ? true : false);
 		prgBankReg = val & 0x0F; // only low 4 bits used for PRG bank
 	}
 	// --- Clamp CHR bank values for SAROM ---
@@ -202,9 +216,9 @@ void MMC1::recomputeMappings()
 		break;
 	}
 
-	dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
-	dbg(L"  PRG addrs: prg0=0x%06X prg1=0x%06X (prgBankCount=%d)\n", prg0Addr, prg1Addr, prgBankCount);
-	dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
+	//dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
+	//dbg(L"  PRG addrs: prg0=0x%06X prg1=0x%06X (prgBankCount=%d)\n", prg0Addr, prg1Addr, prgBankCount);
+	//dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
 uint8_t MMC1::readPRGROM(uint16_t addr) {
@@ -221,11 +235,10 @@ uint8_t MMC1::readPRGROM(uint16_t addr) {
 	return cartridge->m_prgRomData[offset];
 }
 
-void MMC1::writePRGROM(uint16_t address, uint8_t data) {
+void MMC1::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
 	// Typically, PRG ROM is not writable. This is a placeholder for mappers that support it.
 	if (address >= 0x8000) {
-		writeRegister(address, data);
-		//cartridge->m_prgRomData[address - 0x8000] = data;
+		writeRegister(address, data, currentCycle);
 	}
 }
 
