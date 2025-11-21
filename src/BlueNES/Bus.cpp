@@ -79,7 +79,8 @@ void Bus::write(uint16_t addr, uint8_t data)
     if (addr <= 0x1FFF)
     {
         // Check for blown stack
-        if (addr == 0x0105) {
+        if (cpu->GetSP() == 0x05) {
+            //OutputDebugStringW(L"Stack blown!");
             int i = 0;
         }
         if (addr >= 0x0200 && addr <= 0x02FF) {

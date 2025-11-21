@@ -933,7 +933,7 @@ void Core::RunMessageLoop()
 				// and also in real time rather than once per second
 				InvalidateRect(m_hwndHex, nullptr, TRUE);
                 double fps = frameCount / timeSinceStart;
-                std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps);
+                std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(cpu.GetCycleCount());
                 SetWindowText(m_hwnd, title.c_str());
                 frameStartTime = currentTime;
                 frameCount = 0;

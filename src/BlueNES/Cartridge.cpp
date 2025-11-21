@@ -119,16 +119,10 @@ void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
 }
 
 uint8_t Cartridge::ReadPRGRAM(uint16_t address) {
-    if (!isPrgRamEnabled) {
-        return 0xFF;
-    }
     return m_prgRamData[address - 0x6000];
 }
 
 void Cartridge::WritePRGRAM(uint16_t address, uint8_t data) {
-    if (!isPrgRamEnabled) {
-        return;
-    }
     m_prgRamData[address - 0x6000] = data;
 }
 
@@ -140,7 +134,7 @@ void dbg2(const wchar_t* fmt, ...) {
     va_start(args, fmt);
     _vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
     va_end(args);
-    OutputDebugStringW(buf);
+    //OutputDebugStringW(buf);
 }
 
 void Cartridge::SetPrgRamEnabled(bool enable) {

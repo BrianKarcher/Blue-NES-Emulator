@@ -14,7 +14,7 @@ MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, const ines_file_t& inesFil
 	controlReg = 0x0C; // PRG ROM mode = 3 (fix last bank), CHR mode = 0, mirroring = 0 (single-screen lower)
 	chrBank0Reg = 0;
 	chrBank1Reg = 0;
-	prgBankReg = 0;
+	prgBankReg = 0; // MMC1 starts Bank 0 at $8000
 	prgBankCount = inesFile.header.prg_rom_size;
 	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
 	chrBankCount = inesFile.header.chr_rom_size * 2;
@@ -65,6 +65,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	// High bit resets the shift register.
 	if (val & 0x80) {
 		shiftRegister = 0b10000;
+		//prgBankReg = 2; // MMC1 starts Bank 0 at $8000
 		controlReg |= 0x0C; // set PRG mode bits to 11 (mode 3) as hardware typically does on reset
 		//dbg(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
 		recomputeMappings();
@@ -105,8 +106,8 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// Control register
 	std::string bits = std::bitset<8>(val).to_string();
 	std::wstring wbits(bits.begin(), bits.end());
-	//dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
-	//	addr, wbits.c_str(), val);
+	dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
+		addr, wbits.c_str(), val);
 	if (addr >= 0x8000 && addr <= 0x9FFF) {
 		// Control register (mirroring + PRG mode + CHR mode)
 		controlReg = val & 0x1F;
@@ -142,7 +143,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		if ((val & 0x0F) > 4) {
 			int i = 0;
 		}
-		dbg(L"Changing prg bank to %d\n", val & 0x0F);
+		dbg(L"\nChanging prg bank to %d\n", val & 0x0F);
 		cartridge->SetPrgRamEnabled((val & 0b10000) == 0 ? true : false);
 		prgBankReg = val & 0x0F; // only low 4 bits used for PRG bank
 	}

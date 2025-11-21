@@ -9,8 +9,8 @@ int cnt = 0;
 int cnt2 = 0;
 
 // ---------------- Debug helper ----------------
-void dbg(const wchar_t* fmt, ...) {
-	//if (!debug) return;
+void Processor_6502::dbg(const wchar_t* fmt, ...) {
+	if (!debug) return;
 	wchar_t buf[512];
 	va_list args;
 	va_start(args, fmt);
@@ -222,14 +222,31 @@ uint64_t Processor_6502::GetCycleCount()
 }
 
 void Processor_6502::NMI() {
+	if (isFrozen) {
+		return;
+	}
 	// Push PC and P to stack
+	dbg(L"\nTaking NMI (cycle %d)\n", m_cycle_count);
+	dbg(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
+	dbg(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+	m_p |= FLAG_INTERRUPT;
+	dbg(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
 	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
 	// Set PC to NMI vector
 	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
+	dbg(L"pc set to 0x%04X\n", m_pc);
+	dbg(L"Stack set to ");
+	for (uint8_t i = m_sp + 1; i != 0; i++) {
+		dbg(L"0x%02X ", bus->read(0x100 + i));
+	}
 	// NMI takes 7 cycles
 	m_cycle_count += 7;
+	count += 1;
+	//if (count == 2) {
+	//	isFrozen = true;
+	//}
 }
 
 /// <summary>
@@ -241,7 +258,18 @@ uint8_t Processor_6502::Clock()
 	uint16_t current_pc = m_pc;
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
-	dbg(L"");
+	dbg(L"\n0x%04X %S ", current_pc, instructionMap[op].c_str());
+	//if (m_cycle_count > 87992) {
+	//	isFrozen = true;
+	//	return 5;
+	//}
+	if (current_pc == 0x30) {
+		int i = 0;
+	}
+	if (isFrozen) {
+		return 5;
+	}
+
 	switch (op)
 	{
 		case ADC_IMMEDIATE:
@@ -499,6 +527,7 @@ uint8_t Processor_6502::Clock()
 		case BNE_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
+			dbg(L"0x%02X", offset);
 			if (!(m_p & FLAG_ZERO)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -512,6 +541,7 @@ uint8_t Processor_6502::Clock()
 		case BPL_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
+			dbg(L"0x%02X", offset);
 			if (!(m_p & FLAG_NEGATIVE)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -524,21 +554,25 @@ uint8_t Processor_6502::Clock()
 		}
 		case BRK_IMPLIED:
 		{
-			m_p |= FLAG_BREAK; // Set break flag
-			m_pc += 2; // Increment PC by 2 to skip over the next byte (padding byte)
+			//m_p |= FLAG_BREAK; // Set break flag
+			uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
+			m_pc += 1; // Increment PC by 1 to skip over the next byte (padding byte)
 			// Push PC and P to stack
 			bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
 			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
-			bus->write(0x0100 + m_sp--, m_p);                // Push processor status
+			bus->write(0x0100 + m_sp--, flags);                // Push processor status
 			// Set PC to NMI vector
 			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
 			// NMI takes 7 cycles
+			// Set Interrupt Disable flag in real status so IRQs are masked
+			m_p |= FLAG_INTERRUPT;
 			m_cycle_count += 7;
 			break;
 		}
 		case BVC_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
+			dbg(L"0x%02X", offset);
 			if (!(m_p & FLAG_OVERFLOW)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -552,6 +586,7 @@ uint8_t Processor_6502::Clock()
 		case BVS_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
+			dbg(L"0x%02X", offset);
 			if (m_p & FLAG_OVERFLOW) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
@@ -853,6 +888,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t hiByte = ReadNextByte();
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t data = ReadByte(addr);
+			dbg(L"0x%04X = 0x%02X", addr, data);
 			data++;
 			bus->write(addr, data);
 			SetZero(data);
@@ -891,6 +927,7 @@ uint8_t Processor_6502::Clock()
 		case JMP_ABSOLUTE:
 		{
 			m_pc = ReadNextWord();
+			dbg(L"0x%04X", m_pc);
 			m_cycle_count += 3;
 			break;
 		}
@@ -906,6 +943,7 @@ uint8_t Processor_6502::Clock()
 			else {
 				hiByte = ReadByte(pointer_addr + 1);
 			}
+			dbg(L"0x%04X 0x%02X 0x%02X", pointer_addr, loByte, hiByte);
 			m_pc = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			m_cycle_count += 5;
 			break;
@@ -915,15 +953,19 @@ uint8_t Processor_6502::Clock()
 			uint16_t return_addr = m_pc + 1; // Address to return to after subroutine
 			// Push return address onto stack (high byte first)
 			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
+			dbg(L"Pushing 0x%02X to stack 0x%02X\n", (return_addr >> 8) & 0xFF, m_sp + 1);
 			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
+			dbg(L"Pushing 0x%02X to stack 0x%02X\n", return_addr & 0xFF, m_sp + 1);
 			// Set PC to target address
 			m_pc = ReadNextWord();
+			dbg(L"JSR to 0x%04X (return 0x%04X)", m_pc, return_addr);
 			m_cycle_count += 6;
 			break;
 		}
 		case LDA_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
+			dbg(L"0x%02X", operand);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -932,7 +974,9 @@ uint8_t Processor_6502::Clock()
 		}
 		case LDA_ZEROPAGE:
 		{
-			uint8_t operand = ReadByte(ReadNextByte());
+			uint16_t addr = ReadNextByte();
+			uint8_t operand = ReadByte(addr);
+			dbg(L"0x%04X 0x%02X", addr, operand);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -943,6 +987,7 @@ uint8_t Processor_6502::Clock()
 		{
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t operand = ReadByte(zp_addr);
+			dbg(L"0x%02X + 0x%02X = 0x%02X", zp_addr, m_x, operand);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -953,6 +998,7 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t addr = ReadNextWord();
 			uint8_t operand = ReadByte(addr);
+			dbg(L"0x%04X = 0x%02X", addr, operand);
 			if (addr == 0x2002) {
 				//dbg(L"LDA 2002, operand=%d", operand);
 			}
@@ -966,6 +1012,7 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t addr = ReadNextWord(m_x);
 			uint8_t operand = ReadByte(addr);
+			dbg(L"0x%04X = 0x%02X for X 0x%02X", addr, operand, m_x);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -976,6 +1023,7 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t addr = ReadNextWord(m_y);
 			uint8_t operand = ReadByte(addr);
+			dbg(L"0x%04X = 0x%02X for Y 0x%02X", addr, operand, m_y);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -986,6 +1034,7 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t target_addr = ReadIndexedIndirect();
 			uint8_t operand = ReadByte(target_addr);
+			dbg(L"Target addr 0x%04X = 0x%02X", target_addr, operand);
 			m_a = operand;
 			SetZero(m_a);
 			SetNegative(m_a);
@@ -1326,11 +1375,16 @@ uint8_t Processor_6502::Clock()
 			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
 			// Pull P from stack
 			m_p = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Readomg 0x%02X from stack 0x%02X\n", m_p, m_sp - 1);
 			SetBreak(break_flag); // Restore B flag state
+			SetInterrupt(false);
 			// Pull PC from stack (low byte first)
 			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_lo, m_sp - 1);
 			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_hi, m_sp - 1);
 			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
+			dbg(L"Setting PC to 0x%04X\n", m_pc);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1338,9 +1392,12 @@ uint8_t Processor_6502::Clock()
 		{
 			// Pull return address from stack (low byte first)
 			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_lo, m_sp);
 			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_hi, m_sp);
 			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
 			m_pc++; // Increment PC to point to the next instruction after the JSR
+			dbg(L"Changing pc to 0x%04X\n", m_pc);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1441,6 +1498,7 @@ uint8_t Processor_6502::Clock()
 		case STA_ABSOLUTE:
 		{
 			uint16_t addr = ReadNextWord();
+			dbg(L"0x%04X", addr);
 			if (addr >= 0x2000 && addr <= 0x2FFF) {
 				int i = 0;
 			}
@@ -1548,6 +1606,7 @@ uint8_t Processor_6502::Clock()
 		case TSX_IMPLIED:
 		{
 			m_x = m_sp;
+			dbg(L"Transferring sp 0x%02X to x\n", m_sp);
 			SetZero(m_x);
 			SetNegative(m_x);
 			m_cycle_count += 2;
@@ -1893,6 +1952,7 @@ void Processor_6502::BIT(uint8_t data) {
 void Processor_6502::cp(uint8_t value, uint8_t operand)
 {
 	uint8_t result = value - operand;
+	dbg(L"0x%02X", result);
 	// Set/clear carry flag
 	if (value >= operand) {
 		m_p |= FLAG_CARRY;   // Set carry
@@ -1920,6 +1980,7 @@ void Processor_6502::EOR(uint8_t operand)
 {
 	// EOR operation with the accumulator
 	m_a ^= operand;
+	dbg(L"0x%02X", m_a);
 	// Set/clear zero flag
 	if (m_a == 0) {
 		m_p |= FLAG_ZERO;
@@ -1945,8 +2006,9 @@ void Processor_6502::LSR(uint8_t& byte)
 	else {
 		m_p &= ~FLAG_CARRY;  // Clear carry  
 	}
-	// Shift right by 1  
+	// Shift right by 1
 	byte >>= 1;
+	dbg(L"0x%02X", byte);
 	// Set/clear zero flag  
 	if (byte == 0) {
 		m_p |= FLAG_ZERO;
@@ -1962,6 +2024,7 @@ void Processor_6502::ORA(uint8_t operand)
 {
 	// Perform bitwise OR operation with the accumulator  
 	m_a |= operand;
+	dbg(L"0x%02X", m_a);
 
 	// Set/clear zero flag  
 	if (m_a == 0) {

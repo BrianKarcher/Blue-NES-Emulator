@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <array>
+#include <string>
 
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
@@ -163,7 +165,6 @@ const uint8_t TXA_IMPLIED = 0x8A;
 const uint8_t TXS_IMPLIED = 0x9A;
 const uint8_t TYA_IMPLIED = 0x98;
 
-
 class Bus;
 
 class Processor_6502
@@ -196,7 +197,7 @@ public:
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
 	int cyclesThisFrame;
-	std::array<std::string, 256 > instructionMap;
+	std::array<std::string, 256> instructionMap;
 private:
 	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);
@@ -204,6 +205,7 @@ private:
 	// Program counter
 	int m_pc;
 	uint8_t m_sp = 0xFD;
+	void dbg(const wchar_t* fmt, ...);
 
 	// Registers
 	uint8_t m_a;
@@ -243,4 +245,7 @@ private:
 	inline void SetBreak(bool condition);
 	inline uint16_t ReadIndirectIndexed();
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
+	bool debug = false;
+	bool isFrozen = false;
+	int count = 0;
 };
