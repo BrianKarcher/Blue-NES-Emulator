@@ -556,14 +556,14 @@ uint8_t Processor_6502::Clock()
 		{
 			//m_p |= FLAG_BREAK; // Set break flag
 			uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
-			m_pc += 1; // Increment PC by 1 to skip over the next byte (padding byte)
+			uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
+			//m_pc += 1; 
 			// Push PC and P to stack
-			bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
-			bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
+			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
 			bus->write(0x0100 + m_sp--, flags);                // Push processor status
 			// Set PC to NMI vector
 			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
-			// NMI takes 7 cycles
 			// Set Interrupt Disable flag in real status so IRQs are masked
 			m_p |= FLAG_INTERRUPT;
 			m_cycle_count += 7;
@@ -1374,10 +1374,13 @@ uint8_t Processor_6502::Clock()
 		{
 			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
 			// Pull P from stack
-			m_p = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Readomg 0x%02X from stack 0x%02X\n", m_p, m_sp - 1);
-			SetBreak(break_flag); // Restore B flag state
-			SetInterrupt(false);
+			uint8_t pulledP = ReadByte(0x0100 + ++m_sp);
+			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pulledP, m_sp - 1);
+
+			m_p = static_cast<uint8_t>((pulledP & ~FLAG_BREAK) | FLAG_UNUSED);
+
+			//SetBreak(break_flag); // Restore B flag state
+			//SetInterrupt(false);
 			// Pull PC from stack (low byte first)
 			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
 			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_lo, m_sp - 1);
