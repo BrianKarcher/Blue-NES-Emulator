@@ -139,6 +139,7 @@
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="NROM.cpp" />
     <ClCompile Include="PPU.cpp" />
+    <ClCompile Include="PPUViewer.cpp" />
     <ClCompile Include="RendererSlow.cpp" />
     <ClCompile Include="RendererWithReg.cpp" />
   </ItemGroup>
@@ -158,6 +159,7 @@
     <ClInclude Include="CPU.h" />
     <ClInclude Include="NROM.h" />
     <ClInclude Include="PPU.h" />
+    <ClInclude Include="PPUViewer.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererSlow.h" />
     <ClInclude Include="RendererWithReg.h" />

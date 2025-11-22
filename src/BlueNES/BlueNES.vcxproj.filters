@@ -63,6 +63,9 @@
     <ClCompile Include="NROM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PPUViewer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -120,6 +123,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PPUViewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -11,6 +11,7 @@
 #include "CPU.h"
 #include "NES_APU.h"
 #include "Input.h"
+#include "PPUViewer.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -85,10 +86,10 @@ public:
 	HWND hHexCombo = NULL;
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
+	PPUViewer ppuViewer;
 private:
 	// Draw content.
 	bool DrawToWindow(HDC dc);
-	void PPURenderToBackBuffer();
 	void LoadGame(const std::wstring& filePath);
 	// The windows procedure.
 	static LRESULT CALLBACK MainWndProc(
@@ -115,12 +116,6 @@ private:
 		WPARAM wParam,
 		LPARAM lParam
 	);
-	static LRESULT CALLBACK PPUWndProc(
-		HWND hwnd,
-		UINT msg,
-		WPARAM wParam,
-		LPARAM lParam
-	);
 
 	// Resize the render target.
 	void OnResize(
@@ -128,21 +123,11 @@ private:
 		UINT height
 	);
 
-	void DrawNametables(HWND wnd, HDC hdc);
-	void renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable);
-	void get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex);
-	void render_tile(std::array<uint32_t, 256 * 240>& buffer,
-		int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
-	std::array<uint32_t, 256 * 240> nt0;
-	std::array<uint32_t, 256 * 240> nt1;
-
 	HDC hdcMem;
-	HDC hdcPPUMem;
 	BITMAPINFO bmi;
 	HBITMAP hBitmap;
-	HBITMAP hPPUBitmap;
+	
 	HWND m_hwnd;
-	HWND m_hwndPPUViewer;
 	// Hex Window handles
 	HWND m_hwndHex;
 	std::array<uint8_t(*)(Core*, uint16_t), 2> hexSources;
