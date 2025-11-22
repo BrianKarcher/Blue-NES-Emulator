@@ -117,10 +117,10 @@ void PPUViewer::DrawNametables(HDC hdcPPU)
     if (!core->isPlaying) {
         return;
     }
-    renderNametable(nt0, 0);
+    //renderNametable(nt0, 0);
     renderNametable(nt1, 1);
 
-    //ppu.framebuffer.fill(0xff0f0f0f);
+    //nt1.fill(m_nesPalette[0x25]);
     // Copy back buffer to bitmap
     SetDIBits(hdcPPUMem, hPPUBitmap, 0, 240, nt1.data(), &bmi, DIB_RGB_COLORS);
     //SetDIBits(hdcPPUMem, hPPUBitmap, 120, 240, nt1.data(), &bmi, DIB_RGB_COLORS);
@@ -156,7 +156,11 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
             int attrRow = row / 4;
             int attrCol = col / 4;
             // Get attribute byte for the tile
-            uint8_t attributeByte = core->ppu.m_vram[0x3c0 + attrRow * 8 + attrCol];
+            uint16_t attrAddr = (nametableAddr | 0x3c0) + attrRow * 8 + attrCol;
+            uint8_t attributeByte = core->ppu.m_vram[attrAddr];
+            if (attributeByte > 0) {
+                int i = 0;
+            }
 
             uint8_t paletteIndex = 0;
             get_palette_index_from_attribute(attributeByte, row, col, paletteIndex);
@@ -169,9 +173,13 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
 
 void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
     int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors) {
-    int tileBase = tileIndex * 16; // 16 bytes per tile
+    int tileOffset = tileIndex * 16; // 16 bytes per tile
 
     for (int y = 0; y < 8; y++) {
+        // Determine the pattern table base address
+        uint16_t patternTableBase = core->ppu.GetBackgroundPatternTableBase();
+        int tileBase = patternTableBase + tileOffset; // 16 bytes per tile
+
         uint8_t byte1 = core->bus.cart->ReadCHR(tileBase + y);     // bitplane 0
         uint8_t byte2 = core->bus.cart->ReadCHR(tileBase + y + 8); // bitplane 1
 
@@ -180,7 +188,7 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
             uint8_t bit1 = (byte2 >> (7 - x)) & 1;
             uint8_t colorIndex = (bit1 << 1) | bit0;
 
-            uint16_t actualColor = 0;
+            uint32_t actualColor = 0;
             if (colorIndex == 0) {
                 actualColor = m_nesPalette[core->ppu.paletteTable[0]]; // Transparent color (background color)
             }

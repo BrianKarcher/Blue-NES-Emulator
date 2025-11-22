@@ -268,7 +268,7 @@ void RendererWithReg::RenderScanline()
 			get_palette_index_from_attribute(attributeByte, tileRow, tileCol, paletteIndex);
 
 			std::array<uint32_t, 4> palette;
-			ppu->get_palette(paletteIndex, palette); // For now we don't use the colors
+			ppu->get_palette(paletteIndex, palette);
 
 			// Get the color of the specific pixel within the tile
 			int bgPixelInTileX = fineX % TILE_SIZE;

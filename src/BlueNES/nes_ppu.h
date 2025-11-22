@@ -86,23 +86,17 @@ public:
 	void setFrameComplete(bool complete);
 	void Initialize(Bus* bus, Core* core);
 	void SetPPUStatus(uint8_t flag);
-
+	uint16_t GetBackgroundPatternTableBase() const {
+		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
+	};
 private:
 	bool is_failure = false;
-
-	
 
 	// register v in hardware PPU
 	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	// register t in hardware PPU
 	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
-
-	// Back buffer for rendering (256x240 pixels, RGBA)
-	
-	uint16_t GetBackgroundPatternTableBase() const {
-		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
-	}
 
 	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
 		if (!(m_ppuCtrl & PPUCTRL_SPRITESIZE)) {
