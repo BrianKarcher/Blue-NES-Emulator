@@ -9,14 +9,28 @@ int cnt = 0;
 int cnt2 = 0;
 
 // ---------------- Debug helper ----------------
-void Processor_6502::dbg(const wchar_t* fmt, ...) {
-	if (!debug) return;
+inline void Processor_6502::dbg(const wchar_t* fmt, ...) {
+#ifdef CPUDEBUG
+	//if (!debug) return;
 	wchar_t buf[512];
 	va_list args;
 	va_start(args, fmt);
 	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
 	va_end(args);
 	OutputDebugStringW(buf);
+#endif
+}
+
+inline void Processor_6502::dbgNmi(const wchar_t* fmt, ...) {
+#ifdef NMIDEBUG
+	//if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+#endif
 }
 
 Processor_6502::Processor_6502() {
@@ -37,161 +51,6 @@ void Processor_6502::PowerOn()
 	m_sp = 0xFD;
 	m_cycle_count = 0;
 	isActive = true;
-}
-
-void Processor_6502::buildMap() {
-	instructionMap[0x69] = "ADC_IMMEDIATE";
-	instructionMap[0x65] = "ADC_ZEROPAGE";
-	instructionMap[0x75] = "ADC_ZEROPAGE_X";
-	instructionMap[0x6D] = "ADC_ABSOLUTE";
-	instructionMap[0x7D] = "ADC_ABSOLUTE_X";
-	instructionMap[0x79] = "ADC_ABSOLUTE_Y";
-	instructionMap[0x61] = "ADC_INDEXEDINDIRECT";
-	instructionMap[0x71] = "ADC_INDIRECTINDEXED";
-	instructionMap[0x29] = "AND_IMMEDIATE";
-	instructionMap[0x25] = "AND_ZEROPAGE";
-	instructionMap[0x35] = "AND_ZEROPAGE_X";
-	instructionMap[0x2D] = "AND_ABSOLUTE";
-	instructionMap[0x3D] = "AND_ABSOLUTE_X";
-	instructionMap[0x39] = "AND_ABSOLUTE_Y";
-	instructionMap[0x21] = "AND_INDEXEDINDIRECT";
-	instructionMap[0x31] = "AND_INDIRECTINDEXED";
-	instructionMap[0x0A] = "ASL_ACCUMULATOR";
-	instructionMap[0x06] = "ASL_ZEROPAGE";
-	instructionMap[0x16] = "ASL_ZEROPAGE_X";
-	instructionMap[0x0E] = "ASL_ABSOLUTE";
-	instructionMap[0x1E] = "ASL_ABSOLUTE_X";
-	instructionMap[0x90] = "BCC_RELATIVE";
-	instructionMap[0xB0] = "BCS_RELATIVE";
-	instructionMap[0xF0] = "BEQ_RELATIVE";
-	instructionMap[0x24] = "BIT_ZEROPAGE";
-	instructionMap[0x2C] = "BIT_ABSOLUTE";
-	instructionMap[0x30] = "BMI_RELATIVE";
-	instructionMap[0xD0] = "BNE_RELATIVE";
-	instructionMap[0x10] = "BPL_RELATIVE";
-	instructionMap[0x00] = "BRK_IMPLIED";
-	instructionMap[0x50] = "BVC_RELATIVE";
-	instructionMap[0x70] = "BVS_RELATIVE";
-	instructionMap[0x18] = "CLC_IMPLIED";
-	instructionMap[0xD8] = "CLD_IMPLIED";
-	instructionMap[0x58] = "CLI_IMPLIED";
-	instructionMap[0xB8] = "CLV_IMPLIED";
-	instructionMap[0xC9] = "CMP_IMMEDIATE";
-	instructionMap[0xC5] = "CMP_ZEROPAGE";
-	instructionMap[0xD5] = "CMP_ZEROPAGE_X";
-	instructionMap[0xCD] = "CMP_ABSOLUTE";
-	instructionMap[0xDD] = "CMP_ABSOLUTE_X";
-	instructionMap[0xD9] = "CMP_ABSOLUTE_Y";
-	instructionMap[0x69] = "ADC_IMMEDIATE";
-	instructionMap[0xC1] = "CMP_INDEXEDINDIRECT";
-	instructionMap[0xD1] = "CMP_INDIRECTINDEXED";
-	instructionMap[0xE0] = "CPX_IMMEDIATE";
-	instructionMap[0xE4] = "CPX_ZEROPAGE";
-	instructionMap[0xEC] = "CPX_ABSOLUTE";
-	instructionMap[0xC0] = "CPY_IMMEDIATE";
-	instructionMap[0xC4] = "CPY_ZEROPAGE";
-	instructionMap[0xCC] = "CPY_ABSOLUTE";
-	instructionMap[0xC6] = "DEC_ZEROPAGE";
-	instructionMap[0xD6] = "DEC_ZEROPAGE_X";
-	instructionMap[0xCE] = "DEC_ABSOLUTE";
-	instructionMap[0xDE] = "DEC_ABSOLUTE_X";
-	instructionMap[0xCA] = "DEX_IMPLIED";
-	instructionMap[0x88] = "DEY_IMPLIED";
-	instructionMap[0x49] = "EOR_IMMEDIATE";
-	instructionMap[0x45] = "EOR_ZEROPAGE";
-	instructionMap[0x55] = "EOR_ZEROPAGE_X";
-	instructionMap[0x4D] = "EOR_ABSOLUTE";
-	instructionMap[0x5D] = "EOR_ABSOLUTE_X";
-	instructionMap[0x59] = "EOR_ABSOLUTE_Y";
-	instructionMap[0x41] = "EOR_INDEXEDINDIRECT";
-	instructionMap[0x51] = "EOR_INDIRECTINDEXED";
-	instructionMap[0xE6] = "INC_ZEROPAGE";
-	instructionMap[0xF6] = "INC_ZEROPAGE_X";
-	instructionMap[0xEE] = "INC_ABSOLUTE";
-	instructionMap[0xFE] = "INC_ABSOLUTE_X";
-	instructionMap[0xE8] = "INX_IMPLIED";
-	instructionMap[0xC8] = "INY_IMPLIED";
-	instructionMap[0x4C] = "JMP_ABSOLUTE";
-	instructionMap[0x6C] = "JMP_INDIRECT";
-	instructionMap[0x20] = "JSR_ABSOLUTE";
-	instructionMap[0xA9] = "LDA_IMMEDIATE";
-	instructionMap[0xA5] = "LDA_ZEROPAGE";
-	instructionMap[0xB5] = "LDA_ZEROPAGE_X";
-	instructionMap[0xAD] = "LDA_ABSOLUTE";
-	instructionMap[0xBD] = "LDA_ABSOLUTE_X";
-	instructionMap[0xB9] = "LDA_ABSOLUTE_Y";
-	instructionMap[0xA1] = "LDA_INDEXEDINDIRECT";
-	instructionMap[0xB1] = "LDA_INDIRECTINDEXED";
-	instructionMap[0xA2] = "LDX_IMMEDIATE";
-	instructionMap[0xA6] = "LDX_ZEROPAGE";
-	instructionMap[0xB6] = "LDX_ZEROPAGE_Y";
-	instructionMap[0xAE] = "LDX_ABSOLUTE";
-	instructionMap[0xBE] = "LDX_ABSOLUTE_Y";
-	instructionMap[0xA0] = "LDY_IMMEDIATE";
-	instructionMap[0xA4] = "LDY_ZEROPAGE";
-	instructionMap[0xB4] = "LDY_ZEROPAGE_X";
-	instructionMap[0xAC] = "LDY_ABSOLUTE";
-	instructionMap[0xBC] = "LDY_ABSOLUTE_X";
-	instructionMap[0x4A] = "LSR_ACCUMULATOR";
-	instructionMap[0x46] = "LSR_ZEROPAGE";
-	instructionMap[0x56] = "LSR_ZEROPAGE_X";
-	instructionMap[0x4E] = "LSR_ABSOLUTE";
-	instructionMap[0x5E] = "LSR_ABSOLUTE_X";
-	instructionMap[0xEA] = "NOP_IMPLIED";
-	instructionMap[0x09] = "ORA_IMMEDIATE";
-	instructionMap[0x05] = "ORA_ZEROPAGE";
-	instructionMap[0x15] = "ORA_ZEROPAGE_X";
-	instructionMap[0x0D] = "ORA_ABSOLUTE";
-	instructionMap[0x1D] = "ORA_ABSOLUTE_X";
-	instructionMap[0x19] = "ORA_ABSOLUTE_Y";
-	instructionMap[0x01] = "ORA_INDEXEDINDIRECT";
-	instructionMap[0x11] = "ORA_INDIRECTINDEXED";
-	instructionMap[0x48] = "PHA_IMPLIED";
-	instructionMap[0x08] = "PHP_IMPLIED";
-	instructionMap[0x68] = "PLA_IMPLIED";
-	instructionMap[0x28] = "PLP_IMPLIED";
-	instructionMap[0x2A] = "ROL_ACCUMULATOR";
-	instructionMap[0x26] = "ROL_ZEROPAGE";
-	instructionMap[0x36] = "ROL_ZEROPAGE_X";
-	instructionMap[0x2E] = "ROL_ABSOLUTE";
-	instructionMap[0x3E] = "ROL_ABSOLUTE_X";
-	instructionMap[0x6A] = "ROR_ACCUMULATOR";
-	instructionMap[0x66] = "ROR_ZEROPAGE";
-	instructionMap[0x76] = "ROR_ZEROPAGE_X";
-	instructionMap[0x6E] = "ROR_ABSOLUTE";
-	instructionMap[0x7E] = "ROR_ABSOLUTE_X";
-	instructionMap[0x40] = "RTI_IMPLIED";
-	instructionMap[0x60] = "RTS_IMPLIED";
-	instructionMap[0xE9] = "SBC_IMMEDIATE";
-	instructionMap[0xE5] = "SBC_ZEROPAGE";
-	instructionMap[0xF5] = "SBC_ZEROPAGE_X";
-	instructionMap[0xED] = "SBC_ABSOLUTE";
-	instructionMap[0xFD] = "SBC_ABSOLUTE_X";
-	instructionMap[0xF9] = "SBC_ABSOLUTE_Y";
-	instructionMap[0xE1] = "SBC_INDEXEDINDIRECT";
-	instructionMap[0xF1] = "SBC_INDIRECTINDEXED";
-	instructionMap[0x38] = "SEC_IMPLIED";
-	instructionMap[0xF8] = "SED_IMPLIED";
-	instructionMap[0x78] = "SEI_IMPLIED";
-	instructionMap[0x85] = "STA_ZEROPAGE";
-	instructionMap[0x95] = "STA_ZEROPAGE_X";
-	instructionMap[0x8D] = "STA_ABSOLUTE";
-	instructionMap[0x9D] = "STA_ABSOLUTE_X";
-	instructionMap[0x99] = "STA_ABSOLUTE_Y";
-	instructionMap[0x81] = "STA_INDEXEDINDIRECT";
-	instructionMap[0x91] = "STA_INDIRECTINDEXED";
-	instructionMap[0x86] = "STX_ZEROPAGE";
-	instructionMap[0x96] = "STX_ZEROPAGE_Y";
-	instructionMap[0x8E] = "STX_ABSOLUTE";
-	instructionMap[0x84] = "STY_ZEROPAGE";
-	instructionMap[0x94] = "STY_ZEROPAGE_X";
-	instructionMap[0x8C] = "STY_ABSOLUTE";
-	instructionMap[0xAA] = "TAX_IMPLIED";
-	instructionMap[0xA8] = "TAY_IMPLIED";
-	instructionMap[0xBA] = "TSX_IMPLIED";
-	instructionMap[0x8A] = "TXA_IMPLIED";
-	instructionMap[0x9A] = "TXS_IMPLIED";
-	instructionMap[0x98] = "TYA_IMPLIED";
 }
 
 void Processor_6502::Activate(bool active)
@@ -226,21 +85,21 @@ void Processor_6502::NMI() {
 		return;
 	}
 	// Push PC and P to stack
-	dbg(L"\nTaking NMI (cycle %d)\n", m_cycle_count);
-	dbg(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
+	dbgNmi(L"\nTaking NMI (cycle %d)\n", m_cycle_count);
+	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
-	dbg(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
+	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
 	m_p |= FLAG_INTERRUPT;
-	dbg(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
+	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
 	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
 	// Set PC to NMI vector
 	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
-	dbg(L"pc set to 0x%04X\n", m_pc);
-	dbg(L"Stack set to ");
-	for (uint8_t i = m_sp + 1; i != 0; i++) {
-		dbg(L"0x%02X ", bus->read(0x100 + i));
-	}
+	//dbgNmi(L"pc set to 0x%04X\n", m_pc);
+	//dbgNmi(L"Stack set to ");
+	//for (uint8_t i = m_sp + 1; i != 0; i++) {
+	//	dbgNmi(L"0x%02X ", bus->read(0x100 + i));
+	//}
 	// NMI takes 7 cycles
 	m_cycle_count += 7;
 	count += 1;
@@ -1372,7 +1231,7 @@ uint8_t Processor_6502::Clock()
 		}
 		case RTI_IMPLIED:
 		{
-			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
+			//bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
 			// Pull P from stack
 			uint8_t pulledP = ReadByte(0x0100 + ++m_sp);
 			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pulledP, m_sp - 1);
@@ -2142,4 +2001,159 @@ uint16_t Processor_6502::GetPC() {
 void Processor_6502::SetPC(uint16_t address)
 {
 	m_pc = address;
+}
+
+void Processor_6502::buildMap() {
+	instructionMap[0x69] = "ADC_IMMEDIATE";
+	instructionMap[0x65] = "ADC_ZEROPAGE";
+	instructionMap[0x75] = "ADC_ZEROPAGE_X";
+	instructionMap[0x6D] = "ADC_ABSOLUTE";
+	instructionMap[0x7D] = "ADC_ABSOLUTE_X";
+	instructionMap[0x79] = "ADC_ABSOLUTE_Y";
+	instructionMap[0x61] = "ADC_INDEXEDINDIRECT";
+	instructionMap[0x71] = "ADC_INDIRECTINDEXED";
+	instructionMap[0x29] = "AND_IMMEDIATE";
+	instructionMap[0x25] = "AND_ZEROPAGE";
+	instructionMap[0x35] = "AND_ZEROPAGE_X";
+	instructionMap[0x2D] = "AND_ABSOLUTE";
+	instructionMap[0x3D] = "AND_ABSOLUTE_X";
+	instructionMap[0x39] = "AND_ABSOLUTE_Y";
+	instructionMap[0x21] = "AND_INDEXEDINDIRECT";
+	instructionMap[0x31] = "AND_INDIRECTINDEXED";
+	instructionMap[0x0A] = "ASL_ACCUMULATOR";
+	instructionMap[0x06] = "ASL_ZEROPAGE";
+	instructionMap[0x16] = "ASL_ZEROPAGE_X";
+	instructionMap[0x0E] = "ASL_ABSOLUTE";
+	instructionMap[0x1E] = "ASL_ABSOLUTE_X";
+	instructionMap[0x90] = "BCC_RELATIVE";
+	instructionMap[0xB0] = "BCS_RELATIVE";
+	instructionMap[0xF0] = "BEQ_RELATIVE";
+	instructionMap[0x24] = "BIT_ZEROPAGE";
+	instructionMap[0x2C] = "BIT_ABSOLUTE";
+	instructionMap[0x30] = "BMI_RELATIVE";
+	instructionMap[0xD0] = "BNE_RELATIVE";
+	instructionMap[0x10] = "BPL_RELATIVE";
+	instructionMap[0x00] = "BRK_IMPLIED";
+	instructionMap[0x50] = "BVC_RELATIVE";
+	instructionMap[0x70] = "BVS_RELATIVE";
+	instructionMap[0x18] = "CLC_IMPLIED";
+	instructionMap[0xD8] = "CLD_IMPLIED";
+	instructionMap[0x58] = "CLI_IMPLIED";
+	instructionMap[0xB8] = "CLV_IMPLIED";
+	instructionMap[0xC9] = "CMP_IMMEDIATE";
+	instructionMap[0xC5] = "CMP_ZEROPAGE";
+	instructionMap[0xD5] = "CMP_ZEROPAGE_X";
+	instructionMap[0xCD] = "CMP_ABSOLUTE";
+	instructionMap[0xDD] = "CMP_ABSOLUTE_X";
+	instructionMap[0xD9] = "CMP_ABSOLUTE_Y";
+	instructionMap[0x69] = "ADC_IMMEDIATE";
+	instructionMap[0xC1] = "CMP_INDEXEDINDIRECT";
+	instructionMap[0xD1] = "CMP_INDIRECTINDEXED";
+	instructionMap[0xE0] = "CPX_IMMEDIATE";
+	instructionMap[0xE4] = "CPX_ZEROPAGE";
+	instructionMap[0xEC] = "CPX_ABSOLUTE";
+	instructionMap[0xC0] = "CPY_IMMEDIATE";
+	instructionMap[0xC4] = "CPY_ZEROPAGE";
+	instructionMap[0xCC] = "CPY_ABSOLUTE";
+	instructionMap[0xC6] = "DEC_ZEROPAGE";
+	instructionMap[0xD6] = "DEC_ZEROPAGE_X";
+	instructionMap[0xCE] = "DEC_ABSOLUTE";
+	instructionMap[0xDE] = "DEC_ABSOLUTE_X";
+	instructionMap[0xCA] = "DEX_IMPLIED";
+	instructionMap[0x88] = "DEY_IMPLIED";
+	instructionMap[0x49] = "EOR_IMMEDIATE";
+	instructionMap[0x45] = "EOR_ZEROPAGE";
+	instructionMap[0x55] = "EOR_ZEROPAGE_X";
+	instructionMap[0x4D] = "EOR_ABSOLUTE";
+	instructionMap[0x5D] = "EOR_ABSOLUTE_X";
+	instructionMap[0x59] = "EOR_ABSOLUTE_Y";
+	instructionMap[0x41] = "EOR_INDEXEDINDIRECT";
+	instructionMap[0x51] = "EOR_INDIRECTINDEXED";
+	instructionMap[0xE6] = "INC_ZEROPAGE";
+	instructionMap[0xF6] = "INC_ZEROPAGE_X";
+	instructionMap[0xEE] = "INC_ABSOLUTE";
+	instructionMap[0xFE] = "INC_ABSOLUTE_X";
+	instructionMap[0xE8] = "INX_IMPLIED";
+	instructionMap[0xC8] = "INY_IMPLIED";
+	instructionMap[0x4C] = "JMP_ABSOLUTE";
+	instructionMap[0x6C] = "JMP_INDIRECT";
+	instructionMap[0x20] = "JSR_ABSOLUTE";
+	instructionMap[0xA9] = "LDA_IMMEDIATE";
+	instructionMap[0xA5] = "LDA_ZEROPAGE";
+	instructionMap[0xB5] = "LDA_ZEROPAGE_X";
+	instructionMap[0xAD] = "LDA_ABSOLUTE";
+	instructionMap[0xBD] = "LDA_ABSOLUTE_X";
+	instructionMap[0xB9] = "LDA_ABSOLUTE_Y";
+	instructionMap[0xA1] = "LDA_INDEXEDINDIRECT";
+	instructionMap[0xB1] = "LDA_INDIRECTINDEXED";
+	instructionMap[0xA2] = "LDX_IMMEDIATE";
+	instructionMap[0xA6] = "LDX_ZEROPAGE";
+	instructionMap[0xB6] = "LDX_ZEROPAGE_Y";
+	instructionMap[0xAE] = "LDX_ABSOLUTE";
+	instructionMap[0xBE] = "LDX_ABSOLUTE_Y";
+	instructionMap[0xA0] = "LDY_IMMEDIATE";
+	instructionMap[0xA4] = "LDY_ZEROPAGE";
+	instructionMap[0xB4] = "LDY_ZEROPAGE_X";
+	instructionMap[0xAC] = "LDY_ABSOLUTE";
+	instructionMap[0xBC] = "LDY_ABSOLUTE_X";
+	instructionMap[0x4A] = "LSR_ACCUMULATOR";
+	instructionMap[0x46] = "LSR_ZEROPAGE";
+	instructionMap[0x56] = "LSR_ZEROPAGE_X";
+	instructionMap[0x4E] = "LSR_ABSOLUTE";
+	instructionMap[0x5E] = "LSR_ABSOLUTE_X";
+	instructionMap[0xEA] = "NOP_IMPLIED";
+	instructionMap[0x09] = "ORA_IMMEDIATE";
+	instructionMap[0x05] = "ORA_ZEROPAGE";
+	instructionMap[0x15] = "ORA_ZEROPAGE_X";
+	instructionMap[0x0D] = "ORA_ABSOLUTE";
+	instructionMap[0x1D] = "ORA_ABSOLUTE_X";
+	instructionMap[0x19] = "ORA_ABSOLUTE_Y";
+	instructionMap[0x01] = "ORA_INDEXEDINDIRECT";
+	instructionMap[0x11] = "ORA_INDIRECTINDEXED";
+	instructionMap[0x48] = "PHA_IMPLIED";
+	instructionMap[0x08] = "PHP_IMPLIED";
+	instructionMap[0x68] = "PLA_IMPLIED";
+	instructionMap[0x28] = "PLP_IMPLIED";
+	instructionMap[0x2A] = "ROL_ACCUMULATOR";
+	instructionMap[0x26] = "ROL_ZEROPAGE";
+	instructionMap[0x36] = "ROL_ZEROPAGE_X";
+	instructionMap[0x2E] = "ROL_ABSOLUTE";
+	instructionMap[0x3E] = "ROL_ABSOLUTE_X";
+	instructionMap[0x6A] = "ROR_ACCUMULATOR";
+	instructionMap[0x66] = "ROR_ZEROPAGE";
+	instructionMap[0x76] = "ROR_ZEROPAGE_X";
+	instructionMap[0x6E] = "ROR_ABSOLUTE";
+	instructionMap[0x7E] = "ROR_ABSOLUTE_X";
+	instructionMap[0x40] = "RTI_IMPLIED";
+	instructionMap[0x60] = "RTS_IMPLIED";
+	instructionMap[0xE9] = "SBC_IMMEDIATE";
+	instructionMap[0xE5] = "SBC_ZEROPAGE";
+	instructionMap[0xF5] = "SBC_ZEROPAGE_X";
+	instructionMap[0xED] = "SBC_ABSOLUTE";
+	instructionMap[0xFD] = "SBC_ABSOLUTE_X";
+	instructionMap[0xF9] = "SBC_ABSOLUTE_Y";
+	instructionMap[0xE1] = "SBC_INDEXEDINDIRECT";
+	instructionMap[0xF1] = "SBC_INDIRECTINDEXED";
+	instructionMap[0x38] = "SEC_IMPLIED";
+	instructionMap[0xF8] = "SED_IMPLIED";
+	instructionMap[0x78] = "SEI_IMPLIED";
+	instructionMap[0x85] = "STA_ZEROPAGE";
+	instructionMap[0x95] = "STA_ZEROPAGE_X";
+	instructionMap[0x8D] = "STA_ABSOLUTE";
+	instructionMap[0x9D] = "STA_ABSOLUTE_X";
+	instructionMap[0x99] = "STA_ABSOLUTE_Y";
+	instructionMap[0x81] = "STA_INDEXEDINDIRECT";
+	instructionMap[0x91] = "STA_INDIRECTINDEXED";
+	instructionMap[0x86] = "STX_ZEROPAGE";
+	instructionMap[0x96] = "STX_ZEROPAGE_Y";
+	instructionMap[0x8E] = "STX_ABSOLUTE";
+	instructionMap[0x84] = "STY_ZEROPAGE";
+	instructionMap[0x94] = "STY_ZEROPAGE_X";
+	instructionMap[0x8C] = "STY_ABSOLUTE";
+	instructionMap[0xAA] = "TAX_IMPLIED";
+	instructionMap[0xA8] = "TAY_IMPLIED";
+	instructionMap[0xBA] = "TSX_IMPLIED";
+	instructionMap[0x8A] = "TXA_IMPLIED";
+	instructionMap[0x9A] = "TXS_IMPLIED";
+	instructionMap[0x98] = "TYA_IMPLIED";
 }

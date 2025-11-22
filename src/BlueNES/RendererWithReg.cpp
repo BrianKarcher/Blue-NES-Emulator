@@ -60,34 +60,6 @@ void RendererWithReg::SetPPUAddrLow(uint8_t value) {
 //		}
 //	}
 //}
-//
-//void RendererSlow::render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors) {
-//	int tileBase = tileIndex * 16; // 16 bytes per tile
-//
-//	for (int y = 0; y < 8; y++) {
-//		uint8_t byte1 = bus->cart->ReadCHR(tileBase + y);     // bitplane 0
-//		uint8_t byte2 = bus->cart->ReadCHR(tileBase + y + 8); // bitplane 1
-//
-//		for (int x = 0; x < 8; x++) {
-//			uint8_t bit0 = (byte1 >> (7 - x)) & 1;
-//			uint8_t bit1 = (byte2 >> (7 - x)) & 1;
-//			uint8_t colorIndex = (bit1 << 1) | bit0;
-//
-//			uint16_t actualColor = 0;
-//			if (colorIndex == 0) {
-//				actualColor = m_nesPalette[ppu->paletteTable[0]]; // Transparent color (background color)
-//			}
-//			else {
-//				actualColor = colors[colorIndex]; // Map to actual color from palette
-//			}
-//			int renderX = pc + x;
-//			int renderY = pr + y;
-//			if (renderX < 0 || renderY < 0 || renderX >= 256 || renderY >= 240)
-//				continue;
-//			m_backBuffer[(renderY * 256) + renderX] = actualColor;
-//		}
-//	}
-//}
 
 void RendererWithReg::clock() {
 	bool rendering = renderingEnabled();

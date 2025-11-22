@@ -205,7 +205,8 @@ private:
 	// Program counter
 	int m_pc;
 	uint8_t m_sp = 0xFD;
-	void dbg(const wchar_t* fmt, ...);
+	inline void dbg(const wchar_t* fmt, ...);
+	inline void dbgNmi(const wchar_t* fmt, ...);
 
 	// Registers
 	uint8_t m_a;
@@ -245,7 +246,9 @@ private:
 	inline void SetBreak(bool condition);
 	inline uint16_t ReadIndirectIndexed();
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
-	bool debug = false;
+	//bool debug = false;
+//#define CPUDEBUG 0
+#define NMIDEBUG
 	bool isFrozen = false;
 	int count = 0;
 };

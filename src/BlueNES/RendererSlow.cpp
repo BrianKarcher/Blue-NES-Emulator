@@ -415,38 +415,3 @@ void RendererSlow::get_palette_index_from_attribute(uint8_t attributeByte, int t
 //		EvaluateSprites(screenY, secondaryOAM);
 //	}
 //}
-
-//void RendererSlow::render_nametable()
-//{
-//	// Clear back buffer
-//	// m_backBuffer.fill(0xFF000000);
-//
-//	// Nametable starts at 0x2000 in VRAM
-//	// TODO : Support multiple nametables and mirroring
-//	const uint16_t nametableAddr = 0x2000;
-//
-//	// TODO: For now, we just render the nametable directly without scrolling or attribute tables
-//	std::array<uint32_t, 4> palette;
-//	// Render the 32x30 tile nametable
-//	for (int row = 0; row < 30; row++) {
-//		for (int col = 0; col < 32; col++) {
-//			// Get the tile index from the nametable in VRAM
-//			uint8_t tileIndex = m_vram[nametableAddr + row * 32 + col];
-//
-//			// Calculate pixel coordinates
-//			int pixelX = col * 8;  // Each tile is 8x8 pixels
-//			int pixelY = row * 8;
-//
-//			int attrRow = row / 4;
-//			int attrCol = col / 4;
-//			// Get attribute byte for the tile
-//			uint8_t attributeByte = m_vram[0x23c0 + attrRow * 8 + attrCol];
-//
-//			uint8_t paletteIndex = 0;
-//			get_palette_index_from_attribute(attributeByte, row, col, paletteIndex);
-//			get_palette(paletteIndex, palette); // For now we don't use the colors
-//			// Render the tile at the calculated position
-//			render_tile(pixelY, pixelX, tileIndex, palette);
-//		}
-//	}
-//}
