@@ -1233,6 +1233,7 @@ uint8_t Processor_6502::Clock()
 		{
 			//bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
 			// Pull P from stack
+			dbgNmi(L"\nRTI (cycle %d)\n", m_cycle_count);
 			uint8_t pulledP = ReadByte(0x0100 + ++m_sp);
 			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pulledP, m_sp - 1);
 

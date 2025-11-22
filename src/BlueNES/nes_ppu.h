@@ -81,7 +81,7 @@ public:
 	uint8_t m_ppuCtrl = 0;
 	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM
 	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
-	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite);
+	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite);
 	bool isFrameComplete();
 	void setFrameComplete(bool complete);
 	void Initialize(Bus* bus, Core* core);
@@ -98,22 +98,19 @@ private:
 	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
 
-	
-
 	// Back buffer for rendering (256x240 pixels, RGBA)
-	
-	
-	
-	
-	
-	
 	
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
 	}
 
-	uint16_t GetSpritePatternTableBase() const {
-		return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
+	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
+		if (!(m_ppuCtrl & PPUCTRL_SPRITESIZE)) {
+			return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
+		}
+		else {
+			return (tileId & 1) == 1 ? 0x1000 : 0x000;
+		}		
 	}
 	//int scrollY; // Fine Y scrolling (0-239)
 

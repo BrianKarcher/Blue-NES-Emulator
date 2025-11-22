@@ -206,7 +206,7 @@ void RendererSlow::RenderScanline()
 		// Get the color of the specific pixel within the tile
 		int bgPixelInTileX = fineX % TILE_SIZE;
 		int bgPixelInTileY = fineY % TILE_SIZE;
-		uint8_t bgColorIndex = ppu->get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false);
+		uint8_t bgColorIndex = ppu->get_tile_pixel_color_index(tileIndex, bgPixelInTileX, bgPixelInTileY, false, false);
 		// Handle both background and sprite color mapping here since we have to deal with
 		// transparency and priority
 		// Added bonus: Single draw call to set pixel in back buffer
@@ -247,8 +247,9 @@ void RendererSlow::RenderScanline()
 				uint8_t spritePaletteIndex = sprite.attributes & 0x03;
 				std::array<uint32_t, 4> spritePalette;
 				ppu->get_palette(spritePaletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+				bool isSecondSprite = spritePixelY >= 8;
 				// Get color index from sprite tile
-				uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true);
+				uint8_t spriteColorIndex = ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true, isSecondSprite);
 				if (spriteColorIndex != 0) { // Non-transparent pixel
 					uint32_t spriteColor = spritePalette[spriteColorIndex];
 					// Handle priority (not implemented yet, assuming sprites are always on top)

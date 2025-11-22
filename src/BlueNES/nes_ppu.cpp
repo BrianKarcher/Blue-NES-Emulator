@@ -265,13 +265,29 @@ bool NesPPU::NMI() {
 	return hasVBlank && (m_ppuCtrl & 0x80);
 }
 
-uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite)
+uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite)
 {
 	if (isSprite) {
 		int i = 0;
 	}
 	// Determine the pattern table base address
-	uint16_t patternTableBase = isSprite ? GetSpritePatternTableBase() : GetBackgroundPatternTableBase();
+	uint16_t patternTableBase = isSprite ? GetSpritePatternTableBase(tileIndex) : GetBackgroundPatternTableBase();
+	// This needs to be refactored, it's hard to understand.
+	if (isSprite) {
+		if (m_ppuCtrl & PPUCTRL_SPRITESIZE) { // 8x16
+			if (tileIndex & 1) {
+				if (!isSecondSprite) {
+					tileIndex -= 1;
+				}
+			}
+			else {
+				if (isSecondSprite) {
+					tileIndex += 1;
+				}
+			}
+		}
+	}
+	
 	int tileBase = patternTableBase + (tileIndex * 16); // 16 bytes per tile
 
 	uint8_t byte1 = bus->cart->ReadCHR(tileBase + pixelInTileY);     // bitplane 0

@@ -67,7 +67,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 		shiftRegister = 0b10000;
 		//prgBankReg = 2; // MMC1 starts Bank 0 at $8000
 		controlReg |= 0x0C; // set PRG mode bits to 11 (mode 3) as hardware typically does on reset
-		//dbg(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
+		dbg(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
 		recomputeMappings();
 		return;
 	}
@@ -130,6 +130,9 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// CHR Bank 0
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
 		// CHR bank 0 (4KB)
+		if (val > 3) {
+			int i = 0;
+		}
 		chrBank0Reg = val & 0x1F;
 	}
 	// CHR Bank 1
@@ -143,16 +146,16 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		if ((val & 0x0F) > 4) {
 			int i = 0;
 		}
-		dbg(L"\nChanging prg bank to %d\n", val & 0x0F);
+		//dbg(L"\nChanging prg bank to %d\n", val & 0x0F);
 		cartridge->SetPrgRamEnabled((val & 0b10000) == 0 ? true : false);
 		prgBankReg = val & 0x0F; // only low 4 bits used for PRG bank
 	}
 	// --- Clamp CHR bank values for SAROM ---
-	if (boardType == BoardType::SAROM) {
-		// SAROM only has 16KB of CHR-ROM
-		chrBank0Reg &= 0x04;
-		chrBank1Reg &= 0x04;
-	}
+	//if (boardType == BoardType::SAROM) {
+	//	// SAROM only has 16KB of CHR-ROM
+	//	chrBank0Reg &= 0x04;
+	//	chrBank1Reg &= 0x04;
+	//}
 	recomputeMappings();
 }
 
@@ -173,23 +176,26 @@ void MMC1::recomputeMappings()
 	else if (chrMode == 0) {
 		// 8KB mode
 		uint32_t bank8k = chrBank0Reg;
-		if (boardType == BoardType::SAROM)
-			bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
+		if (bank8k == 6) {
+			int i = 0;
+		}
+		//if (boardType == BoardType::SAROM)
+		//	bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
 		bank8k %= chrBankCount;
-		chr0Addr = bank8k * 0x2000;
+		chr0Addr = bank8k * 0x1000;
 		chr1Addr = chr0Addr + 0x1000;
 	}
 	else {
 		// 4KB mode
-		uint32_t bank0 = chrBank0Reg % chrBankCount;
-		uint32_t bank1 = chrBank1Reg % chrBankCount;
+		uint32_t bank0 = chrBank0Reg; // &(chrBankCount - 1);
+		uint32_t bank1 = chrBank1Reg; // &(chrBankCount - 1);
 		chr0Addr = bank0 * 0x1000;
 		chr1Addr = bank1 * 0x1000;
 	}
 
 	// ------------ PRG BANKING ------------
 	uint32_t prgMax = prgBankCount - 1;
-	uint32_t bank = prgBankReg & prgMax;
+	uint32_t bank = prgBankReg; // &prgMax;
 	uint32_t lastBankStart = (prgBankCount - 1) * 0x4000;
 
 	switch (prgMode) {
@@ -198,7 +204,7 @@ void MMC1::recomputeMappings()
 	case 1:
 		// 32 KB mode
 	{
-		prg0Addr = ((prgBankReg & 0xFE) % prgBankCount) * 0x4000;  // even bank
+		prg0Addr = (prgBankReg & 0xFE) * 0x4000;  // even bank
 		prg1Addr = prg0Addr + 0x4000;
 	}
 	break;
@@ -206,13 +212,13 @@ void MMC1::recomputeMappings()
 	case 2:
 		// First 16KB fixed at $8000
 		prg0Addr = 0;
-		prg1Addr = (prgBankReg % prgBankCount) * 0x4000;
+		prg1Addr = prgBankReg * 0x4000;
 		break;
 
 	case 3:
 	default:
 		// Last 16KB fixed at $C000
-		prg0Addr = (prgBankReg % prgBankCount) * 0x4000;
+		prg0Addr = prgBankReg * 0x4000;
 		prg1Addr = lastBankStart;
 		break;
 	}
