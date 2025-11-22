@@ -44,9 +44,12 @@ bool PPUViewer::Initialize(HINSTANCE hInstance, Core* core) {
         return false;
 
     HDC hdc = GetDC(m_hwndPPUViewer);
-    hdcPPUMem = CreateCompatibleDC(hdc);
-    hPPUBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-    SelectObject(hdcPPUMem, hPPUBitmap);
+    hdcPPUMem0 = CreateCompatibleDC(hdc);
+    hPPUBitmap0 = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+    SelectObject(hdcPPUMem0, hPPUBitmap0);
+    hdcPPUMem1 = CreateCompatibleDC(hdc);
+    hPPUBitmap1 = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+    SelectObject(hdcPPUMem1, hPPUBitmap1);
     ReleaseDC(m_hwndPPUViewer, hdc);
 
     ShowWindow(m_hwndPPUViewer, SW_SHOWNORMAL);
@@ -117,18 +120,38 @@ void PPUViewer::DrawNametables(HDC hdcPPU)
     if (!core->isPlaying) {
         return;
     }
-    //renderNametable(nt0, 0);
+    renderNametable(nt0, 0);
     renderNametable(nt1, 1);
 
     //nt1.fill(m_nesPalette[0x25]);
     // Copy back buffer to bitmap
-    SetDIBits(hdcPPUMem, hPPUBitmap, 0, 240, nt1.data(), &bmi, DIB_RGB_COLORS);
+    SetDIBits(hdcPPUMem0, hPPUBitmap0, 0, 240, nt0.data(), &bmi, DIB_RGB_COLORS);
+    SetDIBits(hdcPPUMem1, hPPUBitmap1, 0, 240, nt1.data(), &bmi, DIB_RGB_COLORS);
     //SetDIBits(hdcPPUMem, hPPUBitmap, 120, 240, nt1.data(), &bmi, DIB_RGB_COLORS);
     // Stretch blit to window (3x scale)
     RECT clientRect;
     GetClientRect(m_hwndPPUViewer, &clientRect);
-    StretchBlt(hdcPPU, 0, 0, clientRect.right, clientRect.bottom,
-        hdcPPUMem, 0, 0, 256, 240, SRCCOPY);
+    HDC *hdc0, *hdc1, *hdc2, *hdc3;
+    if (core->cart.GetMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) {
+        hdc0 = &hdcPPUMem0;
+        hdc1 = &hdcPPUMem0;
+        hdc2 = &hdcPPUMem1;
+        hdc3 = &hdcPPUMem1;
+    }
+    else {
+        hdc0 = &hdcPPUMem0;
+        hdc1 = &hdcPPUMem1;
+        hdc2 = &hdcPPUMem0;
+        hdc3 = &hdcPPUMem1;
+    }
+    StretchBlt(hdcPPU, 0, 0, clientRect.right / 2, clientRect.bottom / 2,
+        *hdc0, 0, 0, 256, 240, SRCCOPY);
+    StretchBlt(hdcPPU, clientRect.right / 2, 0, clientRect.right / 2, clientRect.bottom / 2,
+        *hdc1, 0, 0, 256, 240, SRCCOPY);
+    StretchBlt(hdcPPU, 0, clientRect.bottom / 2, clientRect.right / 2, clientRect.bottom / 2,
+        *hdc2, 0, 0, 256, 240, SRCCOPY);
+    StretchBlt(hdcPPU, clientRect.right / 2, clientRect.bottom / 2, clientRect.right / 2, clientRect.bottom / 2,
+        *hdc3, 0, 0, 256, 240, SRCCOPY);
 }
 
 void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable)

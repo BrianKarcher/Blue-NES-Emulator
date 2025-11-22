@@ -18,9 +18,11 @@ private:
 		int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 	void DrawNametables(HDC hdcPPU);
 
-	HDC hdcPPUMem;
+	HDC hdcPPUMem0;
+	HDC hdcPPUMem1;
 	HWND m_hwndPPUViewer;
-	HBITMAP hPPUBitmap;
+	HBITMAP hPPUBitmap0;
+	HBITMAP hPPUBitmap1;
 	BITMAPINFO bmi;
 	std::array<uint32_t, 256 * 240> nt0;
 	std::array<uint32_t, 256 * 240> nt1;
