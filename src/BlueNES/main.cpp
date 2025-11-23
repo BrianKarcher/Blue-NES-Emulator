@@ -20,7 +20,7 @@ int WINAPI WinMain(
         {
             Core core;
 
-            if (core.Initialize() == S_OK)
+            if (core.Initialize() == S_OK && core.CreateWindows() == S_OK)
             {
                 core.RunMessageLoop();
             }

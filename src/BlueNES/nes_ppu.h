@@ -52,6 +52,8 @@ public:
 	void write_register(uint16_t addr, uint8_t value);
 	uint8_t read_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
+	uint8_t GetScrollX() const;
+	uint8_t GetScrollY() const;
 	
 	//void render_frame();
 	

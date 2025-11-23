@@ -170,6 +170,14 @@ uint8_t NesPPU::read_register(uint16_t addr)
 	return 0;
 }
 
+uint8_t NesPPU::GetScrollX() const {
+	return renderer->GetScrollX();
+}
+
+uint8_t NesPPU::GetScrollY() const {
+	return renderer->GetScrollY();
+}
+
 uint8_t NesPPU::ReadVRAM(uint16_t addr)
 {
 	uint8_t value = 0;

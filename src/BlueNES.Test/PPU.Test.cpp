@@ -5,6 +5,8 @@
 #include "Cartridge.h"
 #include "Bus.h"
 #include "nes_ppu.h"
+#include "RendererWithReg.h"
+#include "Core.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -13,87 +15,89 @@ namespace PPUTest
 	TEST_CLASS(PPUTest)
 	{
 	private:
-		Processor_6502 processor;
-		Bus bus;
-		Cartridge cart;
-		NesPPU ppu;
+		//Processor_6502 processor;
+		//Bus bus;
+		//Cartridge cart;
+		//NesPPU ppu;
+		Core core;
 
 	public:
 		TEST_METHOD_INITIALIZE(TestSetup)
 		{
-			bus.cart = &cart;
-			bus.cpu = &processor;
-			processor.bus = &bus;
-			ppu.bus = &bus;
-			processor.PowerOn();
-			processor.Activate(true);
+			core.Initialize();
+			ines_file_t inesLoader;
+			core.bus.cart->SetMapper(0, inesLoader);
+			core.cpu.PowerOn();
+			core.cpu.Activate(true);
+			core.cpu.SetPC(0x8000);
 		}
 
 		TEST_METHOD(TestReadWritePPUCTRL)
 		{
-			ppu.write_register(0x2000, 0x80);
-			Assert::AreEqual((uint8_t)0x80, ppu.read_register(0x2000));
+			core.ppu.write_register(0x2000, 0x80);
+			Assert::AreEqual((uint8_t)0x80, core.ppu.read_register(0x2000));
 		}
 
 		TEST_METHOD(TestWritePPUADDR)
 		{
-			ppu.write_register(PPUADDR, 0x20);
+			core.ppu.write_register(PPUADDR, 0x20);
 			// The first write sets the high byte of the TEMP address
 			// But does not update the actual VRAM address yet
-			Assert::AreEqual((uint16_t)0x0000, ppu.GetVRAMAddress());
-			ppu.write_register(PPUADDR, 0x00);
+			Assert::AreEqual((uint16_t)0x0000, core.ppu.GetVRAMAddress());
+			core.ppu.write_register(PPUADDR, 0x00);
 			// The second write sets the low byte and updates the VRAM address
-			Assert::AreEqual((uint16_t)0x2000, ppu.GetVRAMAddress());
+			Assert::AreEqual((uint16_t)0x2000, core.ppu.GetVRAMAddress());
 		}
 		TEST_METHOD(TestWritePPUSCROLL)
 		{
-			ppu.write_register(PPUSCROLL, 0x05);
-			ppu.write_register(PPUSCROLL, 0x06);
-			/*auto [x, y] = ppu.GetPPUScroll();
+			core.ppu.write_register(PPUSCROLL, 0x05);
+			core.ppu.write_register(PPUSCROLL, 0x06);
+			auto x = core.ppu.GetScrollX();
+			auto y = core.ppu.GetScrollY();
 			Assert::AreEqual((uint8_t)0x05, x);
-			Assert::AreEqual((uint8_t)0x06, y);*/
+			Assert::AreEqual((uint8_t)0x06, y);
 		}
 		TEST_METHOD(TestWritePPUDATA)
 		{
-			//ppu.SetVRAMAddress(0x2000);
-			//ppu.write_register(PPUDATA, 0x55);
-			//Assert::AreEqual((uint16_t) 0x2001, ppu.GetVRAMAddress());
-			//// Fill the read buffer
-			//ppu.ReadVRAM(0x2000);
-			//Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
+			core.ppu.SetVRAMAddress(0x2000);
+			core.ppu.write_register(PPUDATA, 0x55);
+			Assert::AreEqual((uint16_t) 0x2001, core.ppu.GetVRAMAddress());
+			// Fill the read buffer
+			Assert::AreEqual((uint8_t)0x00, core.ppu.ReadVRAM(0x2000));
+			Assert::AreEqual((uint8_t)0x55, core.ppu.ReadVRAM(0x2000));
 		}
 		TEST_METHOD(TestWritePPUDATAVert)
 		{
-			ppu.write_register(PPUCTRL, 0x04); // Set vertical increment
-			//ppu.SetVRAMAddress(0x2000);
-			//ppu.write_register(PPUDATA, 0x55);
-			//Assert::AreEqual((uint16_t)0x2020, ppu.GetVRAMAddress());
-			//// Fill the read buffer
-			//ppu.ReadVRAM(0x2000);
-			//Assert::AreEqual((uint8_t)0x55, ppu.ReadVRAM(0x2000));
+			core.ppu.write_register(PPUCTRL, 0x04); // Set vertical increment
+			core.ppu.SetVRAMAddress(0x2000);
+			core.ppu.write_register(PPUDATA, 0x55);
+			Assert::AreEqual((uint16_t)0x2020, core.ppu.GetVRAMAddress());
+			// Fill the read buffer
+			core.ppu.ReadVRAM(0x2000);
+			Assert::AreEqual((uint8_t)0x55, core.ppu.ReadVRAM(0x2000));
 		}
 
 		TEST_METHOD(TestReadPPUDATA)
 		{
-			//ppu.SetVRAMAddress(0x2000);
-			//ppu.write_register(PPUDATA, 0x55);
-			//ppu.SetVRAMAddress(0x2000);
-			//// First read returns the buffered value (initially 0)
-			//Assert::AreEqual((uint8_t)0x00, ppu.read_register(PPUDATA));
-			//// Second read returns the actual value
-			//Assert::AreEqual((uint8_t)0x55, ppu.read_register(PPUDATA));
+			core.ppu.SetVRAMAddress(0x2000);
+			core.ppu.write_register(PPUDATA, 0x55);
+			core.ppu.SetVRAMAddress(0x2000);
+			// First read returns the buffered value (initially 0)
+			Assert::AreEqual((uint8_t)0x00, core.ppu.read_register(PPUDATA));
+			// Second read returns the actual value
+			Assert::AreEqual((uint8_t)0x55, core.ppu.read_register(PPUDATA));
 		}
 		TEST_METHOD(TestReadPPUDATAx2)
 		{
-			//ppu.SetVRAMAddress(0x2000);
-			//ppu.write_register(PPUDATA, 0x55);
-			//ppu.write_register(PPUDATA, 0x66);
-			//ppu.SetVRAMAddress(0x2000);
-			//// First read returns the buffered value (initially 0)
-			//Assert::AreEqual((uint8_t)0x00, ppu.read_register(PPUDATA));
-			//// Second read returns the actual value
-			//Assert::AreEqual((uint8_t)0x55, ppu.read_register(PPUDATA));
-			//Assert::AreEqual((uint8_t)0x66, ppu.read_register(PPUDATA));
+			core.ppu.SetVRAMAddress(0x2000);
+			core.ppu.write_register(PPUDATA, 0x55);
+			core.ppu.write_register(PPUDATA, 0x66);
+			core.ppu.SetVRAMAddress(0x2000);
+			// First read returns the buffered value (initially 0)
+			Assert::AreEqual((uint8_t)0x00, core.ppu.read_register(PPUDATA));
+			// Second read returns the actual value
+			Assert::AreEqual((uint8_t)0x55, core.ppu.read_register(PPUDATA));
+			Assert::AreEqual((uint8_t)0x66, core.ppu.read_register(PPUDATA));
 		}
 	};
 }

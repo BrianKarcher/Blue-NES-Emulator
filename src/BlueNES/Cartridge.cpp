@@ -37,18 +37,25 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
     m_prgRamData.clear();
     m_prgRamData.resize(0x2000);
     
+    SetMapper(mapperNum, inesFile);
+    
+}
+
+void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
     if (mapper)
         delete mapper;
 
-    switch (mapperNum) {
+    switch (value) {
     case 0:
         mapper = new NROM(this);
         break;
     case 1:
         mapper = new MMC1(this, cpu, inesFile);
         break;
+    default:
+        mapper = new NROM(this);
+        break;
     }
-    
 }
 
 // Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)

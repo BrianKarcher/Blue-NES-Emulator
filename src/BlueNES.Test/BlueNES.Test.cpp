@@ -4,6 +4,7 @@
 #include "CPU.h"
 #include "Cartridge.h"
 #include "Bus.h"
+#include "INESLoader.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -22,7 +23,11 @@ namespace BlueNESTest
 			bus.cart = &cart;
 			bus.cpu = &processor;
 			processor.bus = &bus;
+			ines_file_t inesLoader;
+			bus.cart->cpu = &processor;
+			bus.cart->SetMapper(0, inesLoader);
 			processor.PowerOn();
+			processor.SetPC(0x8000);
 			processor.Activate(true);
 		}
 
@@ -430,17 +435,18 @@ namespace BlueNESTest
 		{
 			uint8_t rom[] = { BRK_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
 			cart.SetPRGRom(rom, sizeof(rom));
-			bus.write(0xFFFE, 0x88); // Set IRQ vector low byte to 0x0088
-			bus.write(0xFFFF, 0x80); // Set IRQ vector high byte to 0x8000
+			uint8_t lo = 0x88;
+			uint8_t hi = 0x80;
+			// TODO This test is currently broken because ROM is not writeable. Fix!
+			bus.write(0xFFFE, lo); // Set IRQ vector low byte to 0x0088
+			bus.write(0xFFFF, hi); // Set IRQ vector high byte to 0x8000
 			processor.SetPC(0x8000);
 			processor.Clock();
 			// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
-			uint16_t lo = bus.read(0xFFFE);
-			uint16_t hi = bus.read(0xFFFF);
 			uint16_t irqVector = (hi << 8) | lo;
 			Assert::AreEqual(irqVector, processor.GetPC());
-			// Also check that the Break flag is set
-			Assert::IsTrue(processor.GetFlag(FLAG_BREAK));
+			// Also check that the Interrupt flag is set
+			Assert::IsTrue(processor.GetFlag(FLAG_INTERRUPT));
 		}
 		TEST_METHOD(TestBVCRelative)
 		{

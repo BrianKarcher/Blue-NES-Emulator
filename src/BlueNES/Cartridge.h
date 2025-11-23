@@ -5,6 +5,7 @@
 #include <array>
 #include <vector>
 #include "Mapper.h"
+#include "INESLoader.h"
 
 class Processor_6502;
 
@@ -41,6 +42,7 @@ public:
 	Processor_6502* cpu;
 	void SetPrgRamEnabled(bool enable);
 	bool isPrgRamEnabled = true;
+	void SetMapper(uint8_t value, ines_file_t& inesFile);
 private:
 	MirrorMode m_mirrorMode;
 	Mapper* mapper;

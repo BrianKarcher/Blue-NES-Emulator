@@ -44,6 +44,43 @@ HRESULT Core::Initialize()
 
 
     // Register the window class.
+
+    /*bus.cart = &cart;
+    bus.cpu = &cpu;
+    bus.ppu = &ppu;
+    bus.core = this;*/
+    bus.Initialize(this);
+    ppu.Initialize(&bus, this);
+	cpu.bus = &bus;
+    ppu.set_hwnd(m_hwnd);
+    
+    //UpdateWindow(m_hwnd);
+
+	audioBackend = new AudioBackend();
+    // Initialize audio backend
+    if (!audioBackend->Initialize(44100, 1)) {  // 44.1kHz, mono
+        // Handle error - audio failed to initialize
+        MessageBox(m_hwnd, L"Failed to initialize audio!", L"Error", MB_OK);
+    }
+
+    // Set up DMC read callback
+    apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+        return bus.read(address);
+    });
+
+    // --- Debug: force a tone on Pulse 1 ---
+    //apu.write_register(0x4000, 0x30); // duty + envelope: constant volume 0x0 / vol 0x0? adjust below
+    //apu.write_register(0x4002, 0xFF); // timer low
+    //apu.write_register(0x4003, 0x07); // timer high -> make very low frequency (adjust)
+    //apu.write_register(0x4015, 0x01); // enable pulse 1
+
+    //// Increase volume to audible: 0x10 sets constant volume, low nibble is volume (0x0 - 0xF).
+    //apu.write_register(0x4000, 0x90); // 1 0 0 1 0000 -> constant volume + volume 0 (tweak to 0x9..0xF)
+
+    return S_OK;
+}
+
+HRESULT Core::CreateWindows() {
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc = Core::MainWndProc;
@@ -98,8 +135,8 @@ HRESULT Core::Initialize()
     if (!m_hwnd)
         return S_FALSE;
 
-	HMENU hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
-	SetMenu(m_hwnd, hMenu);
+    HMENU hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
+    SetMenu(m_hwnd, hMenu);
 
     m_hwndHex = CreateWindow(
         L"HexWindowClass",
@@ -138,14 +175,6 @@ HRESULT Core::Initialize()
         return S_FALSE;
     }
 
-    /*bus.cart = &cart;
-    bus.cpu = &cpu;
-    bus.ppu = &ppu;
-    bus.core = this;*/
-    bus.Initialize(this);
-    ppu.Initialize(&bus, this);
-	cpu.bus = &bus;
-    ppu.set_hwnd(m_hwnd);
     HDC hdc = GetDC(m_hwnd);
     hdcMem = CreateCompatibleDC(hdc);
     hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
@@ -156,31 +185,8 @@ HRESULT Core::Initialize()
     hexSources[1] = hexReadPPU;
 
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
-	ShowWindow(m_hwndHex, SW_SHOWNORMAL);
+    ShowWindow(m_hwndHex, SW_SHOWNORMAL);
     ShowWindow(m_hwndPalette, SW_SHOWNORMAL);
-    
-    //UpdateWindow(m_hwnd);
-
-	audioBackend = new AudioBackend();
-    // Initialize audio backend
-    if (!audioBackend->Initialize(44100, 1)) {  // 44.1kHz, mono
-        // Handle error - audio failed to initialize
-        MessageBox(m_hwnd, L"Failed to initialize audio!", L"Error", MB_OK);
-    }
-
-    // Set up DMC read callback
-    apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-        return bus.read(address);
-    });
-
-    // --- Debug: force a tone on Pulse 1 ---
-    //apu.write_register(0x4000, 0x30); // duty + envelope: constant volume 0x0 / vol 0x0? adjust below
-    //apu.write_register(0x4002, 0xFF); // timer low
-    //apu.write_register(0x4003, 0x07); // timer high -> make very low frequency (adjust)
-    //apu.write_register(0x4015, 0x01); // enable pulse 1
-
-    //// Increase volume to audible: 0x10 sets constant volume, low nibble is volume (0x0 - 0xF).
-    //apu.write_register(0x4000, 0x90); // 1 0 0 1 0000 -> constant volume + volume 0 (tweak to 0x9..0xF)
 
     return S_OK;
 }

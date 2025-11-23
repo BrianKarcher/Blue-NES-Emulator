@@ -50,6 +50,7 @@ public:
 	AudioBackend* audioBackend;
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
+	HRESULT CreateWindows();
 	// Load the game ROM
 	void LoadGame(
 		const std::string& szFileName

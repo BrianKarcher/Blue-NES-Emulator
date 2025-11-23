@@ -22,14 +22,13 @@ public:
 	RendererWithReg();
 	void Initialize(NesPPU* ppu);
 	void SetPPUCTRL(uint8_t value);
-	uint8_t GetScrollX() { return (v & 0b11111) << 3 | (x & 0b111); }
-	uint8_t GetScrollY() { return ((v & 0b1111100000) >> 2) | ((v & 0b111000000000000) >> 12); }
 	void SetScrollX(uint8_t value);
 	void SetScrollY(uint8_t value);
 	void SetPPUAddrHigh(uint8_t value);
 	void SetPPUAddrLow(uint8_t value);
 	void SetPPUMask(uint8_t value) { ppumask = value; }
-	//std::pair<uint8_t, uint8_t> GetPPUScroll() const { return std::make_pair(m_scrollX, m_scrollY); }
+	uint8_t GetScrollX();
+	uint8_t GetScrollY();
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void reset() {
 		m_backBuffer.fill(0xFFFF0000);

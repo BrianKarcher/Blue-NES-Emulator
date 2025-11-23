@@ -34,6 +34,16 @@ void RendererWithReg::SetScrollY(uint8_t value) {
 	t = (t & ~INTERNAL_COARSE_Y) | (courseY << 5);
 }
 
+uint8_t RendererWithReg::GetScrollX()
+{
+	return ((t & INTERNAL_COARSE_X) << 3) | (x & 0x07);
+}
+
+uint8_t RendererWithReg::GetScrollY()
+{
+	return ((t & INTERNAL_COARSE_Y) >> 5) | ((t & INTERNAL_FINE_Y) >> 12);
+}
+
 void RendererWithReg::SetPPUAddrHigh(uint8_t value) {
 	t = (t & ~0b11111100000000) | ((value & 0b111111) << 8);
 	// Zero this bit for reasons unknown

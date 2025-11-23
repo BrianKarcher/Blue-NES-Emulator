@@ -139,8 +139,11 @@
     <ClCompile Include="..\BlueNES\CPU.cpp" />
     <ClCompile Include="..\BlueNES\INESLoader.cpp" />
     <ClCompile Include="..\BlueNES\Input.cpp" />
+    <ClCompile Include="..\BlueNES\MMC1.cpp" />
     <ClCompile Include="..\BlueNES\NES_APU.cpp" />
     <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
+    <ClCompile Include="..\BlueNES\NROM.cpp" />
+    <ClCompile Include="..\BlueNES\PPUViewer.cpp" />
     <ClCompile Include="..\BlueNES\RendererSlow.cpp" />
     <ClCompile Include="..\BlueNES\RendererWithReg.cpp" />
     <ClCompile Include="IntegrationRunner.cpp" />
@@ -156,8 +159,11 @@
     <ClInclude Include="..\BlueNES\CPU.h" />
     <ClInclude Include="..\BlueNES\INESLoader.h" />
     <ClInclude Include="..\BlueNES\Input.h" />
+    <ClInclude Include="..\BlueNES\MMC1.h" />
     <ClInclude Include="..\BlueNES\NES_APU.h" />
     <ClInclude Include="..\BlueNES\nes_ppu.h" />
+    <ClInclude Include="..\BlueNES\NROM.h" />
+    <ClInclude Include="..\BlueNES\PPUViewer.h" />
     <ClInclude Include="..\BlueNES\Renderer.h" />
     <ClInclude Include="..\BlueNES\RendererSlow.h" />
     <ClInclude Include="..\BlueNES\RendererWithReg.h" />
