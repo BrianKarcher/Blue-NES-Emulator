@@ -25,7 +25,7 @@
 #define PPUMASK_SPRITEENABLED 0x10
 #define PPUMASK_RENDERINGEITHER PPUMASK_BACKGROUNDENABLED | PPUMASK_SPRITEENABLED
 
-#define PPUDEBUG
+//#define PPUDEBUG
 
 // NES color palette (64 colors)
 static constexpr uint32_t m_nesPalette[64] = {

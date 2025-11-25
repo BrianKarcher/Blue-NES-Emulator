@@ -80,8 +80,8 @@ uint16_t RendererWithReg::GetPPUAddr() {
 
 void RendererWithReg::PPUDataAccess() {
 	// TODO Handle data access during rendering (where it glitches up)
-	v += 1;
-	//v += vramIncrementRight ? 1 : 32;
+	//v += 1;
+	v += vramIncrementRight ? 1 : 32;
 	//uint16_t addrTemp = GetPPUAddr();
 	//if (addrTemp >= 0x3F00) {
 	//	// Palette data always increments by 1
@@ -163,9 +163,10 @@ void RendererWithReg::clock() {
     // On dot 257: copy horizontal bits from t to v and start sprite evaluation
     if (rendering && m_cycle == 257 && (visibleScanline)) {
         copyHorizontalBitsFromTtoV();
-        // evaluate sprites (we do simple eager eval; full timing consumes 64 cycles 257..320)
-		EvaluateSprites(m_scanline, secondaryOAM);
     }
+	if (rendering && m_cycle == 257) {
+		EvaluateSprites(m_scanline, secondaryOAM);
+	}
 
     // Pre-render only: dots 280..304 copy vertical bits from t to v
     if (preRenderLine && m_cycle >= 280 && m_cycle <= 304 && rendering) {

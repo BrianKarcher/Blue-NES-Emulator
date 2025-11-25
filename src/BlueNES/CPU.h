@@ -249,7 +249,7 @@ private:
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 	//bool debug = false;
 //#define CPUDEBUG
-#define NMIDEBUG
+//#define NMIDEBUG
 	bool isFrozen = false;
 	int count = 0;
 };

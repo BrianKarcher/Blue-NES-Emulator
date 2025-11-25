@@ -62,8 +62,6 @@ namespace PPUTest
 			core.ppu.SetVRAMAddress(0x2000);
 			core.ppu.write_register(PPUDATA, 0x55);
 			Assert::AreEqual((uint16_t) 0x2001, core.ppu.GetVRAMAddress());
-			// Fill the read buffer
-			Assert::AreEqual((uint8_t)0x00, core.ppu.ReadVRAM(0x2000));
 			Assert::AreEqual((uint8_t)0x55, core.ppu.ReadVRAM(0x2000));
 		}
 		TEST_METHOD(TestWritePPUDATAVert)
@@ -98,6 +96,25 @@ namespace PPUTest
 			// Second read returns the actual value
 			Assert::AreEqual((uint8_t)0x55, core.ppu.read_register(PPUDATA));
 			Assert::AreEqual((uint8_t)0x66, core.ppu.read_register(PPUDATA));
+		}
+
+		TEST_METHOD(TestWriteScrollThenAddr) {
+			// A more complicated series of commands taken from a game log.
+			// Ensure palette data is writing correctly after fudging with it a bit.
+			core.ppu.write_register(PPUSCROLL, 0x00);
+			core.ppu.write_register(PPUSCROLL, 0x00);
+			core.ppu.read_register(PPUSTATUS);
+			core.ppu.write_register(PPUADDR, 0x3F);
+			core.ppu.write_register(PPUADDR, 0x00);
+			core.ppu.write_register(PPUCTRL, 0x30);
+			core.ppu.write_register(PPUDATA, 0x36);
+			core.ppu.write_register(PPUDATA, 0x0F);
+
+			core.ppu.read_register(PPUSTATUS);
+			core.ppu.write_register(PPUADDR, 0x3F);
+			core.ppu.write_register(PPUADDR, 0x00);
+			Assert::AreEqual((uint8_t)0x36, core.ppu.read_register(PPUDATA));
+			Assert::AreEqual((uint8_t)0x0F, core.ppu.read_register(PPUDATA));
 		}
 	};
 }
