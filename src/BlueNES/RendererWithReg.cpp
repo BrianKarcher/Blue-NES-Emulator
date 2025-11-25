@@ -184,16 +184,7 @@ void RendererWithReg::clock() {
 	}
 }
 
-void RendererWithReg::copyHorizontalBitsFromTtoV() {
-    v = (v & ~0x041F) | (t & 0x041F);
-}
-
-void RendererWithReg::copyVerticalBitsFromTtoV() {
-    v = (v & ~0x7BE0) | (t & 0x7BE0);
-}
-
-void RendererWithReg::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam)
-{
+void RendererWithReg::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam) {
 	for (int i = 0; i < 8; ++i) {
 		newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
 	}
@@ -229,6 +220,14 @@ void RendererWithReg::EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam
 			}
 		}
 	}
+}
+
+void RendererWithReg::copyHorizontalBitsFromTtoV() {
+    v = (v & ~0x041F) | (t & 0x041F);
+}
+
+void RendererWithReg::copyVerticalBitsFromTtoV() {
+    v = (v & ~0x7BE0) | (t & 0x7BE0);
 }
 
 // ---------------- Loopy helpers ----------------

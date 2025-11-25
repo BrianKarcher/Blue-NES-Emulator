@@ -1,14 +1,37 @@
 #pragma once
 #include <stdint.h>
+#include <array>
+
+class NesPPU;
 
 class RendererLoopy
 {
 public:
+    void initialize(NesPPU* ppu);
     void reset();
-    void SetPPUCTRL(uint8_t value);
-    void WriteScroll(uint8_t value);
+    void setPPUCTRL(uint8_t value);
+    void writeScroll(uint8_t value);
+    void ppuWriteAddr(uint8_t value);
+    void ppuReadStatus();
+    void ppuIncrementX();
+    void ppuIncrementY();
+    void ppuCopyX();
+    void ppuCopyY();
+    uint16_t ppuGetVramAddr();
+    void ppuIncrementVramAddr(uint8_t increment);
 
 private:
+    // Sprite data for current scanline
+    typedef struct Sprite {
+        uint8_t x;
+        uint8_t y;
+        uint8_t tileIndex;
+        uint8_t attributes;
+        bool isSprite0;
+    } Sprite;
+
+    int m_scanline = 0; // Current PPU scanline (0-261)
+
     // Loopy register structure (15-bit VRAM address)
     // yyy NN YYYYY XXXXX
     // ||| || ||||| +++++-- coarse X scroll
@@ -32,5 +55,10 @@ private:
         bool w;           // Write latch (first/second write toggle)
     } PPURegisters;
 
-    PPURegisters ppu;
+    PPURegisters loopy;
+    NesPPU* m_ppu;
+    // Overflow can only be set once per frame
+    bool hasOverflowBeenSet = false;
+
+    void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 };

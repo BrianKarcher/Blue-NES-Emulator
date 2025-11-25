@@ -5,123 +5,166 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "nes_ppu.h"
+
+void RendererLoopy::initialize(NesPPU* ppu) {
+    m_ppu = ppu;
+}
 
 void RendererLoopy::reset() {
-    *(uint16_t*)&ppu.v = 0;
-    *(uint16_t*)&ppu.t = 0;
-    ppu.x = 0;
-    ppu.w = false;
+    *(uint16_t*)&loopy.v = 0;
+    *(uint16_t*)&loopy.t = 0;
+    loopy.x = 0;
+    loopy.w = false;
 }
 
 // Write to PPUCTRL ($2000)
-void RendererLoopy::SetPPUCTRL(uint8_t value) {
+void RendererLoopy::setPPUCTRL(uint8_t value) {
     // t: ...GH.. ........ <- d: ......GH
     // G = bit 1, H = bit 0 (nametable select)
-    ppu.t.nametable_x = (value >> 0) & 1;
-    ppu.t.nametable_y = (value >> 1) & 1;
+    loopy.t.nametable_x = (value >> 0) & 1;
+    loopy.t.nametable_y = (value >> 1) & 1;
 }
 
 // Write to PPUSCROLL ($2005)
-void RendererLoopy::WriteScroll(uint8_t value) {
-    if (!ppu.w) {
+void RendererLoopy::writeScroll(uint8_t value) {
+    if (!loopy.w) {
         // First write (X scroll)
         // t: ....... ...HGFED <- d: HGFED...
         // x:              CBA <- d: .....CBA
-        ppu.t.coarse_x = value >> 3;
-        ppu.x = value & 0x07;
-        ppu.w = true;
+        loopy.t.coarse_x = value >> 3;
+        loopy.x = value & 0x07;
+        loopy.w = true;
     }
     else {
         // Second write (Y scroll)
         // t: CBA..HG FED..... <- d: HGFEDCBA
-        ppu.t.fine_y = value & 0x07;
-        ppu.t.coarse_y = value >> 3;
-        ppu.w = false;
+        loopy.t.fine_y = value & 0x07;
+        loopy.t.coarse_y = value >> 3;
+        loopy.w = false;
     }
 }
 
-//// Write to PPUADDR ($2006)
-//void ppu_write_addr(PPURegisters* ppu, uint8_t value) {
-//    if (!ppu->w) {
-//        // First write (high byte)
-//        // t: .FEDCBA ........ <- d: ..FEDCBA
-//        // t: X...... ........ <- 0
-//        uint16_t* t_ptr = (uint16_t*)&ppu->t;
-//        *t_ptr = (*t_ptr & 0x00FF) | ((value & 0x3F) << 8);
-//        ppu->w = true;
-//    }
-//    else {
-//        // Second write (low byte)
-//        // t: ....... HGFEDCBA <- d: HGFEDCBA
-//        // v:                   <- t
-//        uint16_t* t_ptr = (uint16_t*)&ppu->t;
-//        *t_ptr = (*t_ptr & 0xFF00) | value;
-//        *(uint16_t*)&ppu->v = *(uint16_t*)&ppu->t;
-//        ppu->w = false;
-//    }
-//}
-//
-//// Read from PPUSTATUS ($2002)
-//void ppu_read_status(PPURegisters* ppu) {
-//    // w:                   <- 0
-//    ppu->w = false;
-//}
-//
-//// Increment coarse X (only when rendering is enabled)
-//void ppu_increment_x(PPURegisters* ppu) {
-//    if (ppu->v.coarse_x == 31) {
-//        ppu->v.coarse_x = 0;
-//        ppu->v.nametable_x ^= 1;  // Switch horizontal nametable
-//    }
-//    else {
-//        ppu->v.coarse_x++;
-//    }
-//}
-//
-//// Increment Y (only when rendering is enabled)
-//void ppu_increment_y(PPURegisters* ppu) {
-//    if (ppu->v.fine_y < 7) {
-//        ppu->v.fine_y++;
-//    }
-//    else {
-//        ppu->v.fine_y = 0;
-//
-//        if (ppu->v.coarse_y == 29) {
-//            ppu->v.coarse_y = 0;
-//            ppu->v.nametable_y ^= 1;  // Switch vertical nametable
-//        }
-//        else if (ppu->v.coarse_y == 31) {
-//            ppu->v.coarse_y = 0;
-//            // Don't switch nametable (out of bounds)
-//        }
-//        else {
-//            ppu->v.coarse_y++;
-//        }
-//    }
-//}
-//
-//// Copy horizontal bits from t to v (only when rendering is enabled)
-//void ppu_copy_x(PPURegisters* ppu) {
-//    // v: ....F.. ...EDCBA <- t: ....F.. ...EDCBA
-//    ppu->v.nametable_x = ppu->t.nametable_x;
-//    ppu->v.coarse_x = ppu->t.coarse_x;
-//}
-//
-//// Copy vertical bits from t to v (only when rendering is enabled)
-//void ppu_copy_y(PPURegisters* ppu) {
-//    // v: IHGF.ED CBA..... <- t: IHGF.ED CBA.....
-//    ppu->v.fine_y = ppu->t.fine_y;
-//    ppu->v.nametable_y = ppu->t.nametable_y;
-//    ppu->v.coarse_y = ppu->t.coarse_y;
-//}
-//
-//// Get current VRAM address
-//uint16_t ppu_get_vram_addr(PPURegisters* ppu) {
-//    return *(uint16_t*)&ppu->v & 0x3FFF;  // 14-bit address
-//}
-//
-//// Increment VRAM address (after PPUDATA read/write)
-//void ppu_increment_vram_addr(PPURegisters* ppu, uint8_t increment) {
-//    uint16_t* v_ptr = (uint16_t*)&ppu->v;
-//    *v_ptr = (*v_ptr + increment) & 0x7FFF;
-//}
+// Write to PPUADDR ($2006)
+void RendererLoopy::ppuWriteAddr(uint8_t value) {
+    if (!loopy.w) {
+        // First write (high byte)
+        // t: .FEDCBA ........ <- d: ..FEDCBA
+        // t: X...... ........ <- 0
+        uint16_t* t_ptr = (uint16_t*)&loopy.t;
+        *t_ptr = (*t_ptr & 0x00FF) | ((value & 0x3F) << 8);
+        loopy.w = true;
+    }
+    else {
+        // Second write (low byte)
+        // t: ....... HGFEDCBA <- d: HGFEDCBA
+        // v:                   <- t
+        uint16_t* t_ptr = (uint16_t*)&loopy.t;
+        *t_ptr = (*t_ptr & 0xFF00) | value;
+        *(uint16_t*)&loopy.v = *(uint16_t*)&loopy.t;
+        loopy.w = false;
+    }
+}
+
+// Read from PPUSTATUS ($2002)
+void RendererLoopy::ppuReadStatus() {
+    // w:                   <- 0
+    loopy.w = false;
+}
+
+// Increment coarse X (only when rendering is enabled)
+void RendererLoopy::ppuIncrementX() {
+    if (loopy.v.coarse_x == 31) {
+        loopy.v.coarse_x = 0;
+        loopy.v.nametable_x ^= 1;  // Switch horizontal nametable
+    }
+    else {
+        loopy.v.coarse_x++;
+    }
+}
+
+// Increment Y (only when rendering is enabled)
+void RendererLoopy::ppuIncrementY() {
+    if (loopy.v.fine_y < 7) {
+        loopy.v.fine_y++;
+    }
+    else {
+        loopy.v.fine_y = 0;
+
+        if (loopy.v.coarse_y == 29) {
+            loopy.v.coarse_y = 0;
+            loopy.v.nametable_y ^= 1;  // Switch vertical nametable
+        }
+        else if (loopy.v.coarse_y == 31) {
+            loopy.v.coarse_y = 0;
+            // Don't switch nametable (out of bounds)
+        }
+        else {
+            loopy.v.coarse_y++;
+        }
+    }
+}
+
+// Copy horizontal bits from t to v (only when rendering is enabled)
+void RendererLoopy::ppuCopyX() {
+    // v: ....F.. ...EDCBA <- t: ....F.. ...EDCBA
+    loopy.v.nametable_x = loopy.t.nametable_x;
+    loopy.v.coarse_x = loopy.t.coarse_x;
+}
+
+// Copy vertical bits from t to v (only when rendering is enabled)
+void RendererLoopy::ppuCopyY() {
+    // v: IHGF.ED CBA..... <- t: IHGF.ED CBA.....
+    loopy.v.fine_y = loopy.t.fine_y;
+    loopy.v.nametable_y = loopy.t.nametable_y;
+    loopy.v.coarse_y = loopy.t.coarse_y;
+}
+
+// Get current VRAM address
+uint16_t RendererLoopy::ppuGetVramAddr() {
+    return *(uint16_t*)&loopy.v & 0x3FFF;  // 14-bit address
+}
+
+// Increment VRAM address (after PPUDATA read/write)
+void RendererLoopy::ppuIncrementVramAddr(uint8_t increment) {
+    uint16_t* v_ptr = (uint16_t*)&loopy.v;
+    *v_ptr = (*v_ptr + increment) & 0x7FFF;
+}
+
+void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) {
+    for (int i = 0; i < 8; ++i) {
+        newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
+    }
+    // Evaluate sprites for this scanline
+    int spriteCount = 0;
+    for (int i = 0; i < 64; ++i) {
+        int spriteY = m_ppu->oam[i * 4]; // Y position of the sprite
+        if (spriteY > 0xF0) {
+            continue; // Empty sprite slot
+        }
+        int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) == 0 ? 8 : 16;
+        if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
+            if (m_scanline == 0) {
+                int test = 0;
+            }
+            if (spriteCount < 8) {
+                // Copy sprite data to new OAM
+                newOam[spriteCount].y = m_ppu->oam[i * 4];
+                newOam[spriteCount].tileIndex = m_ppu->oam[i * 4 + 1];
+                newOam[spriteCount].attributes = m_ppu->oam[i * 4 + 2];
+                newOam[spriteCount].x = m_ppu->oam[i * 4 + 3];
+                newOam[spriteCount].isSprite0 = (i == 0); // Mark if this is sprite 0
+                spriteCount++;
+            }
+            else {
+                // Sprite overflow - more than 8 sprites on this scanline
+                if (!hasOverflowBeenSet) {
+                    // Set sprite overflow flag only once per frame
+                    hasOverflowBeenSet = true;
+                    m_ppu->m_ppuStatus |= PPUSTATUS_SPRITE_OVERFLOW;
+                }
+                break;
+            }
+        }
+    }
+}
