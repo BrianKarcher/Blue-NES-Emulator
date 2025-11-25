@@ -13,10 +13,15 @@ public:
 	virtual void SetScrollY(uint8_t value) = 0;
 	virtual void SetPPUAddrHigh(uint8_t value) = 0;
 	virtual void SetPPUAddrLow(uint8_t value) = 0;
+	virtual uint16_t GetPPUAddr() = 0;
+	virtual void PPUDataAccess() = 0;
 	virtual void SetPPUMask(uint8_t value) = 0;
 	virtual const std::array<uint32_t, 256 * 240>& get_back_buffer() const = 0;
 	virtual void reset() = 0;
 	virtual bool isFrameComplete() = 0;
 	virtual void clock() = 0;
 	virtual void setFrameComplete(bool complete) = 0;
+	virtual void SetVramIncrementRight(bool val) = 0;
+	virtual void SetWriteToggle(bool toggle) = 0;
+	virtual bool GetWriteToggle() const = 0;
 };

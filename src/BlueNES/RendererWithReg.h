@@ -26,12 +26,18 @@ public:
 	void SetScrollY(uint8_t value);
 	void SetPPUAddrHigh(uint8_t value);
 	void SetPPUAddrLow(uint8_t value);
+	uint16_t GetPPUAddr();
+	void PPUDataAccess();
 	void SetPPUMask(uint8_t value) { ppumask = value; }
 	uint8_t GetScrollX();
 	uint8_t GetScrollY();
 	const std::array<uint32_t, 256 * 240>& get_back_buffer() const { return m_backBuffer; }
 	void reset() {
 		m_backBuffer.fill(0xFFFF0000);
+		v = 0;
+		t = 0;
+		w = false;
+		ppumask = 0;
 	}// Clear back buffer to opaque black }
 	void clock();
 	bool isFrameComplete() { return m_frameComplete; }
@@ -48,10 +54,13 @@ public:
     uint16_t v = 0;   // current VRAM address (15 bits)
     uint16_t t = 0;   // temporary VRAM address (15 bits)
     uint8_t x = 0;    // fine X (0..7)
-    bool w = false;   // first/second write toggle
+	bool w = false; // Write toggle
 	void incrementX();
 	void incrementY();
-
+	// Determine whether we increment to the right, or down.
+	void SetVramIncrementRight(bool val) { vramIncrementRight = val; }
+	void SetWriteToggle(bool toggle);
+	bool GetWriteToggle() const;
 private:
 	// Sprite data for current scanline
 	struct Sprite {
@@ -61,6 +70,7 @@ private:
 		uint8_t attributes;
 		bool isSprite0;
 	};
+	bool vramIncrementRight = true;
 	void RenderScanline();
 	void EvaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
 	int m_scanline = 0; // Current PPU scanline (0-261)

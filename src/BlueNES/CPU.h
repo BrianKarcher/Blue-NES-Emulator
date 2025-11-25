@@ -245,9 +245,10 @@ private:
 	inline void SetInterrupt(bool condition);
 	inline void SetBreak(bool condition);
 	inline uint16_t ReadIndirectIndexed();
+	int nmiCount = 0;
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 	//bool debug = false;
-//#define CPUDEBUG 0
+//#define CPUDEBUG
 #define NMIDEBUG
 	bool isFrozen = false;
 	int count = 0;

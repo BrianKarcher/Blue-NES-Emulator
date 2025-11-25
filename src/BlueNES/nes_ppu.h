@@ -25,6 +25,8 @@
 #define PPUMASK_SPRITEENABLED 0x10
 #define PPUMASK_RENDERINGEITHER PPUMASK_BACKGROUNDENABLED | PPUMASK_SPRITEENABLED
 
+#define PPUDEBUG
+
 // NES color palette (64 colors)
 static constexpr uint32_t m_nesPalette[64] = {
 	0xFF666666, 0xFF002A88, 0xFF1412A7, 0xFF3B00A4, 0xFF5C007E, 0xFF6E0040, 0xFF6C0600, 0xFF561D00,
@@ -71,8 +73,8 @@ public:
 	void Clock();
 	
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
-	uint16_t GetVRAMAddress() const { return vramAddr; }
-	void SetVRAMAddress(uint16_t addr) { vramAddr = addr & 0x3FFF; }
+	uint16_t GetVRAMAddress() const;
+	void SetVRAMAddress(uint16_t addr);
 	uint8_t GetPPUStatus() const { return m_ppuStatus; }
 	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
 	const std::array<uint32_t, 256 * 240>& get_back_buffer();
@@ -95,9 +97,9 @@ private:
 	bool is_failure = false;
 
 	// register v in hardware PPU
-	uint16_t vramAddr = 0; // Current VRAM address (15 bits)
+	//uint16_t vramAddr = 0; // Current VRAM address (15 bits)
 	// register t in hardware PPU
-	uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
+	//uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
 
 	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
@@ -110,13 +112,11 @@ private:
 	}
 	//int scrollY; // Fine Y scrolling (0-239)
 
-	bool writeToggle = false; // Toggle for first/second write to PPUSCROLL/PPUADDR
-
 	void write_vram(uint16_t addr, uint8_t value);
 	
 	
 	//void render_nametable();
-	
+	inline void dbg(const wchar_t* fmt, ...);
 
 	
 	

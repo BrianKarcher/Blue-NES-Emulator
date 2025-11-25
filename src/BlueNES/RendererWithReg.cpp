@@ -11,6 +11,10 @@ RendererWithReg::RendererWithReg() {
 	m_backBuffer.fill(0xFF000000); // Initialize to opaque black
 }
 
+//void RenderWithReg::SetW(bool w) {
+//	this->w = w;
+//}
+
 void RendererWithReg::Initialize(NesPPU* ppu) {
 	this->ppu = ppu;
 	bus = &ppu->core->bus;
@@ -19,41 +23,73 @@ void RendererWithReg::Initialize(NesPPU* ppu) {
 void RendererWithReg::SetPPUCTRL(uint8_t value) {
 	// Set nametable bits in register t
 	t = (t & ~INTERNAL_NAMETABLE) | ((value & 0x03) << 10);
+	vramIncrementRight = !(value & 0b100);
 }
 
 void RendererWithReg::SetScrollX(uint8_t value) {
-	t = (t & ~INTERNAL_COARSE_X) | (value >> 3);
+	// Coarse X goes into bits 0-4 of t
+	t = (t & ~INTERNAL_COARSE_X) | ((value >> 3) & 0x1F);
+	// Fine X goes into the x register
 	x = value & 0x07;
 }
 
 void RendererWithReg::SetScrollY(uint8_t value) {
-	// Fine Y
-	t = (t & ~INTERNAL_FINE_Y) | ((value & 0x07) << 12);
-	// Coarse Y
-	uint8_t courseY = value >> 3;
-	t = (t & ~INTERNAL_COARSE_Y) | (courseY << 5);
+	// Fine Y goes into bits 12-14 of t
+	t = (t & ~INTERNAL_FINE_Y) | (((uint16_t)(value & 0x07)) << 12);
+	// Coarse Y goes into bits 5-9 of t
+	t = (t & ~INTERNAL_COARSE_Y) | (((uint16_t)(value >> 3) & 0x1F) << 5);
 }
 
 uint8_t RendererWithReg::GetScrollX()
 {
+	// Reconstruct scroll X from coarse X (bits 0-4) and fine X register
 	return ((t & INTERNAL_COARSE_X) << 3) | (x & 0x07);
 }
 
 uint8_t RendererWithReg::GetScrollY()
 {
-	return ((t & INTERNAL_COARSE_Y) >> 5) | ((t & INTERNAL_FINE_Y) >> 12);
+	// Reconstruct scroll Y from coarse Y (bits 5-9) and fine Y (bits 12-14)
+	uint8_t coarseY = (t & INTERNAL_COARSE_Y) >> 5;
+	uint8_t fineY = (t & INTERNAL_FINE_Y) >> 12;
+	return (coarseY << 3) | fineY;
 }
 
 void RendererWithReg::SetPPUAddrHigh(uint8_t value) {
-	t = (t & ~0b11111100000000) | ((value & 0b111111) << 8);
-	// Zero this bit for reasons unknown
-	t = (t & ~0b100000000000000);
+	// PPUADDR first write: t = (t & 0x00FF) | ((value & 0x3F) << 8)
+	// This sets bits 8-13, clearing bit 14
+	t = (t & 0x00FF) | (((uint16_t)(value & 0x3F)) << 8);
 }
 
 void RendererWithReg::SetPPUAddrLow(uint8_t value) {
-	t = (t & ~0b11111111) | ((value & 0b11111111));
-	//tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
+	// PPUADDR second write: t = (t & 0xFF00) | value, then v = t
+	t = (t & 0xFF00) | value;
 	v = t;
+}
+
+void RendererWithReg::SetWriteToggle(bool toggle) {
+	w = toggle;
+}
+
+bool RendererWithReg::GetWriteToggle() const {
+	return w;
+}
+
+uint16_t RendererWithReg::GetPPUAddr() {
+	return (v & 0b11111111111111); // The address is 14 bits
+}
+
+void RendererWithReg::PPUDataAccess() {
+	// TODO Handle data access during rendering (where it glitches up)
+	v += 1;
+	//v += vramIncrementRight ? 1 : 32;
+	//uint16_t addrTemp = GetPPUAddr();
+	//if (addrTemp >= 0x3F00) {
+	//	// Palette data always increments by 1
+	//	v += 1;
+	//	return;
+	//}
+	//// Increment VRAM address based on PPUCTRL setting
+	//v += vramIncrementRight ? 1 : 32;
 }
 
 //void RendererSlow::render_chr_rom()
@@ -80,7 +116,7 @@ void RendererWithReg::clock() {
 	if (m_scanline >= 0 && m_scanline < 240) {
 		//OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
 		//OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
-		if (m_cycle == 256) {
+		if (m_cycle == 256 && rendering) {
 			//OutputDebugStringW((L"Rendering scanline " + std::to_wstring(m_scanline)
 			//	+ L" at CPU Cycle " + std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
 			// TODO: Pixel by pixel rendering can be implemented here for more accuracy
@@ -125,7 +161,7 @@ void RendererWithReg::clock() {
     }
 
     // On dot 257: copy horizontal bits from t to v and start sprite evaluation
-    if (rendering && m_cycle == 257) {
+    if (rendering && m_cycle == 257 && (visibleScanline)) {
         copyHorizontalBitsFromTtoV();
         // evaluate sprites (we do simple eager eval; full timing consumes 64 cycles 257..320)
 		EvaluateSprites(m_scanline, secondaryOAM);

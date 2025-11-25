@@ -85,7 +85,11 @@ void Processor_6502::NMI() {
 		return;
 	}
 	// Push PC and P to stack
-	dbgNmi(L"\nTaking NMI (cycle %d)\n", m_cycle_count);
+	nmiCount++;
+	if (nmiCount == 6) {
+		int i = 0;
+	}
+	dbgNmi(L"\nTaking NMI (%d) (cycle %d)\n", nmiCount, m_cycle_count);
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
@@ -117,11 +121,15 @@ uint8_t Processor_6502::Clock()
 	uint16_t current_pc = m_pc;
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
-	dbg(L"\n0x%04X %S ", current_pc, instructionMap[op].c_str());
-	//if (m_cycle_count > 87992) {
-	//	isFrozen = true;
-	//	return 5;
-	//}
+	dbg(L"\n(%d) 0x%04X %S ", cyclesBefore, current_pc, instructionMap[op].c_str());
+	if (m_cycle_count > 1102773) { // Zelda Palette issue.
+		int i = 0;
+		//isFrozen = true;
+		//return 5;
+	}
+	if (current_pc == 0xA0A3) {
+		int i = 0;
+	}
 	if (current_pc == 0x30) {
 		int i = 0;
 	}

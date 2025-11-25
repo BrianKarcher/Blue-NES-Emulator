@@ -29,6 +29,7 @@ public:
 	void SetPPUMask(uint8_t value) { }
 	void SetPPUAddrHigh(uint8_t value) {}
 	void SetPPUAddrLow(uint8_t value) {}
+	void SetVramIncrementRight(bool val) {}
 
 private:
 	// Sprite data for current scanline
