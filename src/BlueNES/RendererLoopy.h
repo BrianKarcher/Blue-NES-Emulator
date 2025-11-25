@@ -4,6 +4,9 @@
 
 class NesPPU;
 
+#define DOTS_PER_SCANLINE 340
+#define SCANLINES_PER_FRAME 261
+
 class RendererLoopy
 {
 public:
@@ -19,6 +22,9 @@ public:
     void ppuCopyY();
     uint16_t ppuGetVramAddr();
     void ppuIncrementVramAddr(uint8_t increment);
+    void clock();
+    bool isFrameComplete() { return m_frameComplete; }
+    void setFrameComplete(bool complete) { m_frameComplete = complete; }
 
 private:
     // Sprite data for current scanline
@@ -59,6 +65,24 @@ private:
     NesPPU* m_ppu;
     // Overflow can only be set once per frame
     bool hasOverflowBeenSet = false;
+    bool hasSprite0HitBeenSet = false;
+    bool m_frameComplete = false;
+    void setPPUMask(uint8_t value) { ppumask = value; }
+    uint8_t ppumask = 0;
+    int dot = 0;
+    std::array<Sprite, 8> secondaryOAM{};
+
+    // Tile info
+    uint8_t attributeByte;
+    std::array<uint32_t, 4> palette;
+    // CHR-ROM/RAM data for tile
+    uint8_t chrLowByte;
+    uint8_t chrHighByte;
 
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
+
+    // Internal helpers
+    inline bool renderingEnabled() const { return (ppumask & 0x18) != 0; } // bg or sprites
+    inline bool bgEnabled() const { return (ppumask & 0x08) != 0; }
+    inline bool spriteEnabled() const { return (ppumask & 0x10) != 0; }
 };

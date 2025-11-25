@@ -131,6 +131,103 @@ void RendererLoopy::ppuIncrementVramAddr(uint8_t increment) {
     *v_ptr = (*v_ptr + increment) & 0x7FFF;
 }
 
+void RendererLoopy::clock() {
+    bool rendering = renderingEnabled();
+    bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
+    bool preRenderLine = (m_scanline == 261);
+
+    dot++;
+    if (dot >= DOTS_PER_SCANLINE) {
+        dot = 0;
+        m_scanline++;
+        if (m_scanline >= SCANLINES_PER_FRAME) {
+            m_scanline = 0;
+        }
+    }
+
+    if (dot % 8 == 0) {
+        // Load next tile
+        // TODO Set these
+        // Get attribute byte for the tile
+        uint8_t nametableSelect = (loopy.v.nametable_x & 1) | (loopy.v.nametable_y & 1) << 1;
+        uint16_t nametableAddr = 0x2000 + nametableSelect * 0x400;
+        nametableAddr = bus->cart->MirrorNametable(nametableAddr);
+        int attrRow = loopy.v.coarse_y / 4;
+        int attrCol = loopy.v.coarse_x / 4;
+        attributeByte = m_ppu->m_vram[(nametableAddr | 0x3c0) + attrRow * 8 + attrCol];
+        attributeByte;
+        palette;
+        // CHR-ROM/RAM data for tile
+        chrLowByte;
+        chrHighByte;
+    }
+
+    // Pixel rendering (visible)
+    if (visibleScanline && dot >= 1 && dot <= 256) {
+        renderPixel();
+    }
+
+    // VBlank scanlines (241-260)
+    if (m_scanline == 241 && dot == 1) {
+        ppu->m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
+        m_frameComplete = true;
+        if (ppu->m_ppuCtrl & NMI_ENABLE) {
+            // Trigger NMI if enabled
+            //OutputDebugStringW((L"Triggering NMI at CPU cycle "
+            //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
+            bus->cpu->NMI();
+        }
+    }
+
+    if (m_scanline == 50 && m_cycle == 1) {
+        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
+    }
+
+    // Pre-render scanline (261)
+    if (m_scanline == 261 && m_cycle == 1) {
+        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
+
+        //OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
+
+        //OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
+        //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
+        hasOverflowBeenSet = false;
+        hasSprite0HitBeenSet = false;
+        ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
+        m_frameComplete = false;
+        //m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
+        //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
+    }
+    //    // On dot 256: increment Y
+    if (rendering && m_cycle == 256 && (visibleScanline)) {
+        ppuIncrementY();
+    }
+
+    // On dot 257: copy horizontal bits from t to v and start sprite evaluation
+    if (rendering && m_cycle == 257 && (visibleScanline)) {
+        ppuCopyX();
+    }
+    if (rendering && m_cycle == 257) {
+        evaluateSprites(m_scanline, secondaryOAM);
+    }
+
+    // Pre-render only: dots 280..304 copy vertical bits from t to v
+    if (preRenderLine && m_cycle >= 280 && m_cycle <= 304 && rendering) {
+        ppuCopyY();
+    }
+
+    // Advance cycle and scanline counters
+    //m_cycle++;
+    //if (m_cycle > 340) {
+    //    m_cycle = 0;
+    //    m_scanline++;
+    //    if (m_scanline > 261) {
+    //        m_scanline = 0;
+    //    }
+    //}
+}
+
+
 void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) {
     for (int i = 0; i < 8; ++i) {
         newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
