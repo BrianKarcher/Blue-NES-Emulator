@@ -3,6 +3,7 @@
 #include <array>
 
 class NesPPU;
+class Bus;
 
 #define DOTS_PER_SCANLINE 340
 #define SCANLINES_PER_FRAME 261
@@ -12,9 +13,11 @@ class RendererLoopy
 public:
     void initialize(NesPPU* ppu);
     void reset();
+    const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
     void setPPUCTRL(uint8_t value);
     void writeScroll(uint8_t value);
     void ppuWriteAddr(uint8_t value);
+    uint16_t getPPUAddr();
     void ppuReadStatus();
     void ppuIncrementX();
     void ppuIncrementY();
@@ -61,7 +64,27 @@ private:
         bool w;           // Write latch (first/second write toggle)
     } PPURegisters;
 
+    // Shift registers for rendering
+    typedef struct {
+        uint16_t pattern_lo_shift;  // 16-bit shift register for pattern low bits
+        uint16_t pattern_hi_shift;  // 16-bit shift register for pattern high bits
+        uint8_t attr_lo_shift;      // 8-bit shift register for attribute low bit
+        uint8_t attr_hi_shift;      // 8-bit shift register for attribute high bit
+        uint8_t attr_latch_lo;      // Next attribute bits to load
+        uint8_t attr_latch_hi;
+    } ShiftRegisters;
+
+    // Tile fetching structure
+    typedef struct {
+        uint8_t nametable_byte;  // Tile index
+        uint8_t attribute_byte;  // Palette info
+        uint8_t pattern_low;     // Low bit plane
+        uint8_t pattern_high;    // High bit plane
+    } TileFetch;
+
     PPURegisters loopy;
+    ShiftRegisters m_shifts;
+    Bus* m_bus;
     NesPPU* m_ppu;
     // Overflow can only be set once per frame
     bool hasOverflowBeenSet = false;
@@ -73,16 +96,26 @@ private:
     std::array<Sprite, 8> secondaryOAM{};
 
     // Tile info
-    uint8_t attributeByte;
-    std::array<uint32_t, 4> palette;
+    TileFetch tile;
+    //uint8_t attributeByte;
+    //std::array<uint32_t, 4> palette;
     // CHR-ROM/RAM data for tile
-    uint8_t chrLowByte;
-    uint8_t chrHighByte;
+    //uint8_t chrLowByte;
+    //uint8_t chrHighByte;
+    std::array<uint32_t, 256 * 240> m_backBuffer;
 
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
+    uint8_t get_pixel();
+    void renderPixel();
 
     // Internal helpers
     inline bool renderingEnabled() const { return (ppumask & 0x18) != 0; } // bg or sprites
     inline bool bgEnabled() const { return (ppumask & 0x08) != 0; }
     inline bool spriteEnabled() const { return (ppumask & 0x10) != 0; }
+    void fetch_tile_data(TileFetch* tile, uint8_t pattern_table_base);
+    void load_shift_registers();
+    void shift_registers();
+    void reload_attribute_shift();
+    uint8_t get_attribute_byte();
+    uint8_t get_palette_from_attribute(uint8_t attr, uint8_t coarse_x, uint8_t coarse_y);
 };

@@ -41,14 +41,14 @@ static constexpr uint32_t m_nesPalette[64] = {
 
 class Bus;
 class Core;
-class Renderer;
+class RendererLoopy;
 
 class NesPPU
 {
 public:
 	NesPPU();
 	~NesPPU();
-	Renderer* renderer;
+	RendererLoopy* renderer;
 	void reset();
 	void step();
 	void write_register(uint16_t addr, uint8_t value);

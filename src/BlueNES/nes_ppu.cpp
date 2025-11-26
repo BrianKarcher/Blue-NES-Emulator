@@ -6,6 +6,7 @@
 #include "Core.h"
 #include "RendererWithReg.h"
 #include "RendererSlow.h"
+#include "RendererLoopy.h"
 
 HWND m_hwnd;
 
