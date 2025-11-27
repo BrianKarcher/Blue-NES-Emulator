@@ -7,6 +7,7 @@ class Bus;
 
 #define DOTS_PER_SCANLINE 340
 #define SCANLINES_PER_FRAME 261
+#define DISABLE_CLOCK
 
 class RendererLoopy
 {

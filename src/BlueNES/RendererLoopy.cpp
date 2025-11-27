@@ -277,21 +277,26 @@ void RendererLoopy::clock() {
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
 
+#ifndef DISABLE_CLOCK
     if (rendering) {
-        if (((dot - 1) & 7) == 0) {
-            // Load previous fetch into shift registers
-            if (dot > 1) {
-                load_shift_registers();
-            }
-            fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
-            // Increment coarse X after fetching
-            ppuIncrementX();
+        if ((visibleScanline || preRenderLine) && dot >= 1 && dot <= 256 || (dot >= 321 && dot <= 336)) {
+            // Background tile and attribute fetches
+            // These occur every 8 dots
+            if (((dot - 1) & 7) == 0) {
+                // Load previous fetch into shift registers
+                if (dot > 1) {
+                    load_shift_registers();
+                }
+                fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
+                // Increment coarse X after fetching
+                ppuIncrementX();
 
-            // Reload attribute shift registers
-            if (dot > 1) {
-                reload_attribute_shift();
+                // Reload attribute shift registers
+                if (dot > 1) {
+                    reload_attribute_shift();
+                }
             }
-        }
+		}
     }
 
     // Pixel rendering (visible)
@@ -300,7 +305,7 @@ void RendererLoopy::clock() {
         shift_registers();
         renderPixel();
     }
-    else if ((preRenderLine || visibleScanline) && dot >= 321 && dot <= 336 && ((dot - 1) & 7) == 0) {
+    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336 && ((dot - 1) & 7) == 0) {
         // While in 321..336 we still load shifters and such for the next scanline,
         // but don't render pixels (this is part of the fetch window).
         // shift each dot as well to keep pipeline in sync.
@@ -309,6 +314,31 @@ void RendererLoopy::clock() {
         shift_registers();
     }
 
+    //    // On dot 256: increment Y
+    if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
+        ppuIncrementY();
+    }
+
+    // On dot 257: copy horizontal bits from t to v and start sprite evaluation
+    if (rendering && dot == 257 && (visibleScanline || preRenderLine)) {
+        ppuCopyX();
+    }
+    if (rendering && dot == 257) {
+        evaluateSprites(m_scanline, secondaryOAM);
+    }
+
+    // Pre-render only: dots 280..304 copy vertical bits from t to v
+    if (preRenderLine && dot >= 280 && dot <= 304 && rendering) {
+        ppuCopyY();
+    }
+
+    if (m_scanline == 50 && dot == 1) {
+        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
+    }
+
+#endif
+
+    // NMI and such has to happen for the CPU to function.
     // VBlank scanlines (241-260)
     if (m_scanline == 241 && dot == 1) {
         m_ppu->m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
@@ -319,10 +349,6 @@ void RendererLoopy::clock() {
             //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
             m_bus->cpu->NMI();
         }
-    }
-
-    if (m_scanline == 50 && dot == 1) {
-        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
     }
 
     // Pre-render scanline (261)
@@ -339,23 +365,6 @@ void RendererLoopy::clock() {
         m_frameComplete = false;
         //m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
         //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
-    }
-    //    // On dot 256: increment Y
-    if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
-        ppuIncrementY();
-    }
-
-    // On dot 257: copy horizontal bits from t to v and start sprite evaluation
-    if (rendering && dot == 257 && (visibleScanline || preRenderLine)) {
-        ppuCopyX();
-    }
-    if (rendering && dot == 257) {
-        evaluateSprites(m_scanline, secondaryOAM);
-    }
- 
-    // Pre-render only: dots 280..304 copy vertical bits from t to v
-    if (preRenderLine && dot >= 280 && dot <= 304 && rendering) {
-        ppuCopyY();
     }
 
     // Advance cycle and scanline counters
