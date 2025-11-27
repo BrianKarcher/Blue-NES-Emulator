@@ -278,8 +278,14 @@ void RendererLoopy::clock() {
     bool preRenderLine = (m_scanline == 261);
 
 #ifndef DISABLE_CLOCK
+
+
+
+
+#endif
+
     if (rendering) {
-        if ((visibleScanline || preRenderLine) && dot >= 1 && dot <= 256 || (dot >= 321 && dot <= 336)) {
+        if ((visibleScanline || preRenderLine) && ((dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336))) {
             // Background tile and attribute fetches
             // These occur every 8 dots
             if (((dot - 1) & 7) == 0) {
@@ -296,7 +302,7 @@ void RendererLoopy::clock() {
                     reload_attribute_shift();
                 }
             }
-		}
+        }
     }
 
     // Pixel rendering (visible)
@@ -309,12 +315,12 @@ void RendererLoopy::clock() {
         // While in 321..336 we still load shifters and such for the next scanline,
         // but don't render pixels (this is part of the fetch window).
         // shift each dot as well to keep pipeline in sync.
-		// This ensures that when we start rendering, we have the correct data in the shifters.
-		// With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
+        // This ensures that when we start rendering, we have the correct data in the shifters.
+        // With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
         shift_registers();
     }
 
-    //    // On dot 256: increment Y
+    // On dot 256: increment Y
     if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
         ppuIncrementY();
     }
@@ -323,7 +329,8 @@ void RendererLoopy::clock() {
     if (rendering && dot == 257 && (visibleScanline || preRenderLine)) {
         ppuCopyX();
     }
-    if (rendering && dot == 257) {
+
+    if (rendering && (visibleScanline || preRenderLine) && dot == 257) {
         evaluateSprites(m_scanline, secondaryOAM);
     }
 
@@ -335,8 +342,6 @@ void RendererLoopy::clock() {
     if (m_scanline == 50 && dot == 1) {
         //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
     }
-
-#endif
 
     // NMI and such has to happen for the CPU to function.
     // VBlank scanlines (241-260)
