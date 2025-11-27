@@ -92,6 +92,7 @@ private:
 	// Draw content.
 	bool DrawToWindow(HDC dc);
 	void LoadGame(const std::wstring& filePath);
+	bool isPaused;
 	// The windows procedure.
 	static LRESULT CALLBACK MainWndProc(
 		HWND hWnd,

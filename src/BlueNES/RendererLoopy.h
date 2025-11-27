@@ -50,14 +50,14 @@ public:
     typedef struct {
         uint16_t pattern_lo_shift;  // 16-bit shift register for pattern low bits
         uint16_t pattern_hi_shift;  // 16-bit shift register for pattern high bits
-        uint8_t attr_lo_shift;      // 8-bit shift register for attribute low bit
-        uint8_t attr_hi_shift;      // 8-bit shift register for attribute high bit
-        uint8_t attr_latch_lo;      // Next attribute bits to load
-        uint8_t attr_latch_hi;
+        uint16_t attr_lo_shift;      // 8-bit shift register for attribute low bit
+        uint16_t attr_hi_shift;      // 8-bit shift register for attribute high bit
     } ShiftRegisters;
 
     // Tile fetching structure
     typedef struct {
+        uint8_t coarseX;
+        uint8_t coarseY;
         uint8_t nametable_byte;  // Tile index
         uint8_t attribute_byte;  // Palette info
         uint8_t pattern_low;     // Low bit plane
@@ -120,7 +120,7 @@ private:
     void fetch_tile_data(TileFetch* tile, uint8_t pattern_table_base);
     void load_shift_registers();
     void shift_registers();
-    void reload_attribute_shift();
+    uint16_t get_attribute_address(LoopyRegister& regV);
     uint8_t get_attribute_byte();
     uint8_t get_palette_from_attribute(uint8_t attr, uint8_t coarse_x, uint8_t coarse_y);
 };

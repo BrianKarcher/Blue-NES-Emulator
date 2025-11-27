@@ -162,8 +162,8 @@ uint8_t RendererLoopy::get_pixel() {
         ((m_shifts.pattern_hi_shift & mux) ? 2 : 0);
 
     // Extract palette (2 bits from attribute planes)
-    uint8_t palette = ((m_shifts.attr_lo_shift & (0x80 >> loopy.x)) ? 1 : 0) |
-        ((m_shifts.attr_hi_shift & (0x80 >> loopy.x)) ? 2 : 0);
+    uint8_t palette = ((m_shifts.attr_lo_shift & mux) ? 1 : 0) |
+        ((m_shifts.attr_hi_shift & mux) ? 2 : 0);
 
     // Combine into final palette index (0-15)
     if (pixel == 0) return 0;  // Transparent
@@ -201,14 +201,17 @@ void RendererLoopy::renderPixel() {
     //m_backBuffer[(y * 256) + x] = 0xFF0C9300;
 }
 
+uint16_t RendererLoopy::get_attribute_address(LoopyRegister& regV) {
+    // Attribute table starts at +0x3C0 from nametable base
+    uint16_t v = (*(uint16_t*)&regV & 0x0FFF);
+    uint16_t attr_addr = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+    return attr_addr;
+}
+
 // Get attribute byte for current tile
 uint8_t RendererLoopy::get_attribute_byte() {
-    // Attribute table starts at +0x3C0 from nametable base
-    uint16_t nametable_base = 0x2000 | ((*(uint16_t*)&loopy.v & 0x0C00));
-    uint16_t attr_addr = nametable_base | 0x03C0 |
-        ((loopy.v.coarse_y >> 2) << 3) |
-        (loopy.v.coarse_x >> 2);
-
+    uint16_t attr_addr = get_attribute_address(loopy.v);
+    
     // Apply mirroring
     //attr_addr = m_bus->cart->MirrorNametable(attr_addr);
     return m_ppu->ReadVRAM(attr_addr);
@@ -254,8 +257,9 @@ void RendererLoopy::load_shift_registers() {
     uint8_t palette = get_palette_from_attribute(tile.attribute_byte,
         loopy.v.coarse_x,
         loopy.v.coarse_y);
-    m_shifts.attr_latch_lo = (palette & 1) ? 0xFF : 0x00;
-    m_shifts.attr_latch_hi = (palette & 2) ? 0xFF : 0x00;
+    // Attribute data gets loaded into the lower 8 bits
+    m_shifts.attr_lo_shift = (m_shifts.attr_lo_shift & 0xFF00) | ((palette & 1) ? 0xFF : 0x00);
+    m_shifts.attr_hi_shift = (m_shifts.attr_hi_shift & 0xFF00) | ((palette & 2) ? 0xFF : 0x00);
 }
 
 // Shift the registers (happens every cycle during rendering)
@@ -264,12 +268,6 @@ void RendererLoopy::shift_registers() {
     m_shifts.pattern_hi_shift <<= 1;
     m_shifts.attr_lo_shift <<= 1;
     m_shifts.attr_hi_shift <<= 1;
-}
-
-// Reload attribute shift registers every 8 pixels
-void RendererLoopy::reload_attribute_shift() {
-    m_shifts.attr_lo_shift = m_shifts.attr_latch_lo;
-    m_shifts.attr_hi_shift = m_shifts.attr_latch_hi;
 }
 
 void RendererLoopy::clock() {
@@ -290,28 +288,23 @@ void RendererLoopy::clock() {
             // These occur every 8 dots
             if (((dot - 1) & 7) == 0) {
                 // Load previous fetch into shift registers
-                if (dot > 1) {
-                    load_shift_registers();
-                }
+                //if (dot > 1) {
+                load_shift_registers();
+                //}
                 fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
                 // Increment coarse X after fetching
                 ppuIncrementX();
-
-                // Reload attribute shift registers
-                if (dot > 1) {
-                    reload_attribute_shift();
-                }
             }
         }
     }
 
     // Pixel rendering (visible)
     if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
+        renderPixel();
         // Shift registers every cycle
         shift_registers();
-        renderPixel();
     }
-    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336 && ((dot - 1) & 7) == 0) {
+    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336) {
         // While in 321..336 we still load shifters and such for the next scanline,
         // but don't render pixels (this is part of the fetch window).
         // shift each dot as well to keep pipeline in sync.

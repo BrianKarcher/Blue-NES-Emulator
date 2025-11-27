@@ -701,7 +701,8 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     pMain->input.ButtonDown(BUTTON_RIGHT);
 					break;
                 case VK_ESCAPE:
-					pMain->cpu.toggleFrozen(); // Toggle freeze
+                    pMain->isPaused = !pMain->isPaused;
+					//pMain->cpu.toggleFrozen(); // Toggle freeze
                     break;
                 }
                 break;
@@ -746,6 +747,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     if (ShowOpenDialog(hwnd, filePath))
                     {
                         pMain->LoadGame(filePath);
+                        pMain->isPaused = false;
                     }
                     break;
                 }
@@ -983,6 +985,11 @@ void Core::RunMessageLoop()
         if (!isPlaying) {
 			continue;
         }
+
+        if (isPaused) {
+            Sleep(100); // Sleep to reduce CPU usage while paused
+            continue;
+		}
 
         if (Update) {
             Update();
