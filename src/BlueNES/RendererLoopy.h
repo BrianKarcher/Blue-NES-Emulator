@@ -11,28 +11,6 @@ class Bus;
 class RendererLoopy
 {
 public:
-    void initialize(NesPPU* ppu);
-    void reset();
-    const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
-    void setPPUCTRL(uint8_t value);
-    void setPPUMask(uint8_t value) { ppumask = value; }
-    void writeScroll(uint8_t value);
-    uint8_t getScrollY();
-    uint8_t getScrollX();
-    void ppuWriteAddr(uint8_t value);
-    uint16_t getPPUAddr();
-    void ppuReadStatus();
-    void ppuIncrementX();
-    void ppuIncrementY();
-    void ppuCopyX();
-    void ppuCopyY();
-    uint16_t ppuGetVramAddr();
-    void ppuIncrementVramAddr(uint8_t increment);
-    void clock();
-    bool isFrameComplete() { return m_frameComplete; }
-    void setFrameComplete(bool complete) { m_frameComplete = complete; }
-
-private:
     // Sprite data for current scanline
     typedef struct Sprite {
         uint8_t x;
@@ -87,6 +65,29 @@ private:
 
     PPURegisters loopy;
     ShiftRegisters m_shifts;
+
+    void initialize(NesPPU* ppu);
+    void reset();
+    const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
+    void setPPUCTRL(uint8_t value);
+    void setPPUMask(uint8_t value) { ppumask = value; }
+    void writeScroll(uint8_t value);
+    uint8_t getScrollY();
+    uint8_t getScrollX();
+    void ppuWriteAddr(uint8_t value);
+    uint16_t getPPUAddr();
+    void ppuReadStatus();
+    void ppuIncrementX();
+    void ppuIncrementY();
+    void ppuCopyX();
+    void ppuCopyY();
+    uint16_t ppuGetVramAddr();
+    void ppuIncrementVramAddr(uint8_t increment);
+    void clock();
+    bool isFrameComplete() { return m_frameComplete; }
+    void setFrameComplete(bool complete) { m_frameComplete = complete; }
+
+private:
     Bus* m_bus;
     NesPPU* m_ppu;
     // Overflow can only be set once per frame

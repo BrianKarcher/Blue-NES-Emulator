@@ -210,7 +210,7 @@ uint8_t RendererLoopy::get_attribute_byte() {
         (loopy.v.coarse_x >> 2);
 
     // Apply mirroring
-    attr_addr = m_bus->cart->MirrorNametable(attr_addr);
+    //attr_addr = m_bus->cart->MirrorNametable(attr_addr);
     return m_ppu->ReadVRAM(attr_addr);
 }
 
@@ -228,7 +228,6 @@ uint8_t RendererLoopy::get_palette_from_attribute(uint8_t attr, uint8_t coarse_x
 void RendererLoopy::fetch_tile_data(TileFetch* tile, uint8_t pattern_table_base) {
     // 1. Fetch nametable byte (tile index)
     uint16_t nametable_addr = 0x2000 | (*(uint16_t*)&loopy.v & 0x0FFF);
-    nametable_addr = m_bus->cart->MirrorNametable(nametable_addr);
     tile->nametable_byte = m_ppu->ReadVRAM(nametable_addr);
 
     // TODO 2. Fetch attribute byte
@@ -278,18 +277,20 @@ void RendererLoopy::clock() {
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
 
-    if (((dot - 1) & 7) == 0) {
-        // Load previous fetch into shift registers
-        if (dot > 1) {
-            load_shift_registers();
-        }
-        fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
-        // Increment coarse X after fetching
-        ppuIncrementX();
+    if (rendering) {
+        if (((dot - 1) & 7) == 0) {
+            // Load previous fetch into shift registers
+            if (dot > 1) {
+                load_shift_registers();
+            }
+            fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
+            // Increment coarse X after fetching
+            ppuIncrementX();
 
-        // Reload attribute shift registers
-        if (dot > 1) {
-            reload_attribute_shift();
+            // Reload attribute shift registers
+            if (dot > 1) {
+                reload_attribute_shift();
+            }
         }
     }
 
@@ -298,6 +299,14 @@ void RendererLoopy::clock() {
         // Shift registers every cycle
         shift_registers();
         renderPixel();
+    }
+    else if ((preRenderLine || visibleScanline) && dot >= 321 && dot <= 336 && ((dot - 1) & 7) == 0) {
+        // While in 321..336 we still load shifters and such for the next scanline,
+        // but don't render pixels (this is part of the fetch window).
+        // shift each dot as well to keep pipeline in sync.
+		// This ensures that when we start rendering, we have the correct data in the shifters.
+		// With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
+        shift_registers();
     }
 
     // VBlank scanlines (241-260)
@@ -332,12 +341,12 @@ void RendererLoopy::clock() {
         //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
     }
     //    // On dot 256: increment Y
-    if (rendering && dot == 256 && (visibleScanline)) {
+    if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
         ppuIncrementY();
     }
 
     // On dot 257: copy horizontal bits from t to v and start sprite evaluation
-    if (rendering && dot == 257 && (visibleScanline)) {
+    if (rendering && dot == 257 && (visibleScanline || preRenderLine)) {
         ppuCopyX();
     }
     if (rendering && dot == 257) {
