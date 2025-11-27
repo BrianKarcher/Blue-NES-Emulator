@@ -48,6 +48,15 @@ void RendererLoopy::writeScroll(uint8_t value) {
     }
 }
 
+// Read from PPUSCROLL ($2005)
+uint8_t RendererLoopy::getScrollY() {
+    return ((loopy.t.coarse_y & 0x1F) << 3) | (loopy.t.fine_y & 0x07);
+}
+
+uint8_t RendererLoopy::getScrollX() {
+    return ((loopy.t.coarse_x & 0x1F) << 3) | (loopy.x & 0x07);
+}
+
 // Write to PPUADDR ($2006)
 void RendererLoopy::ppuWriteAddr(uint8_t value) {
     if (!loopy.w) {
@@ -70,7 +79,8 @@ void RendererLoopy::ppuWriteAddr(uint8_t value) {
 }
 
 uint16_t RendererLoopy::getPPUAddr() {
-	return (v & 0b11111111111111); // The address is 14 bits
+    uint16_t* v_ptr = (uint16_t*)&loopy.v;
+	return (*v_ptr & 0b11111111111111); // The address is 14 bits
 }
 
 // Read from PPUSTATUS ($2002)
@@ -143,6 +153,9 @@ uint8_t RendererLoopy::get_pixel() {
     // Select the bit based on fine_x (0-7)
     // Bit 15 is leftmost, bit 0 is rightmost after shifting
     uint16_t mux = 0x8000 >> loopy.x;
+    if ((m_shifts.pattern_lo_shift & 0x8000) != 0) {
+		int test = 0;
+    }
 
     // Extract pixel value (2 bits from pattern planes)
     uint8_t pixel = ((m_shifts.pattern_lo_shift & mux) ? 1 : 0) |
@@ -182,8 +195,10 @@ void RendererLoopy::renderPixel() {
     }
     // Render pixel using fine X scroll
     uint8_t pixel = get_pixel();
-    uint32_t finalColor = m_nesPalette[pixel];
-    m_backBuffer[(y * 256) + x] = pixel;
+    uint8_t paletteIndex = m_ppu->paletteTable[pixel];
+    uint32_t finalColor = m_nesPalette[paletteIndex];
+    m_backBuffer[(y * 256) + x] = finalColor;
+    //m_backBuffer[(y * 256) + x] = 0xFF0C9300;
 }
 
 // Get attribute byte for current tile
@@ -262,15 +277,6 @@ void RendererLoopy::clock() {
     bool rendering = renderingEnabled();
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
-
-    dot++;
-    if (dot >= DOTS_PER_SCANLINE) {
-        dot = 1;
-        m_scanline++;
-        if (m_scanline >= SCANLINES_PER_FRAME) {
-            m_scanline = 0;
-        }
-    }
 
     if (((dot - 1) & 7) == 0) {
         // Load previous fetch into shift registers
@@ -352,6 +358,15 @@ void RendererLoopy::clock() {
     //        m_scanline = 0;
     //    }
     //}
+
+    dot++;
+    if (dot >= DOTS_PER_SCANLINE) {
+        dot = 1;
+        m_scanline++;
+        if (m_scanline > SCANLINES_PER_FRAME) {
+            m_scanline = 0;
+        }
+    }
 }
 
 

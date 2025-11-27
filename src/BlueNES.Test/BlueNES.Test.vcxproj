@@ -102,7 +102,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CPU.obj;Bus.obj;nes_ppu.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;NES_APU.obj;Input.obj;RendererSlow.obj;MMC1.obj;NROM.obj;PPUViewer.obj;RendererWithReg.obj;Core.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CPU.obj;Bus.obj;nes_ppu.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;NES_APU.obj;Input.obj;RendererSlow.obj;MMC1.obj;NROM.obj;PPUViewer.obj;RendererLoopy.obj;Core.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>copy "..\BlueNES\x64\Debug\cpu.obj" "$(OutDir)"</Command>

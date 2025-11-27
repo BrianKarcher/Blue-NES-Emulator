@@ -25,8 +25,8 @@ NesPPU::~NesPPU()
 void NesPPU::Initialize(Bus* bus, Core* core) {
 	this->bus = bus;
 	this->core = core;
-	renderer = new RendererWithReg();
-	renderer->Initialize(this);
+	renderer = new RendererLoopy();
+	renderer->initialize(this);
 }
 
 void NesPPU::set_hwnd(HWND hwnd) {
@@ -55,12 +55,12 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		dbg(L"(%d) 0x%04X PPUCTRL Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
 		m_ppuCtrl = value;
 		//OutputDebugStringW((L"PPUCTRL: " + std::to_wstring(value) + L"\n").c_str());
-		renderer->SetPPUCTRL(value);
+		renderer->setPPUCTRL(value);
 		break;
 	case PPUMASK: // PPUMASK
 		dbg(L"(%d) 0x%04X PPUMASK Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
 		m_ppuMask = value;
-		renderer->SetPPUMask(value);
+		renderer->setPPUMask(value);
 		break;
 	case PPUSTATUS: // PPUSTATUS (read-only)
 		dbg(L"(%d) 0x%04X PPUSTATUS Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
@@ -76,55 +76,30 @@ void NesPPU::write_register(uint16_t addr, uint8_t value)
 		break;
 	case PPUSCROLL:
 		dbg(L"(%d) 0x%04X PPUSCROLL Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
-		if (!renderer->GetWriteToggle())
-		{
-			renderer->SetScrollX(value); // First write sets horizontal scroll
-		}
-		else
-		{
-			renderer->SetScrollY(value); // Second write sets vertical scroll
-		}
-		// Note that writeToggle is shared with PPUADDR
-		// I retain to mimic hardware behavior
-		renderer->SetWriteToggle(!renderer->GetWriteToggle());
+		renderer->writeScroll(value);
 		break;
 	case PPUADDR: // PPUADDR
 		dbg(L"(%d) 0x%04X PPUADDR Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
 		if (value == 0x3F) {
 			int i = 0;
 		}
-		if (!renderer->GetWriteToggle())
-		{
-			// The PPU address space is 14 bits (0x0000 to 0x3FFF), so we mask accordingly
-			//tempVramAddr = (tempVramAddr & 0x00FF) | ((value & 0x3F) << 8); // First write (high byte)
-			renderer->SetPPUAddrHigh(value);
-			// vramAddr = (vramAddr & 0x00FF) | (value & 0x3F) << 8; // First write (high byte)
-		}
-		else
-		{
-			//tempVramAddr = (tempVramAddr & 0x7F00) | value; // Second write (low byte)
-			//vramAddr = tempVramAddr; // Second write (low byte)
-			renderer->SetPPUAddrLow(value);
-		}
-		// If the program doesn't do two writes in a row, the behavior is undefined.
-		// It's their fault if their code is broken.
-		renderer->SetWriteToggle(!renderer->GetWriteToggle());
+		renderer->ppuWriteAddr(value);
 		break;
 	case PPUDATA: // PPUDATA
 		dbg(L"(%d) 0x%04X PPUDATA Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
-		uint16_t vramAddr = renderer->GetPPUAddr();
+		uint16_t vramAddr = renderer->getPPUAddr();
 		if (vramAddr >= 0x3F00) {
 			int i = 0;
 		}
-		renderer->PPUDataAccess();
+		renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1);
 		write_vram(vramAddr, value);
 		break;
 	}
 }
 
 void NesPPU::SetVRAMAddress(uint16_t addr) {
-	renderer->SetPPUAddrHigh(addr >> 8);
-	renderer->SetPPUAddrLow(addr);
+	renderer->ppuWriteAddr(addr >> 8);
+	renderer->ppuWriteAddr(addr);
 	//vramAddr = addr & 0x3FFF;
 }
 
@@ -145,7 +120,7 @@ uint8_t NesPPU::read_register(uint16_t addr)
 	}
 	case PPUSTATUS:
 	{
-		renderer->SetWriteToggle(false); // Reset write toggle on reading PPUSTATUS
+		renderer->ppuReadStatus(); // Reset write toggle on reading PPUSTATUS
 		// Return PPU status register value and clear VBlank flag
 		uint8_t status = m_ppuStatus;
 		dbg(L"(%d) 0x%04X PPUSTATUS Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), status);
@@ -178,13 +153,13 @@ uint8_t NesPPU::read_register(uint16_t addr)
 	case PPUDATA:
 	{
 		// Read from VRAM at current vramAddr
-		uint16_t vramAddr = renderer->GetPPUAddr();
+		uint16_t vramAddr = renderer->getPPUAddr();
 		uint8_t value = 0;
 		if (vramAddr < 0x3F00) {
 			// PPU reading is through a buffer and the results are off by one.
 			value = ppuDataBuffer;
 			ppuDataBuffer = ReadVRAM(vramAddr);
-			renderer->PPUDataAccess(); // increment v
+			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
 		}
 		else {
 			// I probably shouldn't support reading palette data
@@ -202,7 +177,7 @@ uint8_t NesPPU::read_register(uint16_t addr)
 			uint16_t mirroredAddr = vramAddr & 0x2FFF; // Mirror nametables every 4KB
 			mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
 			ppuDataBuffer = m_vram[mirroredAddr];
-			renderer->PPUDataAccess(); // increment v
+			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
 		}
 		//// Increment VRAM address based on PPUCTRL setting
 		//if (vramAddr >= 0x3F00) {
@@ -220,15 +195,15 @@ uint8_t NesPPU::read_register(uint16_t addr)
 }
 
 uint8_t NesPPU::GetScrollX() const {
-	return renderer->GetScrollX();
+	return renderer->getScrollX();
 }
 
 uint8_t NesPPU::GetScrollY() const {
-	return renderer->GetScrollY();
+	return renderer->getScrollY();
 }
 
 uint16_t NesPPU::GetVRAMAddress() const {
-	return renderer->GetPPUAddr();
+	return renderer->getPPUAddr();
 }
 
 uint8_t NesPPU::ReadVRAM(uint16_t addr)
@@ -292,7 +267,7 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 }
 
 const std::array<uint32_t, 256 * 240>& NesPPU::get_back_buffer() {
-	return renderer->get_back_buffer();
+	return renderer->getBackBuffer();
 }
 
 // OAM DMA - Direct Memory Access for sprites

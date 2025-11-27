@@ -15,7 +15,10 @@ public:
     void reset();
     const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
     void setPPUCTRL(uint8_t value);
+    void setPPUMask(uint8_t value) { ppumask = value; }
     void writeScroll(uint8_t value);
+    uint8_t getScrollY();
+    uint8_t getScrollX();
     void ppuWriteAddr(uint8_t value);
     uint16_t getPPUAddr();
     void ppuReadStatus();
@@ -90,7 +93,7 @@ private:
     bool hasOverflowBeenSet = false;
     bool hasSprite0HitBeenSet = false;
     bool m_frameComplete = false;
-    void setPPUMask(uint8_t value) { ppumask = value; }
+    
     uint8_t ppumask = 0;
     int dot = 0;
     std::array<Sprite, 8> secondaryOAM{};

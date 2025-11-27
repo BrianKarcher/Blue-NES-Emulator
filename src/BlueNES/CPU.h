@@ -198,6 +198,8 @@ public:
 	void SetSP(uint8_t sp);
 	int cyclesThisFrame;
 	std::array<std::string, 256> instructionMap;
+	void setFrozen(bool frozen) { isFrozen = frozen; }
+	void toggleFrozen() { isFrozen = !isFrozen; }
 private:
 	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);

@@ -700,6 +700,9 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 				case VK_RIGHT:
                     pMain->input.ButtonDown(BUTTON_RIGHT);
 					break;
+                case VK_ESCAPE:
+					pMain->cpu.toggleFrozen(); // Toggle freeze
+                    break;
                 }
                 break;
 			}

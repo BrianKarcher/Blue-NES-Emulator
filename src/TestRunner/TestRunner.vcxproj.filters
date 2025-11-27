@@ -73,6 +73,9 @@
     <ClCompile Include="..\BlueNES\PPUViewer.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\RendererLoopy.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\Bus.h">
@@ -130,6 +133,9 @@
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\PPUViewer.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\RendererLoopy.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
   </ItemGroup>
