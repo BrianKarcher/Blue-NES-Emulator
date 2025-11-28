@@ -79,7 +79,7 @@ public:
     uint16_t getPPUAddr();
     void ppuReadStatus();
     void ppuIncrementX();
-    void ppuIncrementY();
+    void ppuIncrementFineY();
     void ppuCopyX();
     void ppuCopyY();
     uint16_t ppuGetVramAddr();

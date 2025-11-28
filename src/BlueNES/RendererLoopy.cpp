@@ -101,7 +101,7 @@ void RendererLoopy::ppuIncrementX() {
 }
 
 // Increment Y (only when rendering is enabled)
-void RendererLoopy::ppuIncrementY() {
+void RendererLoopy::ppuIncrementFineY() {
     if (loopy.v.fine_y < 7) {
         loopy.v.fine_y++;
     }
@@ -192,12 +192,12 @@ void RendererLoopy::renderPixel() {
         //chrLowByte;
         //chrHighByte;
         //m_backBuffer[(y * 256) + x] = finalColor;
+        // Render pixel using fine X scroll
+        uint8_t pixel = get_pixel();
+        uint8_t paletteIndex = m_ppu->paletteTable[pixel];
+        uint32_t finalColor = m_nesPalette[paletteIndex];
+        m_backBuffer[(y * 256) + x] = finalColor;
     }
-    // Render pixel using fine X scroll
-    uint8_t pixel = get_pixel();
-    uint8_t paletteIndex = m_ppu->paletteTable[pixel];
-    uint32_t finalColor = m_nesPalette[paletteIndex];
-    m_backBuffer[(y * 256) + x] = finalColor;
     //m_backBuffer[(y * 256) + x] = 0xFF0C9300;
 }
 
@@ -286,12 +286,13 @@ void RendererLoopy::clock() {
         if ((visibleScanline || preRenderLine) && ((dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336))) {
             // Background tile and attribute fetches
             // These occur every 8 dots
-            if (((dot - 1) & 7) == 0) {
+            if (((dot) & 7) == 0) {
                 // Load previous fetch into shift registers
                 //if (dot > 1) {
-                load_shift_registers();
                 //}
                 fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
+                // OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", Dot: " + std::to_wstring(dot) + L", Nametable Byte: " + std::to_wstring(tile.nametable_byte) + L", Attr Byte: " + std::to_wstring(tile.attribute_byte) + L", Pattern Low: " + std::to_wstring(tile.pattern_low) + L", Pattern High: " + std::to_wstring(tile.pattern_high) + L"\n").c_str());
+                load_shift_registers();
                 // Increment coarse X after fetching
                 ppuIncrementX();
             }
@@ -315,7 +316,7 @@ void RendererLoopy::clock() {
 
     // On dot 256: increment Y
     if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
-        ppuIncrementY();
+        ppuIncrementFineY();
     }
 
     // On dot 257: copy horizontal bits from t to v and start sprite evaluation
@@ -376,7 +377,7 @@ void RendererLoopy::clock() {
     //}
 
     dot++;
-    if (dot >= DOTS_PER_SCANLINE) {
+    if (dot > DOTS_PER_SCANLINE) {
         dot = 1;
         m_scanline++;
         if (m_scanline > SCANLINES_PER_FRAME) {
