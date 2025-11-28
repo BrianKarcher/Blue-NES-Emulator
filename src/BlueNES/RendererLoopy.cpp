@@ -194,11 +194,124 @@ void RendererLoopy::renderPixel() {
         //m_backBuffer[(y * 256) + x] = finalColor;
         // Render pixel using fine X scroll
         uint8_t pixel = get_pixel();
-        uint8_t paletteIndex = m_ppu->paletteTable[pixel];
-        uint32_t finalColor = m_nesPalette[paletteIndex];
-        m_backBuffer[(y * 256) + x] = finalColor;
+        bgPaletteIndex = m_ppu->paletteTable[pixel];
+        bgOpaque = pixel == 0;
+  //      if (bgPaletteIndex % 4 == 0) {
+		//	bgColor = m_nesPalette[ppu->paletteTable[0]]; // Transparent color (background color)
+		//	bgOpaque = false;
+		//}
+		//else {
+		//	bgColor = palette[bgColorIndex]; // Map to actual color from palette
+		//	bgOpaque = true;
+		//}
+        bgColor = m_nesPalette[bgPaletteIndex];
+        
     }
+
+    	// Sprite pixel (simplified): we check secondaryOAM sprites for an opaque pixel at current x
+	uint8_t spritePaletteIndex = 0;
+	uint32_t spriteColor = 0;
+	bool spriteOpaque = false;
+	bool spritePriorityBehind = false;
+	bool spriteIsZero = false;
+
+	if (spriteEnabled()) {
+		for (int i = 0; i < 8; ++i) {
+			Sprite& sprite = secondaryOAM[i];
+			if (sprite.y >= 0xF0) {
+				continue; // Empty sprite slot
+			}
+			int spriteY = sprite.y + 1; // Adjust for off-by-one
+			int spriteX = sprite.x;
+			if (x >= spriteX && x < (spriteX + 8)) {
+				// Sprite pixel coordinates
+				int spritePixelX = x - spriteX;
+				int spritePixelY = m_scanline - spriteY;
+
+				bool flipHorizontal = sprite.attributes & 0x40;
+				bool flipVertical = sprite.attributes & 0x80;
+				if (flipHorizontal) {
+					spritePixelX = 7 - spritePixelX;
+				}
+				if (flipVertical) {
+					int spriteHeight = 7;
+					if ((m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) != 0) {
+						spriteHeight = 15;
+					}
+					spritePixelY = spriteHeight - spritePixelY;
+				}
+				// Get sprite palette
+				uint8_t paletteIndex = sprite.attributes & 0x03;
+				std::array<uint32_t, 4> spritePalette;
+				m_ppu->get_palette(paletteIndex + 4, spritePalette); // Sprite palettes start at 0x3F10
+				// Get color index from sprite tile
+				bool isSecondSprite = spritePixelY >= 8;
+				if (spritePixelY >= 8) {
+					// 8x16 support.
+					spritePixelY -= 8;
+				}
+				uint8_t spriteColorIndex = m_ppu->get_tile_pixel_color_index(sprite.tileIndex, spritePixelX, spritePixelY, true, isSecondSprite);
+				if (spriteColorIndex != 0) { // Non-transparent pixel
+					spritePaletteIndex = spriteColorIndex;
+					spriteOpaque = true;
+					spritePriorityBehind = (sprite.attributes & 0x20) != 0;
+					spriteColor = spritePalette[spriteColorIndex];
+					// Handle priority (not implemented yet, assuming sprites are always on top)
+					if (sprite.isSprite0) {
+						spriteIsZero = true;
+						// Sprite 0 hit detection
+						// The sprite 0 hit flag is immediately set when any opaque pixel of sprite 0 overlaps
+						// any opaque pixel of background, regardless of sprite priority.
+						/*if (!hasSprite0HitBeenSet && bgPaletteIndex != 0) {
+							hasSprite0HitBeenSet = true;
+							ppu->m_ppuStatus |= PPUSTATUS_SPRITE0_HIT;
+						}*/
+					}
+					//if (ppumask & PPUMASK_SPRITEENABLED) {
+					//	m_backBuffer[(m_scanline * 256) + screenX] = spriteColor;
+					//}
+					break;
+				}
+			}
+		}
+	}
+
+	// Sprite0 hit: If sprite0 overlaps non-transparent background and both BG and sprites are enabled,
+	// and x != 255, and sprite0 hasn't been flagged yet.
+	if (!hasSprite0HitBeenSet && spriteIsZero && bgOpaque && spriteOpaque && bgEnabled() && spriteEnabled() && x != 255) {
+		// Determine if sprite belonged to primary OAM index 0 on this scanline -- we simplified above
+		// In a full implementation you should check whether that opaque sprite corresponds to original OAM slot 0.
+		hasSprite0HitBeenSet = true;
+		m_ppu->SetPPUStatus(0x40); // set Sprite 0 Hit
+	}
+
+	// Final pixel selection: sprite over bg depending on priority
+	uint8_t finalPalette = 0;
+	uint32_t finalColor = 0;
+	if (spriteOpaque && (!bgOpaque || !spritePriorityBehind)) {
+		// sprite wins
+		finalPalette = spritePaletteIndex;
+		finalColor = spriteColor;
+	}
+	else {
+		finalPalette = bgPaletteIndex;
+		finalColor = bgColor;
+	}
+
+	// Convert palette index to color (here we just read a byte from paletteTable and write to framebuffer)
+	if (finalPalette != 0) {
+		int i = 0;
+	}
+	//uint8_t color = paletteTable[finalPalette & 0x1F];
+	// For demonstration store color value as ARGB-like 32-bit; user must map palette to RGB
+	//uint32_t pixel32 = 0xFF000000 | (color * 0x010101); // grayish mapping; replace with actual palette RGB
+	//uint32_t pixel32 = m_nesPalette[color];
+	//if (x >= 0 && x < 256 && y >= 0 && y < 240) {
+	m_backBuffer[(y * 256) + x] = finalColor;
+
+
     //m_backBuffer[(y * 256) + x] = 0xFF0C9300;
+    //m_backBuffer[(y * 256) + x] = bgColor;
 }
 
 uint16_t RendererLoopy::get_attribute_address(LoopyRegister& regV) {
@@ -385,7 +498,6 @@ void RendererLoopy::clock() {
         }
     }
 }
-
 
 void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) {
     for (int i = 0; i < 8; ++i) {
