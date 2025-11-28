@@ -36,5 +36,28 @@ namespace PPUTest
 			//core.cpu.SetPC(0x8000);
 			loopyRenderer.initialize(&core.ppu);
 		}
+
+		TEST_METHOD(TestGetAttributeAddress)
+		{
+			for (int nty = 0; nty < 2; nty++) {
+				for (int ntx = 0; ntx < 2; ntx++) {
+					for (int y = 0; y < 30; y++) {
+						for (int x = 0; x < 32; x++) {
+							RendererLoopy::LoopyRegister reg;
+							reg.coarse_x = x;
+							reg.coarse_y = y;
+							reg.nametable_x = ntx;
+							reg.nametable_y = nty;
+							reg.fine_y = 0;
+							uint16_t res = loopyRenderer.get_attribute_address(reg);
+							uint16_t ntaddr = (0x23C0 + (nty * 0x800) + (ntx * 0x400));
+
+							uint16_t expected = ntaddr + ((y / 4) * 8) + (x / 4);
+							Assert::AreEqual(expected, res);
+						}
+					}
+				}
+			}
+		}
 	};
 }

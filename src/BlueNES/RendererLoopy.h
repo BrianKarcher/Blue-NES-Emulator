@@ -87,6 +87,7 @@ public:
     void clock();
     bool isFrameComplete() { return m_frameComplete; }
     void setFrameComplete(bool complete) { m_frameComplete = complete; }
+    uint16_t get_attribute_address(LoopyRegister& regV);
 
 private:
     Bus* m_bus;
@@ -120,7 +121,6 @@ private:
     void fetch_tile_data(TileFetch* tile, uint8_t pattern_table_base);
     void load_shift_registers();
     void shift_registers();
-    uint16_t get_attribute_address(LoopyRegister& regV);
     uint8_t get_attribute_byte();
     uint8_t get_palette_from_attribute(uint8_t attr, uint8_t coarse_x, uint8_t coarse_y);
 };
