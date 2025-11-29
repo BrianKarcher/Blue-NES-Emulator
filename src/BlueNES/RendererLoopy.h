@@ -106,6 +106,7 @@ private:
     };
 
     std::array<SpriteRenderData, 256> spriteLineBuffer;  // One entry per X
+    void prepareSpriteLine(int y);
     
     uint8_t ppumask = 0;
     int dot = 0;

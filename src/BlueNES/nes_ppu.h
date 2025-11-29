@@ -94,6 +94,15 @@ public:
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
 	};
+	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
+		if (!(m_ppuCtrl & PPUCTRL_SPRITESIZE)) {
+			return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
+		}
+		else {
+			return (tileId & 1) == 1 ? 0x1000 : 0x000;
+		}
+	}
+
 private:
 	bool is_failure = false;
 
@@ -102,15 +111,6 @@ private:
 	// register t in hardware PPU
 	//uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
-
-	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
-		if (!(m_ppuCtrl & PPUCTRL_SPRITESIZE)) {
-			return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
-		}
-		else {
-			return (tileId & 1) == 1 ? 0x1000 : 0x000;
-		}		
-	}
 	//int scrollY; // Fine Y scrolling (0-239)
 
 	void write_vram(uint16_t addr, uint8_t value);
