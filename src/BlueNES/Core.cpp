@@ -807,6 +807,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 
 void Core::LoadGame(const std::wstring& filePath)
 {
+    cart.unload();
     cart.LoadROM(filePath);
     cpu.PowerOn();
     isPlaying = true;
@@ -1092,6 +1093,6 @@ void Core::RunMessageLoop()
                 } while (frameTimeElapsed < targetFrameTime * frameCount);
             }
     }
-
+    cart.unload();
     audioBackend->Shutdown();
 }

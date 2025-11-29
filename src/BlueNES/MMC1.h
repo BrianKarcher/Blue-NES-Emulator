@@ -52,5 +52,5 @@ private:
 	Processor_6502* cpu;
 	//ines_file_t* inesFile;
 	uint64_t lastWriteCycle = 0;
-	bool debug = true;
+	bool debug = false;
 };

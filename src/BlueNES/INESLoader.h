@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <string>
 
+#define FLAG_6_BATTERY_BACKED 0x02
+
 // iNES header structure
 typedef struct {
     char signature[4];      // "NES\x1A"

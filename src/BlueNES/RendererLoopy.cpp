@@ -195,7 +195,7 @@ void RendererLoopy::renderPixel() {
         // Render pixel using fine X scroll
         uint8_t pixel = get_pixel();
         bgPaletteIndex = m_ppu->paletteTable[pixel];
-        bgOpaque = pixel == 0;
+        bgOpaque = pixel != 0;
   //      if (bgPaletteIndex % 4 == 0) {
 		//	bgColor = m_nesPalette[ppu->paletteTable[0]]; // Transparent color (background color)
 		//	bgOpaque = false;
@@ -208,7 +208,7 @@ void RendererLoopy::renderPixel() {
         
     }
 
-    	// Sprite pixel (simplified): we check secondaryOAM sprites for an opaque pixel at current x
+    // Sprite pixel (simplified): we check secondaryOAM sprites for an opaque pixel at current x
 	uint8_t spritePaletteIndex = 0;
 	uint32_t spriteColor = 0;
 	bool spriteOpaque = false;
@@ -395,6 +395,21 @@ void RendererLoopy::clock() {
 
 #endif
 
+    // Pixel rendering (visible)
+    if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
+        renderPixel();
+        // Shift registers every cycle
+        shift_registers();
+    }
+    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336) {
+        // While in 321..336 we still load shifters and such for the next scanline,
+        // but don't render pixels (this is part of the fetch window).
+        // shift each dot as well to keep pipeline in sync.
+        // This ensures that when we start rendering, we have the correct data in the shifters.
+        // With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
+        shift_registers();
+    }
+
     if (rendering) {
         if ((visibleScanline || preRenderLine) && ((dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336))) {
             // Background tile and attribute fetches
@@ -412,20 +427,7 @@ void RendererLoopy::clock() {
         }
     }
 
-    // Pixel rendering (visible)
-    if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
-        renderPixel();
-        // Shift registers every cycle
-        shift_registers();
-    }
-    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336) {
-        // While in 321..336 we still load shifters and such for the next scanline,
-        // but don't render pixels (this is part of the fetch window).
-        // shift each dot as well to keep pipeline in sync.
-        // This ensures that when we start rendering, we have the correct data in the shifters.
-        // With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
-        shift_registers();
-    }
+
 
     // On dot 256: increment Y
     if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
@@ -536,3 +538,4 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
         }
     }
 }
+

@@ -6,15 +6,76 @@
 #include "MMC1.h"
 #include "CPU.h"
 #include <Windows.h>
+#include <filesystem>
+#include <fstream>
 
 Cartridge::Cartridge() {
 
 }
 
+std::filesystem::path getAppFolderPath()
+{
+    wchar_t buf[MAX_PATH];
+	// This is a Windows-specific way to get the executable path
+    GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    return std::filesystem::path(buf).parent_path();
+}
+
+std::filesystem::path Cartridge::getAndEnsureSavePath() {
+    std::filesystem::path appFolder = getAppFolderPath();
+    std::filesystem::path sramPath = appFolder / "Save";
+    std::filesystem::create_directories(sramPath);
+    return sramPath;
+}
+
+void Cartridge::loadSRAM() {
+    m_prgRamData.resize(0x2000);
+    if (!isBatteryBacked) {
+        return; // No battery-backed SRAM to load
+    }
+    std::filesystem::path appFolder = getAndEnsureSavePath();
+    std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+    std::ifstream in(sramFilePath, std::ios::binary | std::ios::ate);
+    if (!in)
+		return; // No SRAM file exists, nothing to load
+
+    std::streamsize size = in.tellg();
+    in.seekg(0, std::ios::beg);
+
+    if (!in.read(reinterpret_cast<char*>(m_prgRamData.data()), size))
+        throw std::runtime_error("Failed to read file");
+}
+
+void Cartridge::saveSRAM() {
+    if (!isBatteryBacked)
+		return; // No battery-backed SRAM to save
+    std::filesystem::path appFolder = getAndEnsureSavePath();
+	std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+    std::ofstream out(sramFilePath, std::ios::binary);
+    if (!out)
+        throw std::runtime_error("Failed to open output file");
+
+    out.write(reinterpret_cast<const char*>(m_prgRamData.data()), m_prgRamData.size());
+}
+
+void Cartridge::unload() {
+    saveSRAM();
+    if (mapper) {
+        delete mapper;
+        mapper = nullptr;
+    }
+    m_prgRomData.clear();
+    m_chrData.clear();
+	m_prgRamData.clear();
+}
+
 void Cartridge::LoadROM(const std::wstring& filePath) {
     INESLoader ines;
+    std::filesystem::path filepath(filePath);
     ines_file_t inesFile;
+	fileName = filepath.stem().wstring();
     ines.load_data_from_ines(filePath.c_str(), inesFile);
+    isBatteryBacked = inesFile.header.flags6 & FLAG_6_BATTERY_BACKED;
 
     m_prgRomData.clear();
     for (int i = 0; i < inesFile.prg_rom->size; i++) {
@@ -34,16 +95,16 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
     }
 	m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
     uint8_t mapperNum = inesFile.header.flags6 >> 4;
-    m_prgRamData.clear();
-    m_prgRamData.resize(0x2000);
+    loadSRAM();
     
     SetMapper(mapperNum, inesFile);
-    
 }
 
 void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
-    if (mapper)
+    if (mapper) {
         delete mapper;
+        mapper = nullptr;
+    }
 
     switch (value) {
     case 0:

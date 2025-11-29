@@ -6,6 +6,7 @@
 #include <vector>
 #include "Mapper.h"
 #include "INESLoader.h"
+#include <filesystem>
 
 class Processor_6502;
 
@@ -43,7 +44,13 @@ public:
 	void SetPrgRamEnabled(bool enable);
 	bool isPrgRamEnabled = true;
 	void SetMapper(uint8_t value, ines_file_t& inesFile);
+	void unload();
 private:
 	MirrorMode m_mirrorMode;
 	Mapper* mapper;
+	std::filesystem::path getAndEnsureSavePath();
+	void loadSRAM();
+	void saveSRAM();
+	std::wstring fileName;
+	bool isBatteryBacked = false;
 };

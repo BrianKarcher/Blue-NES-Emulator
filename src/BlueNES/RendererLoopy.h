@@ -96,6 +96,16 @@ private:
     bool hasOverflowBeenSet = false;
     bool hasSprite0HitBeenSet = false;
     bool m_frameComplete = false;
+
+    struct SpriteRenderData {
+        uint8_t x;           // X position on screen
+        uint8_t colorIndex;  // 0–3 (0 = transparent)
+        uint8_t palette;     // Lower 2 bits of attributes
+        bool    behindBg;    // Priority bit
+        bool    isZero;      // Is this sprite 0?
+    };
+
+    std::array<SpriteRenderData, 256> spriteLineBuffer;  // One entry per X
     
     uint8_t ppumask = 0;
     int dot = 0;
