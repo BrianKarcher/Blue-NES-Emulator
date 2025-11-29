@@ -6,6 +6,51 @@
 #include "resource.h"
 #include <commdlg.h>
 #include "AudioBackend.h"
+#include <SDL.h>
+
+SDL_Window* window = nullptr;
+SDL_Renderer* renderer = nullptr;
+SDL_Texture* nesTexture = nullptr;
+
+bool init_sdl(HWND wnd)
+{
+    if (SDL_Init(SDL_INIT_VIDEO /* | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD*/) < 0)
+    {
+        SDL_Log("SDL Init Error: %s", SDL_GetError());
+        return false;
+    }
+
+    window = SDL_CreateWindowFrom((void*)wnd);
+
+    if (!window)
+    {
+        SDL_Log("Window Error: %s", SDL_GetError());
+        return false;
+    }
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer)
+    {
+        SDL_Log("Renderer Error: %s", SDL_GetError());
+        return false;
+    }
+
+    // Create NES framebuffer texture (256x240)
+    nesTexture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_ARGB8888,    // NES framebuffer format
+        SDL_TEXTUREACCESS_STREAMING, // CPU-updated texture
+        256, 240
+    );
+
+    if (!nesTexture)
+    {
+        SDL_Log("Texture Error: %s", SDL_GetError());
+        return false;
+    }
+
+    return true;
+}
 
 // Viewer state
 static int g_firstLine = 0;       // index of first displayed line (0-based)
@@ -15,18 +60,7 @@ static int g_lineHeight = 16;     // px, will be measured
 static int g_charWidth = 8;       // px, measured
 static const int BYTES_PER_LINE = 16;
 
-Core::Core() :
-    m_hwnd(NULL),
-    hdcMem(NULL),
-    hBitmap(NULL)
-{
-    ZeroMemory(&bmi, sizeof(BITMAPINFO));
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = 256;
-    bmi.bmiHeader.biHeight = -240; // Top-down
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
+Core::Core() {
 }
 
 //void Core::PPURenderToBackBuffer()
@@ -52,7 +86,7 @@ HRESULT Core::Initialize()
     bus.Initialize(this);
     ppu.Initialize(&bus, this);
 	cpu.bus = &bus;
-    ppu.set_hwnd(m_hwnd);
+    //ppu.set_hwnd(m_hwnd);
     
     //UpdateWindow(m_hwnd);
 
@@ -135,6 +169,8 @@ HRESULT Core::CreateWindows() {
     if (!m_hwnd)
         return S_FALSE;
 
+    init_sdl(m_hwnd);
+
     HMENU hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
     SetMenu(m_hwnd, hMenu);
 
@@ -174,12 +210,6 @@ HRESULT Core::CreateWindows() {
     if (!ppuViewer.Initialize(HINST_THISCOMPONENT, this)) {
         return S_FALSE;
     }
-
-    HDC hdc = GetDC(m_hwnd);
-    hdcMem = CreateCompatibleDC(hdc);
-    hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-    SelectObject(hdcMem, hBitmap);
-    ReleaseDC(m_hwnd, hdc);
 
     hexSources[0] = hexReadCPU;
     hexSources[1] = hexReadPPU;
@@ -778,7 +808,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->DrawToWindow(hdc);
+                pMain->DrawToWindow();
                 EndPaint(hwnd, &ps);
                 ValidateRect(hwnd, NULL);
             }
@@ -921,21 +951,38 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
     }
 }
 
-HWND Core::GetWindowHandle()
+bool Core::DrawToWindow()
 {
-	return m_hwnd;
-}
+    // Update texture with NES framebuffer
+    SDL_UpdateTexture(
+        nesTexture,
+        nullptr,
+        ppu.get_back_buffer().data(),
+        256 * sizeof(uint32_t)
+    );
 
-bool Core::DrawToWindow(HDC hdc)
-{
+    // Clear screen
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    // Scale to window automatically
+    SDL_Rect dstRect{ 0, 0, 0, 0 };
+    SDL_GetWindowSizeInPixels(window, (int*)&dstRect.w, (int*)&dstRect.h);
+
+    if (SDL_RenderCopy(renderer, nesTexture, nullptr, &dstRect) != 0) {
+        printf("SDL_RenderCopy failed: %s\n", SDL_GetError());
+    }
+
+    SDL_RenderPresent(renderer);
+
     //ppu.framebuffer.fill(0xff0f0f0f);
     // Copy back buffer to bitmap
-    SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
-    // Stretch blit to window (3x scale)
-    RECT clientRect;
-    GetClientRect(m_hwnd, &clientRect);
-    StretchBlt(hdc, 0, 0, clientRect.right, clientRect.bottom,
-        hdcMem, 0, 0, 256, 240, SRCCOPY);
+    //SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
+    //// Stretch blit to window (3x scale)
+    //RECT clientRect;
+    //GetClientRect(m_hwnd, &clientRect);
+    //StretchBlt(hdc, 0, 0, clientRect.right, clientRect.bottom,
+    //    hdcMem, 0, 0, 256, 240, SRCCOPY);
     //ReleaseDC(m_hwnd, hdc);
     return true;
 }
@@ -970,6 +1017,7 @@ void Core::RunMessageLoop()
     double audioFraction = 0.0;  // Per-frame fractional pos
     int cpuCycleDebt = 0;
     const int ppuCyclesPerCPUCycle = 3;
+    SDL_Event e;
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -1050,9 +1098,7 @@ void Core::RunMessageLoop()
             //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
             //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
 
-			HDC hdc = GetDC(m_hwnd);
-            DrawToWindow(hdc);
-            ReleaseDC(m_hwnd, hdc);
+            DrawToWindow();
             
             frameCount++;
             // Debug output every second
@@ -1095,4 +1141,5 @@ void Core::RunMessageLoop()
     }
     cart.unload();
     audioBackend->Shutdown();
+    SDL_Quit();
 }

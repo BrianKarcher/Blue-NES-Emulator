@@ -153,9 +153,6 @@ uint8_t RendererLoopy::get_pixel() {
     // Select the bit based on fine_x (0-7)
     // Bit 15 is leftmost, bit 0 is rightmost after shifting
     uint16_t mux = 0x8000 >> loopy.x;
-    if ((m_shifts.pattern_lo_shift & 0x8000) != 0) {
-		int test = 0;
-    }
 
     // Extract pixel value (2 bits from pattern planes)
     uint8_t pixel = ((m_shifts.pattern_lo_shift & mux) ? 1 : 0) |

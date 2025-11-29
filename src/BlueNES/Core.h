@@ -90,7 +90,7 @@ public:
 	PPUViewer ppuViewer;
 private:
 	// Draw content.
-	bool DrawToWindow(HDC dc);
+	bool DrawToWindow();
 	void LoadGame(const std::wstring& filePath);
 	bool isPaused;
 	// The windows procedure.
@@ -124,10 +124,6 @@ private:
 		UINT width,
 		UINT height
 	);
-
-	HDC hdcMem;
-	BITMAPINFO bmi;
-	HBITMAP hBitmap;
 	
 	HWND m_hwnd;
 	// Hex Window handles
