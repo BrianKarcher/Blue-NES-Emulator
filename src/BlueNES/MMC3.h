@@ -28,6 +28,7 @@ private:
 	uint8_t prgBank16kCount;
 	uint8_t prgBank8kCount;
 	uint8_t chrBank8kCount;
+	uint8_t chrBank1kCount;
 
 	uint8_t m_regSelect;
 

@@ -13,6 +13,10 @@ MMC3::MMC3(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_
 	prgBank16kCount = prgRomSize;
 	prgBank8kCount = prgBank16kCount * 2;
 	chrBank8kCount = chrRomSize;
+	chrBank1kCount = chrBank8kCount * 8;
+	for (int i = 0; i < 8; i++) {
+		banks[i] = 0;
+	}
 
 	this->cart = cartridge;
 	uint32_t lastBankStart = (prgBank8kCount - 1) * BANK_SIZE_PRG;
@@ -97,6 +101,7 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 		}
 
 		if (m_regSelect < 6) {
+			banks[m_regSelect] &= chrBank1kCount - 1;
 			updateChrMapping();
 		}
 		else {
