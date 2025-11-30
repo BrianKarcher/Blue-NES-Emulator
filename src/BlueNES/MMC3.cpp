@@ -108,6 +108,9 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 			updatePrgMapping();
 		}
 	}
+	else if (addr <= 0xBFFE && addr % 2 == 0) {
+		cart->SetMirrorMode((val & 1) == 0 ? Cartridge::MirrorMode::VERTICAL : Cartridge::MirrorMode::HORIZONTAL);
+	}
 	// TODO Handle IRQ registers
 }
 
