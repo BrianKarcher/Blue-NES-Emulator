@@ -171,9 +171,10 @@ class Processor_6502
 {
 public:
 	Processor_6502();
+	void setNMI(bool state);
+	void setIRQ(bool state);
 	// Power On and Reset are different
 	void PowerOn();
-	void setIRQ();
 	uint8_t Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);
@@ -202,6 +203,20 @@ public:
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
 private:
+	void push(uint8_t value);
+	uint8_t pull();
+
+	// Interrupt lines
+	bool nmi_line;
+	bool nmi_previous;
+	bool nmi_pending;
+
+	bool irq_line;
+
+	void checkInterrupts();
+	void handleNMI();
+	void handleIRQ();
+
 	void ADC(uint8_t operand);
 	//void _and(uint8_t operand);
 	uint64_t m_cycle_count = 0;

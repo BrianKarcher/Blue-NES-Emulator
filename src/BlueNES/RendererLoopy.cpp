@@ -354,7 +354,7 @@ void RendererLoopy::clock() {
             // Trigger NMI if enabled
             //OutputDebugStringW((L"Triggering NMI at CPU cycle "
             //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
-            m_bus->cpu->NMI();
+            m_bus->cpu->setNMI(true);
         }
     }
 
@@ -370,6 +370,7 @@ void RendererLoopy::clock() {
         hasSprite0HitBeenSet = false;
         m_ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
         m_frameComplete = false;
+        m_bus->cpu->setNMI(false);
         //m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
         //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
     }

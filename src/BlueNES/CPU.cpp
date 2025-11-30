@@ -80,7 +80,7 @@ uint64_t Processor_6502::GetCycleCount()
 	return m_cycle_count;
 }
 
-void Processor_6502::NMI() {
+void Processor_6502::handleNMI() {
 	if (isFrozen) {
 		return;
 	}
@@ -112,20 +112,67 @@ void Processor_6502::NMI() {
 	//}
 }
 
-void Processor_6502::setIRQ() {
-	//m_p |= FLAG_BREAK; // Set break flag
-	uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
-	uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
-	//m_pc += 1; 
-	// Push PC and P to stack
-	bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
-	bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
-	bus->write(0x0100 + m_sp--, flags);                // Push processor status
-	// Set PC to NMI vector
-	m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
-	// Set Interrupt Disable flag in real status so IRQs are masked
+// Called by mappers/devices to set interrupt lines
+void Processor_6502::setNMI(bool state) {
+	nmi_line = state;
+}
+
+void Processor_6502::setIRQ(bool state) {
+	irq_line = state;
+}
+
+void Processor_6502::push(uint8_t value) {
+	bus->write(0x0100 + m_sp, value);
+	m_sp--;
+}
+
+uint8_t Processor_6502::pull() {
+	m_sp++;
+	return bus->read(0x0100 + m_sp);
+}
+
+void Processor_6502::handleIRQ() {
+	// IRQ takes 7 cycles
+
+	// Push PC (high byte first)
+	push((m_pc >> 8) & 0xFF);
+	push(m_pc & 0xFF);
+
+	// Push status register
+	// Bit 5 (unused) is always set
+	// Bit 4 (B flag) is clear for interrupts
+	push((m_p & ~FLAG_BREAK) | FLAG_UNUSED);
+
+	// Set interrupt disable flag
 	m_p |= FLAG_INTERRUPT;
+
+	// Load IRQ vector from $FFFE-$FFFF
+	uint8_t low = ReadByte(0xFFFE);
+	uint8_t high = ReadByte(0xFFFF);
+	m_pc = (high << 8) | low;
+
 	m_cycle_count += 7;
+}
+
+void Processor_6502::checkInterrupts() {
+	// NMI - Edge-triggered (detects 0->1 transition)
+	if (nmi_line && !nmi_previous) {
+		nmi_pending = true;
+	}
+	nmi_previous = nmi_line;
+
+	// Handle NMI (higher priority than IRQ)
+	if (nmi_pending) {
+		handleNMI();
+		nmi_pending = false;
+		return;  // Don't check IRQ if NMI occurred
+	}
+
+	// IRQ - Level-triggered, maskable by I flag
+	// Check if IRQ line is active AND hardware interrupts are enabled
+	if (irq_line && !(m_p & FLAG_INTERRUPT)) {
+		handleIRQ();
+	}
 }
 
 /// <summary>
@@ -135,6 +182,9 @@ uint8_t Processor_6502::Clock()
 {
 	if (!isActive) return 0;
 	uint16_t current_pc = m_pc;
+	// Check for interrupts before fetching next instruction
+	checkInterrupts();
+
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
 	dbg(L"\n(%d) 0x%04X %S ", cyclesBefore, current_pc, instructionMap[op].c_str());
@@ -437,7 +487,19 @@ uint8_t Processor_6502::Clock()
 		}
 		case BRK_IMPLIED:
 		{
-			setIRQ();
+			//m_p |= FLAG_BREAK; // Set break flag
+			uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
+			uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
+			//m_pc += 1; 
+			// Push PC and P to stack
+			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
+			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
+			bus->write(0x0100 + m_sp--, flags);                // Push processor status
+			// Set PC to NMI vector
+			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
+			// Set Interrupt Disable flag in real status so IRQs are masked
+			m_p |= FLAG_INTERRUPT;
+			m_cycle_count += 7;
 			break;
 		}
 		case BVC_RELATIVE:
