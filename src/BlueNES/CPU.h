@@ -173,6 +173,7 @@ public:
 	Processor_6502();
 	// Power On and Reset are different
 	void PowerOn();
+	void setIRQ();
 	uint8_t Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);

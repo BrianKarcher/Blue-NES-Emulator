@@ -1,5 +1,6 @@
 #include "Cartridge.h"
 #include <string>
+#include "Bus.h"
 #include "INESLoader.h"
 #include "NROM.h"
 #include "Mapper.h"
@@ -12,6 +13,11 @@
 
 Cartridge::Cartridge() {
 
+}
+
+void Cartridge::initialize(Bus* bus) {
+    cpu = bus->cpu;
+    m_bus = bus;
 }
 
 std::filesystem::path getAppFolderPath()
@@ -115,7 +121,7 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 4:
-        mapper = new MMC3(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC3(m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     default:
         mapper = new NROM(this);

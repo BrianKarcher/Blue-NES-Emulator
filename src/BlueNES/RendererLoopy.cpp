@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "nes_ppu.h"
+#include "A12Mapper.h"
 #include "Core.h"
 #include "Bus.h"
 
@@ -286,13 +287,6 @@ void RendererLoopy::clock() {
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
 
-#ifndef DISABLE_CLOCK
-
-
-
-
-#endif
-
     // Pixel rendering (visible)
     if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
         renderPixel();
@@ -378,6 +372,16 @@ void RendererLoopy::clock() {
         m_frameComplete = false;
         //m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
         //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
+    }
+
+    // Clock IRQ counter once per scanline at dot 260
+    if (rendering && (visibleScanline || preRenderLine) && dot == 260) {
+        if (m_mapper) {
+            // Simplified: just clock the counter once per scanline
+            // This creates a rising edge from nametable (A12=0) to pattern (A12=1)
+            m_mapper->ClockIRQCounter(0x0000);  // Nametable access
+            m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
+        }
     }
 
     // Advance cycle and scanline counters

@@ -1,12 +1,16 @@
 #include "MMC3.h"
 #include "CPU.h"
 #include "Cartridge.h"
+#include "Bus.h"
+#include "nes_ppu.h"
+#include "RendererLoopy.h"
 
 #define BANK_SIZE_CHR 0x400 // 1KB
 #define BANK_SIZE_PRG 0x2000 // 8KB
 
-MMC3::MMC3(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_t chrRomSize) {
-	this->cpu = cpu;
+MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
+	this->cpu = bus->cpu;
+	renderLoopy = bus->ppu->renderer;
 	// init registers to reset-like defaults
 	prgMode = 0;
 	chrMode = 0;
@@ -18,12 +22,23 @@ MMC3::MMC3(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_
 		banks[i] = 0;
 	}
 
-	this->cart = cartridge;
+	irq_latch = 0;
+	irq_counter = 0;
+	irq_reload = false;
+	irq_enabled = false;
+	last_a12 = false;
+	renderLoopy->setMapper(this);
+
+	this->cart = bus->cart;
 	uint32_t lastBankStart = (prgBank8kCount - 1) * BANK_SIZE_PRG;
 	//lastPrg = &cartridge->m_prgRomData[lastBankStart];
 	//secondLastPrg = &cartridge->m_prgRomData[lastBankStart - BANK_SIZE_PRG];
 	updatePrgMapping();
 	updateChrMapping();
+}
+
+MMC3::~MMC3() {
+	renderLoopy->setMapper(nullptr);
 }
 
 void MMC3::updateChrMapping() {
@@ -79,39 +94,92 @@ void MMC3::updatePrgMapping() {
 }
 
 void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
-	if (addr < 0x8000) {
-		return;
-	}
-	else if (addr <= 0x9FFE && addr % 2 == 0) { // even
-		// Control register
-		prgMode = val & 0x40;
-		chrMode = val & 0x80;
-		m_regSelect = val & 0x7; // 3 LSB
-		updatePrgMapping();
-		updateChrMapping();
-	}
-	else if (addr <= 0x9FFF && addr % 2 == 1) { // odd
-		banks[m_regSelect] = val;
-
-		if (m_regSelect <= 1) {
-			banks[m_regSelect] &= ~1;      // R0/R1: ignore bit 0
-		}
-		if (m_regSelect >= 6) {
-			banks[m_regSelect] &= 0x3F;   // R6/R7: 6-bit
-		}
-
-		if (m_regSelect < 6) {
-			banks[m_regSelect] &= chrBank1kCount - 1;
-			updateChrMapping();
-		}
-		else {
+	switch (addr & 0xE001) {
+		case 0x8000:
+			// Control register
+			prgMode = val & 0x40;
+			chrMode = val & 0x80;
+			m_regSelect = val & 0x7; // 3 LSB
 			updatePrgMapping();
-		}
+			updateChrMapping();
+			break;
+
+		case 0x8001:
+			banks[m_regSelect] = val;
+			if (m_regSelect == 2 && val == 0xC7) {
+				int i = 0;
+			}
+
+			if (m_regSelect <= 1) {
+				banks[m_regSelect] &= ~1;      // R0/R1: ignore bit 0
+			}
+			if (m_regSelect >= 6) {
+				banks[m_regSelect] &= 0x3F;   // R6/R7: 6-bit
+			}
+
+			if (m_regSelect < 6) {
+				banks[m_regSelect] &= chrBank1kCount - 1;
+				updateChrMapping();
+			}
+			else {
+				updatePrgMapping();
+			}
+			break;
+
+		case 0xA000:
+			cart->SetMirrorMode((val & 1) == 0 ? Cartridge::MirrorMode::VERTICAL : Cartridge::MirrorMode::HORIZONTAL);
+			break;
+
+		case 0xC000:  // IRQ Latch
+			irq_latch = val;
+			break;
+
+		case 0xC001:  // IRQ Reload
+			irq_reload = true;
+			break;
+
+		case 0xE000:  // IRQ Disable
+			irq_enabled = false;
+			break;
+
+		case 0xE001:  // IRQ Enable
+			irq_enabled = true;
+			break;
 	}
-	else if (addr <= 0xBFFE && addr % 2 == 0) {
-		cart->SetMirrorMode((val & 1) == 0 ? Cartridge::MirrorMode::VERTICAL : Cartridge::MirrorMode::HORIZONTAL);
+}
+
+// Called by PPU when PPU address changes (A12 detection)
+void MMC3::ClockIRQCounter(uint16_t ppu_address) {
+	bool current_a12 = (ppu_address & 0x1000) != 0;
+
+	// Detect rising edge of A12 (0 -> 1 transition)
+	if (!last_a12 && current_a12) {
+		//if (a12_filter == 0) {
+			// Clock the counter on rising edge
+			if (irq_counter == 0 || irq_reload) {
+				irq_counter = irq_latch;
+				irq_reload = false;
+			}
+			else {
+				irq_counter--;
+			}
+
+			// Trigger IRQ when counter reaches 0
+			if (irq_counter == 0 && irq_enabled) {
+				if (cpu) {
+					//cpu->setIRQ();
+				}
+			}
+
+			//a12_filter = 6;  // Typical filter delay
+		//}
 	}
-	// TODO Handle IRQ registers
+
+	last_a12 = current_a12;
+
+	//if (a12_filter > 0) {
+	//	a12_filter--;
+	//}
 }
 
 void MMC3::recomputeMappings() {

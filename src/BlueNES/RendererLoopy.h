@@ -4,6 +4,7 @@
 
 class NesPPU;
 class Bus;
+class A12Mapper;
 
 #define DOTS_PER_SCANLINE 340
 #define SCANLINES_PER_FRAME 261
@@ -89,9 +90,14 @@ public:
     void setFrameComplete(bool complete) { m_frameComplete = complete; }
     uint16_t get_attribute_address(LoopyRegister& regV);
 
+    void setMapper(A12Mapper* mapper) {
+        m_mapper = mapper;
+    }
+
 private:
     Bus* m_bus;
     NesPPU* m_ppu;
+    A12Mapper* m_mapper;
     // Overflow can only be set once per frame
     bool hasOverflowBeenSet = false;
     bool hasSprite0HitBeenSet = false;

@@ -2,14 +2,18 @@
 #include <stdint.h>
 #include <array>
 #include "Mapper.h"
+#include "A12Mapper.h"
 
+class Bus;
 class Cartridge;
 class Processor_6502;
+class RendererLoopy;
 
-class MMC3 : public Mapper
+class MMC3 : public Mapper, public A12Mapper
 {
 public:
-	MMC3(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_t chrRomSize);
+	MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	~MMC3();
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	//uint8_t readPRGROM(uint16_t address);
@@ -18,8 +22,10 @@ public:
 	void writeCHR(uint16_t addr, uint8_t data);
 	inline uint8_t readPRGROM(uint16_t addr) const;
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
+	void ClockIRQCounter(uint16_t ppu_address);
 
 private:
+	RendererLoopy* renderLoopy;
 	uint8_t prgMode;
 	uint8_t chrMode;
 	std::array<uint8_t*, 8> chrMap;
@@ -34,6 +40,15 @@ private:
 
 	Cartridge* cart;
 	Processor_6502* cpu;
+
+	// IRQ state
+	uint8_t irq_latch;
+	uint8_t irq_counter;
+	bool irq_reload;
+	bool irq_enabled;
+
+	// A12 tracking
+	bool last_a12;
 
 	void recomputeMappings();
 	void updateChrMapping();

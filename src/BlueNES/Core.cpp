@@ -85,6 +85,7 @@ HRESULT Core::Initialize()
     bus.core = this;*/
     bus.Initialize(this);
     ppu.Initialize(&bus, this);
+    cart.initialize(&bus);
 	cpu.bus = &bus;
     //ppu.set_hwnd(m_hwnd);
     

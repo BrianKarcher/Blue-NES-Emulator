@@ -112,6 +112,22 @@ void Processor_6502::NMI() {
 	//}
 }
 
+void Processor_6502::setIRQ() {
+	//m_p |= FLAG_BREAK; // Set break flag
+	uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
+	uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
+	//m_pc += 1; 
+	// Push PC and P to stack
+	bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
+	bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
+	bus->write(0x0100 + m_sp--, flags);                // Push processor status
+	// Set PC to NMI vector
+	m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
+	// Set Interrupt Disable flag in real status so IRQs are masked
+	m_p |= FLAG_INTERRUPT;
+	m_cycle_count += 7;
+}
+
 /// <summary>
 /// Speed is paramount so we try to reduce function hops as much as feasible while keeping the code readable.
 /// </summary>
@@ -421,19 +437,7 @@ uint8_t Processor_6502::Clock()
 		}
 		case BRK_IMPLIED:
 		{
-			//m_p |= FLAG_BREAK; // Set break flag
-			uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
-			uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
-			//m_pc += 1; 
-			// Push PC and P to stack
-			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
-			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
-			bus->write(0x0100 + m_sp--, flags);                // Push processor status
-			// Set PC to NMI vector
-			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
-			// Set Interrupt Disable flag in real status so IRQs are masked
-			m_p |= FLAG_INTERRUPT;
-			m_cycle_count += 7;
+			setIRQ();
 			break;
 		}
 		case BVC_RELATIVE:

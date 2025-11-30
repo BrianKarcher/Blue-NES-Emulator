@@ -150,6 +150,7 @@
     <ClCompile Include="RendererWithReg.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="A12Mapper.h" />
     <ClInclude Include="AudioBackend.h" />
     <ClInclude Include="Bus.h" />
     <ClInclude Include="Cartridge.h" />
