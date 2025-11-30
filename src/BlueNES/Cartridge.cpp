@@ -4,6 +4,7 @@
 #include "NROM.h"
 #include "Mapper.h"
 #include "MMC1.h"
+#include "MMC3.h"
 #include "CPU.h"
 #include <Windows.h>
 #include <filesystem>
@@ -111,7 +112,10 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         mapper = new NROM(this);
         break;
     case 1:
-        mapper = new MMC1(this, cpu, inesFile);
+        mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        break;
+    case 4:
+        mapper = new MMC3(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     default:
         mapper = new NROM(this);

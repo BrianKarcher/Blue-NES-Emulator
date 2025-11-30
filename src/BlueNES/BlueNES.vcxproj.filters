@@ -69,6 +69,9 @@
     <ClCompile Include="RendererLoopy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MMC3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -132,6 +135,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RendererLoopy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,12 +18,13 @@ class Processor_6502;
 class MMC1 : public Mapper
 {
 public:
-	MMC1(Cartridge* cartridge, Processor_6502* cpu, const ines_file_t& inesFile);
+	MMC1(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_t chrRomSize);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	uint8_t readPRGROM(uint16_t address);
+	inline uint8_t readPRGROM(uint16_t addr) const;
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
-	uint8_t readCHR(uint16_t address);
-	void writeCHR(uint16_t address, uint8_t data);
+	inline uint8_t readCHR(uint16_t addr) const;
+	void writeCHR(uint16_t addr, uint8_t data);
+
 	void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;
 private:

@@ -138,6 +138,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MMC1.cpp" />
+    <ClCompile Include="MMC3.cpp" />
     <ClCompile Include="NES_APU.cpp" />
     <ClCompile Include="nes_ppu.cpp" />
     <ClCompile Include="CPU.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="Mapper.h" />
     <ClInclude Include="MMC1.h" />
+    <ClInclude Include="MMC3.h" />
     <ClInclude Include="NES_APU.h" />
     <ClInclude Include="nes_ppu.h" />
     <ClInclude Include="CPU.h" />

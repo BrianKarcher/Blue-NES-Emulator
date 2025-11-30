@@ -9,7 +9,7 @@ void NROM::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 
 }
 
-uint8_t NROM::readPRGROM(uint16_t address) {
+inline uint8_t NROM::readPRGROM(uint16_t address) const {
 	if (cartridge->m_prgRomData.size() == 0) {
 		return 0;
 	}
@@ -32,7 +32,7 @@ void NROM::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle)
 	// Typically, PRG ROM is not writable. This is a placeholder for mappers that support it.
 }
 
-uint8_t NROM::readCHR(uint16_t address) {
+inline uint8_t NROM::readCHR(uint16_t address) const {
 	if (address < 0x2000) {
 		return cartridge->m_chrData[address];
 	}

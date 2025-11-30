@@ -1,12 +1,11 @@
 #include "MMC1.h"
 #include "Cartridge.h"
-#include "INESLoader.h"
 #include <Windows.h>
 #include <string>
 #include <bitset>
 #include "CPU.h"
 
-MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, const ines_file_t& inesFile) {
+MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_t chrRomSize) {
 	this->cpu = cpu;
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
 	shiftRegister = 0b10000;
@@ -15,9 +14,9 @@ MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, const ines_file_t& inesFil
 	chrBank0Reg = 0;
 	chrBank1Reg = 0;
 	prgBankReg = 0; // MMC1 starts Bank 0 at $8000
-	prgBankCount = inesFile.header.prg_rom_size;
+	prgBankCount = prgRomSize;
 	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
-	chrBankCount = inesFile.header.chr_rom_size * 2;
+	chrBankCount = chrRomSize * 2;
 	// Detect board type from PRG/CHR configuration
 	if (prgBankCount == 4 && chrBankCount == 4) {
 		boardType = BoardType::SAROM;   // 64KB PRG, 16KB CHR-ROM
@@ -176,9 +175,6 @@ void MMC1::recomputeMappings()
 	else if (chrMode == 0) {
 		// 8KB mode
 		uint32_t bank8k = chrBank0Reg;
-		if (bank8k == 6) {
-			int i = 0;
-		}
 		//if (boardType == BoardType::SAROM)
 		//	bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
 		bank8k %= chrBankCount;
@@ -228,7 +224,7 @@ void MMC1::recomputeMappings()
 	//dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
-uint8_t MMC1::readPRGROM(uint16_t addr) {
+inline uint8_t MMC1::readPRGROM(uint16_t addr) const {
 	// Expect addr in 0x8000 - 0xFFFF
 	if (addr < 0x8000) return 0xFF; // open bus / not mapped by mapper
 
@@ -243,13 +239,12 @@ uint8_t MMC1::readPRGROM(uint16_t addr) {
 }
 
 void MMC1::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
-	// Typically, PRG ROM is not writable. This is a placeholder for mappers that support it.
 	if (address >= 0x8000) {
 		writeRegister(address, data, currentCycle);
 	}
 }
 
-uint8_t MMC1::readCHR(uint16_t addr) {
+inline uint8_t MMC1::readCHR(uint16_t addr) const {
 	addr &= 0x1FFF;
 	uint32_t offset = (addr < 0x1000) ? (chr0Addr + addr) : (chr1Addr + (addr - 0x1000));
 
@@ -260,7 +255,6 @@ uint8_t MMC1::readCHR(uint16_t addr) {
 	return cartridge->m_chrData[offset];
 }
 
-// TODO: Support CHR-RAM vs CHR-ROM distinction
 void MMC1::writeCHR(uint16_t address, uint8_t data) {
 	if (!cartridge->isCHRWritable) {
 		return; // Ignore writes if CHR is ROM
