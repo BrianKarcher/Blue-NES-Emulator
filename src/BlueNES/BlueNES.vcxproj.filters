@@ -72,6 +72,9 @@
     <ClCompile Include="MMC3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UxROMMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -141,6 +144,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="A12Mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UxROMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

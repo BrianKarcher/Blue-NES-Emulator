@@ -148,6 +148,7 @@
     <ClCompile Include="RendererLoopy.cpp" />
     <ClCompile Include="RendererSlow.cpp" />
     <ClCompile Include="RendererWithReg.cpp" />
+    <ClCompile Include="UxROMMapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A12Mapper.h" />
@@ -173,6 +174,7 @@
     <ClInclude Include="RendererSlow.h" />
     <ClInclude Include="RendererWithReg.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="UxROMMapper.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlueNES.rc" />

@@ -98,6 +98,11 @@ void Processor_6502::handleNMI() {
 	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
 	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
+	// THIS MUST BE DONE AFTER PUSHING P TO STACK. OTHERWISE WILL BREAK MMC3 FOREVER!
+	// Technically it is because RTI pulls its state from the stack, and that state needs
+	// to have the interrupt flag set to whatever it was PRIOR to the NMI occurring.
+	// Since, you know, that is where you are RETURNING TO.
+	// Yes, this bug pissed me off.
 	m_p |= FLAG_INTERRUPT;
 	// Set PC to NMI vector
 	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
