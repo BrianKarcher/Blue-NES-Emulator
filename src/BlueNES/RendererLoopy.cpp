@@ -441,6 +441,13 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
 }
 
 void RendererLoopy::prepareSpriteLine(int y) {
+    // For MMC3 IRQ reasons, we need to read a sprite even if none are visible.
+    //uint16_t patternTableBase2 = m_ppu->GetSpritePatternTableBase(0x00);
+    // Mario 3 uses 8x16 sprites.
+    // And the game doesn't load any sprites at start.
+    // TODO Figure out how to get MMC 3 to work.
+    uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
+
     spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
     int spriteHeight = 8;
     if ((m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) != 0) {
@@ -474,8 +481,8 @@ void RendererLoopy::prepareSpriteLine(int y) {
         }
 
         uint16_t patternTableBase = m_ppu->GetSpritePatternTableBase(s.tileIndex);
-        uint8_t lowByte = m_ppu->bus->cart->ReadCHR(patternTableBase + lowTile * 16 + relY);
-        uint8_t highByte = m_ppu->bus->cart->ReadCHR(patternTableBase + lowTile * 16 + relY + 8);
+        uint8_t lowByte = m_ppu->ReadVRAM(patternTableBase + lowTile * 16 + relY);
+        uint8_t highByte = m_ppu->ReadVRAM(patternTableBase + lowTile * 16 + relY + 8);
 
         for (int x = 0; x < 8; ++x) {
             int screenX = s.x + x;

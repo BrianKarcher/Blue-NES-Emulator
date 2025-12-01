@@ -1,6 +1,8 @@
 #include "CPU.h"
 #include "Bus.h"
 #include <Windows.h>
+#include "nes_ppu.h"
+#include "RendererLoopy.h"
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
 
@@ -94,9 +96,9 @@ void Processor_6502::handleNMI() {
 	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
 	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
-	m_p |= FLAG_INTERRUPT;
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
 	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
+	m_p |= FLAG_INTERRUPT;
 	// Set PC to NMI vector
 	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
 	//dbgNmi(L"pc set to 0x%04X\n", m_pc);
@@ -171,7 +173,9 @@ void Processor_6502::checkInterrupts() {
 	// IRQ - Level-triggered, maskable by I flag
 	// Check if IRQ line is active AND hardware interrupts are enabled
 	if (irq_line && !(m_p & FLAG_INTERRUPT)) {
+	//if (irq_line) {
 		handleIRQ();
+		irq_line = false; // Clear IRQ line after handling
 	}
 }
 
@@ -181,10 +185,9 @@ void Processor_6502::checkInterrupts() {
 uint8_t Processor_6502::Clock()
 {
 	if (!isActive) return 0;
-	uint16_t current_pc = m_pc;
 	// Check for interrupts before fetching next instruction
 	checkInterrupts();
-
+	uint16_t current_pc = m_pc;
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
 	dbg(L"\n(%d) 0x%04X %S ", cyclesBefore, current_pc, instructionMap[op].c_str());
@@ -201,6 +204,12 @@ uint8_t Processor_6502::Clock()
 	}
 	if (isFrozen) {
 		return 5;
+	}
+
+	// Mario 3 toad house scroll
+	if (m_pc == 0xF795) {
+		int scanline = bus->ppu->renderer->m_scanline;
+		int i = 0;
 	}
 
 	switch (op)

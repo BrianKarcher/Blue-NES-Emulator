@@ -9,6 +9,8 @@ class Cartridge;
 class Processor_6502;
 class RendererLoopy;
 
+//#define MMC3DEBUG
+
 class MMC3 : public Mapper, public A12Mapper
 {
 public:
@@ -25,6 +27,9 @@ public:
 	void ClockIRQCounter(uint16_t ppu_address);
 
 private:
+	inline void dbg(const wchar_t* fmt, ...);
+	void triggerIRQ();
+	void acknowledgeIRQ();
 	RendererLoopy* renderLoopy;
 	uint8_t prgMode;
 	uint8_t chrMode;
@@ -40,6 +45,7 @@ private:
 
 	Cartridge* cart;
 	Processor_6502* cpu;
+	Bus* bus;
 
 	// IRQ state
 	uint8_t irq_latch;
@@ -49,6 +55,7 @@ private:
 
 	// A12 tracking
 	bool last_a12;
+	int a12LowTime = 8;  // in PPU cycles
 
 	void recomputeMappings();
 	void updateChrMapping();

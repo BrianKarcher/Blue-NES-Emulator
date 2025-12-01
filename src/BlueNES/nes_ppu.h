@@ -43,6 +43,7 @@ static constexpr uint32_t m_nesPalette[64] = {
 class Bus;
 class Core;
 class RendererLoopy;
+class A12Mapper;
 
 class NesPPU
 {
@@ -57,6 +58,10 @@ public:
 	uint8_t ReadVRAM(uint16_t addr);
 	uint8_t GetScrollX() const;
 	uint8_t GetScrollY() const;
+
+	void setMapper(A12Mapper* mapper) {
+		m_mapper = mapper;
+	}
 	
 	//void render_frame();
 	
@@ -70,6 +75,8 @@ public:
 	uint8_t oamAddr;
 	Bus* bus;
 	Core* core;
+	A12Mapper* m_mapper;
+
 	bool NMI();
 	void Clock();
 	

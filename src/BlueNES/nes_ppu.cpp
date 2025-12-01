@@ -7,6 +7,7 @@
 #include "RendererWithReg.h"
 #include "RendererSlow.h"
 #include "RendererLoopy.h"
+#include "A12Mapper.h"
 
 HWND m_hwnd;
 
@@ -212,6 +213,12 @@ uint8_t NesPPU::ReadVRAM(uint16_t addr)
 	if (addr < 0x2000) {
 		// Reading from CHR-ROM/RAM
 		value = bus->cart->ReadCHR(addr);
+		//if (m_mapper) {
+		//	if (addr >= 0x1000) {
+		//		int i = 0;
+		//	}
+		//	m_mapper->ClockIRQCounter(addr);
+		//}
 	}
 	else if (addr < 0x3F00) {
 		// Reading from nametables and attribute tables
@@ -237,6 +244,9 @@ void NesPPU::write_vram(uint16_t addr, uint8_t value)
 	if (addr < 0x2000) {
 		// Write to CHR-RAM (if enabled)
 		bus->cart->WriteCHR(addr, value);
+		//if (m_mapper) {
+		//	m_mapper->ClockIRQCounter(addr);
+		//}
 		// Else ignore write (CHR-ROM is typically read-only)
 		return;
 	}

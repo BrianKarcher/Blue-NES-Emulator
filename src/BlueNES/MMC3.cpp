@@ -7,9 +7,24 @@
 
 #define BANK_SIZE_CHR 0x400 // 1KB
 #define BANK_SIZE_PRG 0x2000 // 8KB
+static constexpr int A12_LOW_THRESHOLD = 8; // require A12 low >= this many PPU cycles
+
+// ---------------- Debug helper ----------------
+inline void MMC3::dbg(const wchar_t* fmt, ...) {
+#ifdef MMC3DEBUG
+	//if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+#endif
+}
 
 MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
 	this->cpu = bus->cpu;
+	this->bus = bus;
 	renderLoopy = bus->ppu->renderer;
 	// init registers to reset-like defaults
 	prgMode = 0;
@@ -28,6 +43,7 @@ MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
 	irq_enabled = false;
 	last_a12 = false;
 	renderLoopy->setMapper(this);
+	this->bus->ppu->setMapper(this);
 
 	this->cart = bus->cart;
 	uint32_t lastBankStart = (prgBank8kCount - 1) * BANK_SIZE_PRG;
@@ -39,6 +55,7 @@ MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
 
 MMC3::~MMC3() {
 	renderLoopy->setMapper(nullptr);
+	this->bus->ppu->setMapper(nullptr);
 }
 
 void MMC3::updateChrMapping() {
@@ -94,12 +111,14 @@ void MMC3::updatePrgMapping() {
 }
 
 void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
+	dbg(L"(%d) 0x%04X 0x%02X (%d) \n", currentCycle, addr, val, val);
 	switch (addr & 0xE001) {
 		case 0x8000:
 			// Control register
 			prgMode = val & 0x40;
 			chrMode = val & 0x80;
 			m_regSelect = val & 0x7; // 3 LSB
+			//dbg(L"prg: %d chr: %d reg: %d\n", prgMode, chrMode, m_regSelect);
 			updatePrgMapping();
 			updateChrMapping();
 			break;
@@ -140,6 +159,7 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 
 		case 0xE000:  // IRQ Disable
 			irq_enabled = false;
+			acknowledgeIRQ();
 			break;
 
 		case 0xE001:  // IRQ Enable
@@ -148,14 +168,33 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	}
 }
 
+void MMC3::triggerIRQ() {
+	if (cpu) {
+		cpu->setIRQ(true);
+	}
+}
+
+void MMC3::acknowledgeIRQ() {
+	if (cpu) {
+		cpu->setIRQ(false);
+	}
+}
+
 // Called by PPU when PPU address changes (A12 detection)
 void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	bool current_a12 = (ppu_address & 0x1000) != 0;
 
-	// Detect rising edge of A12 (0 -> 1 transition)
-	if (!last_a12 && current_a12) {
-		//if (a12_filter == 0) {
-			// Clock the counter on rising edge
+	// Track low-time duration
+	if (!current_a12) {
+		a12LowTime++;
+	}
+	else {
+		// Detect rising edge of A12 (0 -> 1 transition)
+		//if (!last_a12 && a12LowTime >= A12_LOW_THRESHOLD && current_a12) {
+		if (!last_a12 && current_a12) {
+			//dbg(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
+			//if (a12_filter == 0) {
+				// Clock the counter on rising edge
 			if (irq_counter == 0 || irq_reload) {
 				irq_counter = irq_latch;
 				irq_reload = false;
@@ -167,12 +206,15 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
 				if (cpu) {
-					//cpu->setIRQ();
+					dbg(L"IRQ Triggered at line %d\n", bus->ppu->renderer->m_scanline);
+					cpu->setIRQ(true);
 				}
 			}
 
 			//a12_filter = 6;  // Typical filter delay
 		//}
+		}
+		a12LowTime = 0;
 	}
 
 	last_a12 = current_a12;

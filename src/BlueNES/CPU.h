@@ -3,6 +3,9 @@
 #include <array>
 #include <string>
 
+//#define CPUDEBUG
+//#define NMIDEBUG
+
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
 #define FLAG_INTERRUPT 0x04
@@ -266,8 +269,7 @@ private:
 	int nmiCount = 0;
 	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
 	//bool debug = false;
-//#define CPUDEBUG
-//#define NMIDEBUG
+
 	bool isFrozen = false;
 	int count = 0;
 };
