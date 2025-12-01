@@ -14,15 +14,19 @@ MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_
 	chrBank0Reg = 0;
 	chrBank1Reg = 0;
 	prgBankReg = 0; // MMC1 starts Bank 0 at $8000
-	prgBankCount = prgRomSize;
+	prgBank16kCount = prgRomSize;
+	suromPrgOuterBank = 0;
 	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
 	chrBankCount = chrRomSize * 2;
 	// Detect board type from PRG/CHR configuration
-	if (prgBankCount == 4 && chrBankCount == 4) {
+	if (prgBank16kCount == 4 && chrBankCount == 4) {
 		boardType = BoardType::SAROM;   // 64KB PRG, 16KB CHR-ROM
 	}
-	else if (prgBankCount == 8 && chrBankCount == 0) {
+	else if (prgBank16kCount == 8 && chrBankCount == 0) {
 		boardType = BoardType::SNROM;   // 128KB PRG, CHR-RAM
+	}
+	else if (prgBank16kCount == 32) {
+		boardType = BoardType::SUROM;   // 512KB PRG, 0KB CHR-ROM
 	}
 	else {
 		boardType = BoardType::GenericMMC1;
@@ -133,11 +137,17 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 			int i = 0;
 		}
 		chrBank0Reg = val & 0x1F;
+		if (boardType == BoardType::SUROM) {
+			suromPrgOuterBank = (val & 0x10);
+		}
 	}
 	// CHR Bank 1
 	else if (addr >= 0xC000 && addr <= 0xDFFF) {
 		// CHR bank 1 (4KB)
 		chrBank1Reg = val & 0x1F;
+		if (boardType == BoardType::SUROM) {
+			suromPrgOuterBank = (val & 0x10);
+		}
 	}
 	// PRG Bank
 	else if (addr >= 0xE000 && addr <= 0xFFFF) {
@@ -190,9 +200,19 @@ void MMC1::recomputeMappings()
 	}
 
 	// ------------ PRG BANKING ------------
-	uint32_t prgMax = prgBankCount - 1;
-	uint32_t bank = prgBankReg; // &prgMax;
-	uint32_t lastBankStart = (prgBankCount - 1) * 0x4000;
+	uint32_t prgMax = prgBank16kCount - 1;
+	uint32_t prgBank = prgBankReg; // &prgMax;
+	uint32_t lastBankStart = 0;
+	if (boardType == BoardType::SUROM) {
+		// SUROM has 512KB PRG-ROM (32 x 16KB banks), but only 16 banks are selectable
+		prgBank %= 16;
+		prgBank |= suromPrgOuterBank; // set bit 4 from CHR bank reg bit 4
+		lastBankStart = suromPrgOuterBank ? 31 * 0x4000 : 15 * 0x4000;
+	}
+	else {
+		prgBank %= prgMax + 1;
+		lastBankStart = (prgBank16kCount - 1) * 0x4000;
+	}
 
 	switch (prgMode) {
 
@@ -200,7 +220,7 @@ void MMC1::recomputeMappings()
 	case 1:
 		// 32 KB mode
 	{
-		prg0Addr = (prgBankReg & 0xFE) * 0x4000;  // even bank
+		prg0Addr = (prgBank & 0xFE) * 0x4000;  // even bank
 		prg1Addr = prg0Addr + 0x4000;
 	}
 	break;
@@ -208,13 +228,13 @@ void MMC1::recomputeMappings()
 	case 2:
 		// First 16KB fixed at $8000
 		prg0Addr = 0;
-		prg1Addr = prgBankReg * 0x4000;
+		prg1Addr = prgBank * 0x4000;
 		break;
 
 	case 3:
 	default:
 		// Last 16KB fixed at $C000
-		prg0Addr = prgBankReg * 0x4000;
+		prg0Addr = prgBank * 0x4000;
 		prg1Addr = lastBankStart;
 		break;
 	}

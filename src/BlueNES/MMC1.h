@@ -9,6 +9,7 @@
 enum BoardType {
 	SAROM,
 	SNROM,
+	SUROM,
 	GenericMMC1
 };
 
@@ -39,11 +40,12 @@ private:
 	//uint32_t chr1Addr;
 	//uint32_t prg0Addr;
 	//uint32_t prg1Addr;
-	uint8_t prgBankCount;
+	uint8_t prgBank16kCount;
 	uint8_t chrBankCount;
 	uint8_t chrBank0Reg = 0;
 	uint8_t chrBank1Reg = 0;
 	uint8_t prgBankReg = 0;
+	uint8_t suromPrgOuterBank;
 	// Current mapped addresses (in bytes)
 	uint32_t prg0Addr = 0; // maps to CPU 0x8000-0xBFFF
 	uint32_t prg1Addr = 0; // maps to CPU 0xC000-0xFFFF
