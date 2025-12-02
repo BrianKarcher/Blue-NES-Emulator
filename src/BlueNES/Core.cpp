@@ -815,10 +815,12 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 void Core::LoadGame(const std::wstring& filePath)
 {
     cart.unload();
+    ppu.reset();
+    bus.reset();
     cart.LoadROM(filePath);
     cpu.PowerOn();
     isPlaying = true;
-	audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
+	//audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
 }
 
 LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

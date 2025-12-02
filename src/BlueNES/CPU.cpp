@@ -53,6 +53,12 @@ void Processor_6502::PowerOn()
 	m_sp = 0xFD;
 	m_cycle_count = 0;
 	isActive = true;
+	nmiRequested = false;
+	nmi_line = false;
+	nmi_previous = false;
+	irq_line = false;
+	nmi_pending = false;
+	isFrozen = false;
 }
 
 void Processor_6502::Activate(bool active)
@@ -70,6 +76,12 @@ void Processor_6502::Reset()
 	m_p = 0x24; // Set unused flag bit to 1, others to 0
 	m_sp = 0xFD;
 	m_cycle_count = 0;
+	nmiRequested = false;
+	nmi_line = false;
+	nmi_previous = false;
+	irq_line = false;
+	nmi_pending = false;
+	isFrozen = false;
 }
 
 void Processor_6502::AddCycles(int count)

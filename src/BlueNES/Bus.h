@@ -34,4 +34,6 @@ public:
 
 	// DMA helper
 	void performDMA(uint8_t page);
+
+	void reset();
 };

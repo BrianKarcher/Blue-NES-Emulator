@@ -19,8 +19,10 @@ NesPPU::NesPPU() {
 
 NesPPU::~NesPPU()
 {
-	if (renderer)
+	if (renderer) {
 		delete renderer;
+		renderer = nullptr;
+	}
 }
 
 void NesPPU::Initialize(Bus* bus, Core* core) {
@@ -36,7 +38,15 @@ void NesPPU::set_hwnd(HWND hwnd) {
 
 void NesPPU::reset()
 {
-	// Reset PPU state here
+	if (m_mapper) {
+		m_mapper = nullptr;
+	}
+	m_ppuMask = 0;
+	m_ppuCtrl = 0;
+	m_ppuStatus = 0;
+	ppuDataBuffer = 0;
+	paletteTable.fill(0x00);
+	m_vram.fill(0x00);
 	renderer->reset();
 }
 

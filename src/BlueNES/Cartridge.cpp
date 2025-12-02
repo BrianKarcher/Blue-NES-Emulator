@@ -69,12 +69,14 @@ void Cartridge::saveSRAM() {
 void Cartridge::unload() {
     saveSRAM();
     if (mapper) {
+		mapper->shutdown();
         delete mapper;
         mapper = nullptr;
     }
     m_prgRomData.clear();
     m_chrData.clear();
 	m_prgRamData.clear();
+    m_mirrorMode = MirrorMode::VERTICAL;
 }
 
 void Cartridge::LoadROM(const std::wstring& filePath) {

@@ -21,6 +21,10 @@ void Bus::Initialize(Core* core)
     //this->core->g_buffer = cpuRAM.data();
 }
 
+void Bus::reset() {
+    cpuRAM.fill(0);
+}
+
 uint8_t Bus::read(uint16_t addr)
 {
     uint8_t data = 0x00;
