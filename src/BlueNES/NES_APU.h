@@ -558,76 +558,72 @@ private:
 
     // ===== NOISE CHANNEL =====
     struct NoiseChannel {
-        // Envelope
-        bool envelope_start_flag;
-        uint8_t envelope_divider;
-        uint8_t envelope_decay_level;
-        bool envelope_loop;  // Also length counter halt
-        uint8_t envelope_period;
-        bool constant_volume;
-        uint8_t constant_volume_period;
+        // Registers
+        bool envelope_loop;           // $400C bit 5
+        bool constant_volume;         // $400C bit 4
+        uint8_t volume_envelope;      // $400C bits 0-3
 
-        // Timer
+        uint8_t length_counter_halt;  // Same as envelope_loop
+        bool mode_flag;               // $400E bit 7 (0 = long, 1 = short)
+        uint8_t timer_period_index;   // $400E bits 0-3
+
+        // Internal state
         uint16_t timer_period;
         uint16_t timer_counter;
-        bool mode;  // 0 = 15-bit, 1 = 9-bit
+        uint16_t shift_register = 1;  // MUST start at 1
+        uint8_t envelope_counter;
+        uint8_t envelope_decay;
+        bool envelope_start_flag;
+        uint8_t length_counter = 0;
+        bool enabled = false;
 
-        // Shift register (15-bit LFSR)
-        uint16_t shift_register;
+        // Lookup table (NTSC) — EXACT from NESdev
+        static constexpr uint16_t period_table[16] = {
+            4, 8, 16, 32, 64, 96, 128, 160,
+            202, 254, 380, 508, 762, 1016, 2034, 4068
+        };
 
-        // Length counter
-        uint8_t length_counter;
+        NoiseChannel() {
+            Reset();
+        }
 
-        // Control
-        bool enabled;
-
-        NoiseChannel() : envelope_start_flag(false), envelope_divider(0),
-            envelope_decay_level(0), envelope_loop(false),
-            envelope_period(0), constant_volume(false),
-            constant_volume_period(0), timer_period(0),
-            timer_counter(0), mode(false), shift_register(1),
-            length_counter(0), enabled(false) {
+        void Reset() {
+            envelope_loop = constant_volume = mode_flag = false;
+            volume_envelope = timer_period_index = 0;
+            timer_counter = 0;
+            shift_register = 1;
+            envelope_counter = envelope_decay = 0;
+            envelope_start_flag = true;
+            length_counter = 0;
+            enabled = false;
         }
 
         uint8_t get_output() {
-            // Silence conditions
-            if (!enabled) return 0;
-            if (length_counter == 0) return 0;
-
-            // Check bit 0 of shift register
-            // If bit 0 is set, output is 0 (silence)
-            if (shift_register & 1) {
+            if (!enabled || length_counter == 0 || (shift_register & 1)) {
                 return 0;
             }
 
-            // Return volume (envelope or constant)
-            if (constant_volume) {
-                return constant_volume_period;
-            }
-            else {
-                return envelope_decay_level;
-            }
+            uint8_t volume = constant_volume ? volume_envelope : envelope_decay;
+            return volume;
         }
 
         void clock_timer() {
             if (timer_counter == 0) {
                 timer_counter = timer_period;
 
-                // Clock the shift register (LFSR)
-                // Feedback is bit 0 XOR bit 1 (mode 0) or bit 0 XOR bit 6 (mode 1)
+                // Feedback calculation
                 uint16_t feedback;
-                if (mode) {
-                    // Short mode: use bits 0 and 6
-                    feedback = (shift_register & 1) ^ ((shift_register >> 6) & 1);
+                if (mode_flag) {
+                    // Short mode: bits 0 and 6
+                    feedback = ((shift_register >> 0) & 1) ^ ((shift_register >> 6) & 1);
                 }
                 else {
-                    // Long mode: use bits 0 and 1
-                    feedback = (shift_register & 1) ^ ((shift_register >> 1) & 1);
+                    // Long mode: bits 0 and 1
+                    feedback = ((shift_register >> 0) & 1) ^ ((shift_register >> 1) & 1);
                 }
 
-                // Shift right and insert feedback at bit 14
-                shift_register >>= 1;
-                shift_register |= (feedback << 14);
+                // Shift right, insert feedback at bit 14
+                shift_register = (shift_register >> 1) | (feedback << 14);
             }
             else {
                 timer_counter--;
@@ -637,22 +633,19 @@ private:
         void clock_envelope() {
             if (envelope_start_flag) {
                 envelope_start_flag = false;
-                envelope_decay_level = 15;
-                envelope_divider = envelope_period;
+                envelope_decay = 15;
+                envelope_counter = volume_envelope;
+            }
+            else if (envelope_counter > 0) {
+                envelope_counter--;
             }
             else {
-                if (envelope_divider == 0) {
-                    envelope_divider = envelope_period;
-
-                    if (envelope_decay_level > 0) {
-                        envelope_decay_level--;
-                    }
-                    else if (envelope_loop) {
-                        envelope_decay_level = 15;
-                    }
+                envelope_counter = volume_envelope;
+                if (envelope_decay > 0) {
+                    envelope_decay--;
                 }
-                else {
-                    envelope_divider--;
+                else if (envelope_loop) {
+                    envelope_decay = 15;
                 }
             }
         }
@@ -665,33 +658,26 @@ private:
 
         void write_register(uint8_t reg, uint8_t value) {
             switch (reg) {
-            case 0:  // $400C - Envelope
-                envelope_loop = (value & 0x20) != 0;
+            case 0: // $400C
+                envelope_loop = length_counter_halt = (value & 0x20) != 0;
                 constant_volume = (value & 0x10) != 0;
-                envelope_period = value & 0x0F;
-                constant_volume_period = value & 0x0F;
+                volume_envelope = value & 0x0F;
                 break;
 
-            case 1:  // $400D - Unused
+            case 2: // $400E
+                mode_flag = (value & 0x80) != 0;
+                timer_period_index = value & 0x0F;
+                timer_period = period_table[timer_period_index];
                 break;
 
-            case 2:  // $400E - Period and mode
-                mode = (value & 0x80) != 0;
-
-                timer_period = noise_period_table[value & 0x0F];
-                break;
-
-            case 3:  // $400F - Length counter load
-                // Load length counter
+            case 3: // $400F
                 if (enabled) {
-                    static const uint8_t length_table[32] = {
-                        10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
-                        12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
+                    static constexpr uint8_t length_table[32] = {
+                        10,254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
+                        12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
                     };
                     length_counter = length_table[value >> 3];
                 }
-
-                // Reset envelope
                 envelope_start_flag = true;
                 break;
             }
