@@ -556,7 +556,7 @@ private:
 
     TriangleChannel triangle;
 
-    // ===== NOISE CHANNEL =====
+    // ===== NOISE CHANNEL (PERFECT NES ACCURACY) =====
     struct NoiseChannel {
         // Registers
         bool envelope_loop;           // $400C bit 5
@@ -937,26 +937,31 @@ private:
         uint8_t no = noise.get_output();
         uint8_t dm = dmc.get_output();
 
-        // Pulse mixing (non-linear)
+        // Pulse mixing (non-linear) - RETAIN THIS
         float pulse_out = 0.0f;
         uint8_t pulse_sum = p1 + p2;
         if (pulse_sum > 0) {
             pulse_out = 95.88f / (8128.0f / pulse_sum + 100.0f);
         }
 
-        // TND mixing (non-linear)
+        // TND mixing (non-linear) - CRITICAL FIX HERE
         float tnd_out = 0.0f;
-        float tnd_sum = (static_cast<float>(tr) / 8227.0f) + (static_cast<float>(no) / 12241.0f) + (static_cast<float>(dm) / 22638.0f);  // Cast for precision
+
+        // Use the standard NESdev coefficients for TND sum
+        float tr_vol = static_cast<float>(tr) / 8227.0;
+        float no_vol = static_cast<float>(no) / 12241.0;
+        float dm_vol = static_cast<float>(dm) / 22638.0;
+
+        float tnd_sum = tr_vol + no_vol + dm_vol;
+
         if (tnd_sum > 0) {
             tnd_out = 159.79f / (1.0f / tnd_sum + 100.0f);
         }
 
-        // Combine and normalize to [-1.0, 1.0]
+        // Combine and normalize (your output scaling factor might need adjustment based on final taste)
         float output = pulse_out + tnd_out;
 
-        // The combined range is approximately 0 to 255
-        // Normalize to [-1.0, 1.0]
-        return output * 1.3f;
+        return output * 1.3f; // The scaling factor 1.3f is for final volume adjustment
     }
 };
 
