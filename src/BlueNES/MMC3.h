@@ -17,6 +17,8 @@ public:
 	MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize);
 	~MMC3();
 
+	void shutdown();
+
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	//uint8_t readPRGROM(uint16_t address);
 	//void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);

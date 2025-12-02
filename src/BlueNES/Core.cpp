@@ -14,7 +14,7 @@ SDL_Texture* nesTexture = nullptr;
 
 bool init_sdl(HWND wnd)
 {
-    if (SDL_Init(SDL_INIT_VIDEO /* | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD*/) < 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER /* | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD*/) < 0)
     {
         SDL_Log("SDL Init Error: %s", SDL_GetError());
         return false;
@@ -707,30 +707,6 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     // Show palette window
                     ShowWindow(pMain->m_hwndHex, SW_SHOWNORMAL);
                     break;
-				case 'A': // TODO : Make configurable
-                    pMain->input.ButtonDown(BUTTON_B);
-                    break;
-                case 'S':
-                    pMain->input.ButtonDown(BUTTON_A);
-                    break;
-				case 'Z':
-					pMain->input.ButtonDown(BUTTON_SELECT);
-                    break;
-                case 'X':
-                    pMain->input.ButtonDown(BUTTON_START);
-                    break;
-				case VK_UP:
-                    pMain->input.ButtonDown(BUTTON_UP);
-					break;
-                case VK_DOWN:
-					pMain->input.ButtonDown(BUTTON_DOWN);
-                    break;
-				case VK_LEFT:
-					pMain->input.ButtonDown(BUTTON_LEFT);
-                    break;
-				case VK_RIGHT:
-                    pMain->input.ButtonDown(BUTTON_RIGHT);
-					break;
                 case VK_ESCAPE:
                     pMain->isPaused = !pMain->isPaused;
 					//pMain->cpu.toggleFrozen(); // Toggle freeze
@@ -842,6 +818,7 @@ void Core::LoadGame(const std::wstring& filePath)
     cart.LoadROM(filePath);
     cpu.PowerOn();
     isPlaying = true;
+	audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
 }
 
 LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1018,7 +995,7 @@ void Core::RunMessageLoop()
     double audioFraction = 0.0;  // Per-frame fractional pos
     int cpuCycleDebt = 0;
     const int ppuCyclesPerCPUCycle = 3;
-    SDL_Event e;
+    
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -1029,118 +1006,143 @@ void Core::RunMessageLoop()
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+            case SDL_QUIT:
+                running = false;
+                break;
+            case SDL_CONTROLLERDEVICEADDED:
+                input.OpenFirstController();
+                break;
+
+            case SDL_CONTROLLERDEVICEREMOVED:
+				input.CloseController();
+                break;
+
+            default:
+                break;
+            }
+        }
         if (!running) {
             break;
         }
         if (!isPlaying) {
-			continue;
+            continue;
         }
 
         if (isPaused) {
             Sleep(100); // Sleep to reduce CPU usage while paused
             continue;
-		}
+        }
 
         if (Update) {
             Update();
         }
+        input.PollControllerState();
 
-            const double CPU_FREQ = 1789773.0;
-            const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
-			const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
+        const double CPU_FREQ = 1789773.0;
+        const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
+        const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 
-            // Clear audio buffer for this frame
-            audioBuffer.clear();
-            cpu.cyclesThisFrame = 0;
+        cpu.cyclesThisFrame = 0;
 
-            // Run PPU until frame complete (89342 cycles per frame)
-            int cpuCyclesThisFrame = 0;
-            while (!ppu.isFrameComplete()) {
-                ppu.Clock();
-				// CPU runs at 1/3 the speed of the PPU
-				cpuCycleDebt++;
+        // Run PPU until frame complete (89342 cycles per frame)
+        int cpuCyclesThisFrame = 0;
+        while (!ppu.isFrameComplete()) {
+            ppu.Clock();
+            // CPU runs at 1/3 the speed of the PPU
+            cpuCycleDebt++;
 
-                while (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
-					//cpuCycleDebt -= ppuCyclesPerCPUCycle;
-                    uint64_t cyclesElapsed = cpu.Clock();
-                    cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
+            while (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
+                //cpuCycleDebt -= ppuCyclesPerCPUCycle;
+                uint64_t cyclesElapsed = cpu.Clock();
+                cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
-                    // Clock APU for each CPU cycle
-                    for (uint64_t i = 0; i < cyclesElapsed; ++i) {
-                        apu.step();
+                // Clock APU for each CPU cycle
+                for (uint64_t i = 0; i < cyclesElapsed; ++i) {
+                    apu.step();
 
-                        // Generate audio sample based on cycle timing
-                        audioFraction += 1.0;
-                        while (audioFraction >= cyclesPerSample) {
-                            audioBuffer.push_back(apu.get_output());
-                            audioFraction -= cyclesPerSample;
-                        }
+                    // Generate audio sample based on cycle timing
+                    audioFraction += 1.0;
+                    while (audioFraction >= cyclesPerSample) {
+                        audioBuffer.push_back(apu.get_output());
+                        audioFraction -= cyclesPerSample;
                     }
                 }
-			}
-			//OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-            cpu.nmiRequested = false;
-            ppu.setFrameComplete(false);
-
-            // Submit the exact samples generated this frame
-            // Check audio queue to prevent unbounded growth
-            size_t queuedSamples = audioBackend->GetQueuedSampleCount();
-            const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-
-            if (queuedSamples < MAX_QUEUED_SAMPLES) {
-                audioBackend->SubmitSamples(audioBuffer.data(), audioBuffer.size());
             }
-            else {
-                // Audio queue is too large - skip this frame's audio to catch up
-                //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
+        }
+        //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
+        cpu.nmiRequested = false;
+        ppu.setFrameComplete(false);
+
+        // Submit the exact samples generated this frame
+        // Check audio queue to prevent unbounded growth
+        size_t queuedSamples = audioBackend->GetQueuedSampleCount();
+        const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
+
+        if (queuedSamples < MAX_QUEUED_SAMPLES) {
+            audioBackend->SubmitSamples(audioBuffer.data(), audioBuffer.size());
+            // Clear audio buffer for next frame
+            audioBuffer.clear();
+        }
+        else {
+            // Audio queue is too large - skip this frame's audio to catch up
+            //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
+        }
+
+        //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+        //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
+        //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
+
+        DrawToWindow();
+
+        frameCount++;
+        // Debug output every second
+        QueryPerformanceCounter(&currentTime);
+        double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+
+        if (timeSinceStart >= 0.25) {
+            ppuViewer.DrawNametables();
+
+            // Updates the hex window
+            // TODO - Make this more efficient by only updating changed areas
+            // and also in real time rather than once per second
+            InvalidateRect(hHexDrawArea, nullptr, TRUE);
+            double fps = frameCount / timeSinceStart;
+            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(cpu.GetCycleCount());
+            SetWindowText(m_hwnd, title.c_str());
+            frameStartTime = currentTime;
+            frameCount = 0;
+        }
+
+        // === FRAME PACING: Wait for correct frame time ===
+        LARGE_INTEGER frameEndTime;
+        QueryPerformanceCounter(&frameEndTime);
+
+        double frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+        double timeToWait = targetFrameTime * frameCount - frameTimeElapsed;
+
+        if (timeToWait > 0.001) { // If more than 1ms to wait
+            DWORD sleepMs = (DWORD)((timeToWait - 0.001) * 1000.0); // Sleep for most of it
+            if (sleepMs > 0) {
+                Sleep(sleepMs);
             }
 
-            //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
-            //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-            //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
-
-            DrawToWindow();
-            
-            frameCount++;
-            // Debug output every second
-            QueryPerformanceCounter(&currentTime);
-            double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
-
-            if (timeSinceStart >= 0.25) {
-                ppuViewer.DrawNametables();
-
-				// Updates the hex window
-				// TODO - Make this more efficient by only updating changed areas
-				// and also in real time rather than once per second
-				InvalidateRect(hHexDrawArea, nullptr, TRUE);
-                double fps = frameCount / timeSinceStart;
-                std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(cpu.GetCycleCount());
-                SetWindowText(m_hwnd, title.c_str());
-                frameStartTime = currentTime;
-                frameCount = 0;
-            }
-
-            // === FRAME PACING: Wait for correct frame time ===
-            LARGE_INTEGER frameEndTime;
-            QueryPerformanceCounter(&frameEndTime);
-
-            double frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
-            double timeToWait = targetFrameTime * frameCount - frameTimeElapsed;
-
-            if (timeToWait > 0.001) { // If more than 1ms to wait
-                DWORD sleepMs = (DWORD)((timeToWait - 0.001) * 1000.0); // Sleep for most of it
-                if (sleepMs > 0) {
-                    Sleep(sleepMs);
-                }
-
-                // Busy wait for the remaining time for accuracy
-                do {
-                    QueryPerformanceCounter(&frameEndTime);
-                    frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
-                } while (frameTimeElapsed < targetFrameTime * frameCount);
-            }
+            // Busy wait for the remaining time for accuracy
+            do {
+                QueryPerformanceCounter(&frameEndTime);
+                frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+            } while (frameTimeElapsed < targetFrameTime * frameCount);
+        }
     }
     cart.unload();
     audioBackend->Shutdown();
+    input.CloseController();
+    /*for (int i = 0; i < controllers.size(); ++i) {
+        SDL_GameControllerClose(controllers[i]);
+        controllers[i] = nullptr;
+	}*/
     SDL_Quit();
 }

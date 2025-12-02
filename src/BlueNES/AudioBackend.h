@@ -13,6 +13,7 @@ public:
     ~AudioBackend();
 
     bool Initialize(int sampleRate = 44100, int channels = 1);
+    void AddBuffer(int buffer);
     void Shutdown();
 
     // Submit audio samples to the queue

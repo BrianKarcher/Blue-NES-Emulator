@@ -21,6 +21,13 @@ AudioBackend::~AudioBackend()
     Shutdown();
 }
 
+void AudioBackend::AddBuffer(int buffer) {
+    std::vector<float> silence(buffer, 0.0f);
+    for (int i = 0; i < 8; ++i) {
+        SubmitSamples(silence.data(), silence.size());
+    }
+}
+
 bool AudioBackend::Initialize(int sampleRate, int channels)
 {
     m_sampleRate = sampleRate;

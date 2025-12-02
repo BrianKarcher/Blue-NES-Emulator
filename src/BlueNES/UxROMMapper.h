@@ -23,6 +23,7 @@ public:
 	inline uint8_t readPRGROM(uint16_t addr) const;
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
+	void shutdown() {}
 
 private:
 	inline void dbg(const wchar_t* fmt, ...);

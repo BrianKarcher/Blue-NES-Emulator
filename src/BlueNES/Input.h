@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <SDL.h>
+#include <vector>
 
 #define BUTTON_A 0x01
 #define BUTTON_B 0x02
@@ -19,8 +21,15 @@ public:
 	void Poll();
 	uint8_t ReadController1();
 	uint8_t ReadController2();
+	void Reset();
+	void OpenFirstController();
+	void CloseController();
+	void PollControllerState();
 
 private:
+	std::vector<SDL_GameController*> controllers;
+	SDL_JoystickID controllerInstanceID = -1;
+
 	uint8_t controller1;
 	uint8_t controller1_stream;
 	uint8_t controller2;

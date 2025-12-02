@@ -54,6 +54,10 @@ MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
 }
 
 MMC3::~MMC3() {
+
+}
+
+void MMC3::shutdown() {
 	renderLoopy->setMapper(nullptr);
 	this->bus->ppu->setMapper(nullptr);
 }

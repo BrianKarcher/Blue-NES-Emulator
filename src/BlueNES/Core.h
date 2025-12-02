@@ -89,6 +89,7 @@ public:
 	int hexView = 0;
 	PPUViewer ppuViewer;
 private:
+	void PollControllerState();
 	// Draw content.
 	bool DrawToWindow();
 	void LoadGame(const std::wstring& filePath);

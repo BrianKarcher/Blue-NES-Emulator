@@ -12,6 +12,7 @@ public:
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	inline uint8_t readCHR(uint16_t addr) const;
 	void writeCHR(uint16_t addr, uint8_t data);
+	void shutdown() { }
 
 private:
 	Cartridge* cartridge;

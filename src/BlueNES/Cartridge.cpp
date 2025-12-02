@@ -110,6 +110,7 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
 
 void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
     if (mapper) {
+        mapper->shutdown();
         delete mapper;
         mapper = nullptr;
     }
