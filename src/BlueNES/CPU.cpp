@@ -202,8 +202,6 @@ void Processor_6502::checkInterrupts() {
 uint8_t Processor_6502::Clock()
 {
 	if (!isActive) return 0;
-	// Check for interrupts before fetching next instruction
-	checkInterrupts();
 	uint16_t current_pc = m_pc;
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
@@ -213,7 +211,7 @@ uint8_t Processor_6502::Clock()
 		//isFrozen = true;
 		//return 5;
 	}
-	if (current_pc == 0xA0A3) {
+	if (current_pc == 0x8030) {
 		int i = 0;
 	}
 	if (current_pc == 0x30) {
@@ -1600,6 +1598,14 @@ uint8_t Processor_6502::Clock()
 	}
 	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
 	cyclesThisFrame += cyclesPassed;
+	// Check for interrupts before fetching next instruction
+	// This must be placed AFTER the clock above. The reason is vblank related.
+	// Some games, namely Dragon Warrior 3, wait for vblank in a dumb way. It loops on 2002 high bit while
+	// interrupts are enabled and gets into a race condition.
+	// If we check for interrupts before the clock, the interrupt will be serviced
+	// immediately, which is incorrect behavior. The CPU should only check for interrupts after the current
+	// instruction has fully executed.
+	checkInterrupts();
 	return cyclesPassed;
 }
 

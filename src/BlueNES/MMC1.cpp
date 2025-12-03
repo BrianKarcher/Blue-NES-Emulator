@@ -136,17 +136,29 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		if (val > 3) {
 			int i = 0;
 		}
-		chrBank0Reg = val & 0x1F;
+		const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
+		// Low bit ignored in 8KB mode
+		if (chrMode == 0) {
+			chrBank0Reg = val & 0x1E;
+		}
+		else {
+			chrBank0Reg = val & 0x1F;
+		}
+		
 		if (boardType == BoardType::SUROM) {
 			suromPrgOuterBank = (val & 0x10);
 		}
 	}
 	// CHR Bank 1
 	else if (addr >= 0xC000 && addr <= 0xDFFF) {
-		// CHR bank 1 (4KB)
-		chrBank1Reg = val & 0x1F;
-		if (boardType == BoardType::SUROM) {
-			suromPrgOuterBank = (val & 0x10);
+		const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
+		// ignored in 8KB mode
+		if (chrMode == 1) {
+			// CHR bank 1 (4KB)
+			chrBank1Reg = val & 0x1F;
+			if (boardType == BoardType::SUROM) {
+				suromPrgOuterBank = (val & 0x10);
+			}
 		}
 	}
 	// PRG Bank
@@ -205,7 +217,7 @@ void MMC1::recomputeMappings()
 	uint32_t lastBankStart = 0;
 	if (boardType == BoardType::SUROM) {
 		// SUROM has 512KB PRG-ROM (32 x 16KB banks), but only 16 banks are selectable
-		prgBank %= 16;
+		prgBank &= 15;
 		prgBank |= suromPrgOuterBank; // set bit 4 from CHR bank reg bit 4
 		lastBankStart = suromPrgOuterBank ? 31 * 0x4000 : 15 * 0x4000;
 	}
@@ -239,9 +251,9 @@ void MMC1::recomputeMappings()
 		break;
 	}
 
-	//dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
-	//dbg(L"  PRG addrs: prg0=0x%06X prg1=0x%06X (prgBankCount=%d)\n", prg0Addr, prg1Addr, prgBankCount);
-	//dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
+	dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
+	dbg(L"  PRG addrs: prg0=0x%06X(0x%02X) prg1=0x%06X(0x%02X) (prgBankCount=%d)\n", prg0Addr, prg0Addr / 0x4000, prg1Addr, prg1Addr / 0x4000, prgBank16kCount);
+	dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
 inline uint8_t MMC1::readPRGROM(uint16_t addr) const {

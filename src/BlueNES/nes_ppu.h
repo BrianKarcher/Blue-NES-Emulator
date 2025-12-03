@@ -77,7 +77,6 @@ public:
 	Core* core;
 	A12Mapper* m_mapper;
 
-	bool NMI();
 	void Clock();
 	
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table

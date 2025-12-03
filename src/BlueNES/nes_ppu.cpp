@@ -306,15 +306,6 @@ void NesPPU::Clock() {
 	renderer->clock();
 }
 
-bool NesPPU::NMI() {
-	bool hasVBlank = m_ppuStatus & PPUSTATUS_VBLANK;
-	if (hasVBlank) {
-		// Disable blanking after NMI is triggered
-		m_ppuStatus &= ~PPUSTATUS_VBLANK;
-	}
-	return hasVBlank && (m_ppuCtrl & 0x80);
-}
-
 uint8_t NesPPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite)
 {
 	if (isSprite) {
