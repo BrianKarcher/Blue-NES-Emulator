@@ -13,7 +13,7 @@
 #include "UxROMMapper.h"
 
 Cartridge::Cartridge() {
-
+	m_isLoaded = false;
 }
 
 void Cartridge::initialize(Bus* bus) {
@@ -77,6 +77,7 @@ void Cartridge::unload() {
     m_chrData.clear();
 	m_prgRamData.clear();
     m_mirrorMode = MirrorMode::VERTICAL;
+    m_isLoaded = false;
 }
 
 void Cartridge::LoadROM(const std::wstring& filePath) {
@@ -108,6 +109,7 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
     loadSRAM();
     
     SetMapper(mapperNum, inesFile);
+    m_isLoaded = true;
 }
 
 void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
@@ -242,4 +244,8 @@ uint8_t Cartridge::ReadCHR(uint16_t address) {
 // TODO: Support CHR-RAM vs CHR-ROM distinction
 void Cartridge::WriteCHR(uint16_t address, uint8_t data) {
     mapper->writeCHR(address, data);
+}
+
+bool Cartridge::isLoaded() {
+	return m_isLoaded;
 }

@@ -20,6 +20,7 @@ void RendererLoopy::reset() {
     *(uint16_t*)&loopy.t = 0;
     loopy.x = 0;
     loopy.w = false;
+    m_backBuffer.fill(0x00);
 }
 
 // Write to PPUCTRL ($2000)

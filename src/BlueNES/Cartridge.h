@@ -46,6 +46,7 @@ public:
 	bool isPrgRamEnabled = true;
 	void SetMapper(uint8_t value, ines_file_t& inesFile);
 	void unload();
+	bool isLoaded();
 private:
 	Bus* m_bus;
 	MirrorMode m_mirrorMode;
@@ -56,4 +57,5 @@ private:
 	void saveSRAM();
 	std::wstring fileName;
 	bool isBatteryBacked = false;
+	bool m_isLoaded;
 };

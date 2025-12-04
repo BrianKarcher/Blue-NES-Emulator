@@ -1605,6 +1605,10 @@ uint8_t Processor_6502::Clock()
 	// If we check for interrupts before the clock, the interrupt will be serviced
 	// immediately, which is incorrect behavior. The CPU should only check for interrupts after the current
 	// instruction has fully executed.
+
+	// NOTE TO NES developers: When interrupts are enabled, you should avoid reading $2002 in a tight loop like that.
+	// You might miss the NMI entirely if it happens between your read and the interrupt check!
+	// Have NMI set a variable that your loop waits for. Thank you!
 	checkInterrupts();
 	return cyclesPassed;
 }

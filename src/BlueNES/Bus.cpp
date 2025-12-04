@@ -22,6 +22,7 @@ void Bus::Initialize(Core* core)
 }
 
 void Bus::reset() {
+	// Probably not necessary
     cpuRAM.fill(0);
 }
 

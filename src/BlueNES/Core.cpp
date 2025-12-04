@@ -172,8 +172,9 @@ HRESULT Core::CreateWindows() {
 
     init_sdl(m_hwnd);
 
-    HMENU hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
+    hMenu = LoadMenu(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_MENU1));
     SetMenu(m_hwnd, hMenu);
+    updateMenu();
 
     m_hwndHex = CreateWindow(
         L"HexWindowClass",
@@ -682,7 +683,6 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             GWLP_USERDATA,
             reinterpret_cast<LONG_PTR>(pMain)
         );
-
         result = 1;
     }
     else
@@ -755,12 +755,33 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     {
                         pMain->LoadGame(filePath);
                         pMain->isPaused = false;
+                        pMain->updateMenu();
                     }
                     break;
                 }
                 case ID_FILE_EXIT:
                     PostQuitMessage(0);
 					break;
+                case ID_FILE_CLOSE:
+                    pMain->cart.unload();
+                    pMain->ppu.reset();
+                    pMain->bus.reset();
+                    pMain->isPlaying = false;
+					InvalidateRect(hwnd, NULL, FALSE);
+                    pMain->updateMenu();
+                    break;
+                case ID_NES_RESET:
+                    pMain->ppu.reset();
+                    pMain->bus.reset();
+                    pMain->cpu.PowerOn();
+                    pMain->isPlaying = true;
+                    break;
+                case ID_NES_POWER:
+                    pMain->ppu.reset();
+                    pMain->bus.reset();
+                    pMain->cpu.PowerOn();
+                    pMain->isPlaying = true;
+                    break;
                 }
                 break;
             case WM_SIZE:
@@ -785,7 +806,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->DrawToWindow();
+                pMain->RenderFrame();
                 EndPaint(hwnd, &ps);
                 ValidateRect(hwnd, NULL);
             }
@@ -810,6 +831,12 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     }
 
     return result;
+}
+
+void Core::updateMenu() {
+	EnableMenuItem(hMenu, ID_FILE_CLOSE, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_RESET, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_POWER, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
 }
 
 void Core::LoadGame(const std::wstring& filePath)
@@ -931,7 +958,7 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
     }
 }
 
-bool Core::DrawToWindow()
+bool Core::RenderFrame()
 {
     // Update texture with NES framebuffer
     SDL_UpdateTexture(
@@ -1098,7 +1125,7 @@ void Core::RunMessageLoop()
         //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
         //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
 
-        DrawToWindow();
+        RenderFrame();
 
         frameCount++;
         // Debug output every second

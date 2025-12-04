@@ -89,9 +89,10 @@ public:
 	int hexView = 0;
 	PPUViewer ppuViewer;
 private:
+	HMENU hMenu;
+	void updateMenu();
 	void PollControllerState();
-	// Draw content.
-	bool DrawToWindow();
+	bool RenderFrame();
 	void LoadGame(const std::wstring& filePath);
 	bool isPaused;
 	// The windows procedure.
