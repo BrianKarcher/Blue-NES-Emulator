@@ -23,11 +23,11 @@ inline void UxROMMapper::dbg(const wchar_t* fmt, ...) {
 }
 
 UxROMMapper::UxROMMapper(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
-	this->cpu = bus->cpu;
+	this->cpu = &bus->cpu;
 	this->bus = bus;
 	prgBank16kCount = prgRomSize;
 
-	this->cart = bus->cart;
+	this->cart = &bus->cart;
 	uint32_t lastBankStart = (prgBank16kCount - 1) * BANK_SIZE_PRG;
 	prgMap[1] = &cart->m_prgRomData[lastBankStart]; // Fixed last bank at $C000
 	// Start with bank 0 selected

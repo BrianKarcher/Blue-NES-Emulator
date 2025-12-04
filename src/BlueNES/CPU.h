@@ -174,6 +174,7 @@ class Processor_6502
 {
 public:
 	Processor_6502();
+	void connectBus(Bus* bus);
 	void setNMI(bool state);
 	void setIRQ(bool state);
 	// Power On and Reset are different

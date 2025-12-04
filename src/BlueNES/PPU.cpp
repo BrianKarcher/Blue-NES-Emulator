@@ -63,41 +63,41 @@ void PPU::write_register(uint16_t addr, uint8_t value)
 	// addr is mirrored every 8 bytes up to 0x3FFF so we mask it
 	switch (addr) {
 	case PPUCTRL:
-		dbg(L"(%d) 0x%04X PPUCTRL Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUCTRL Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		m_ppuCtrl = value;
 		//OutputDebugStringW((L"PPUCTRL: " + std::to_wstring(value) + L"\n").c_str());
 		renderer->setPPUCTRL(value);
 		break;
 	case PPUMASK: // PPUMASK
-		dbg(L"(%d) 0x%04X PPUMASK Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUMASK Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		m_ppuMask = value;
 		renderer->setPPUMask(value);
 		break;
 	case PPUSTATUS: // PPUSTATUS (read-only)
-		dbg(L"(%d) 0x%04X PPUSTATUS Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUSTATUS Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		// Ignore writes to PPUSTATUS
 		break;
 	case OAMADDR: // OAMADDR
-		dbg(L"(%d) 0x%04X OAMADDR Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X OAMADDR Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		oamAddr = value;
 		break;
 	case OAMDATA:
-		dbg(L"(%d) 0x%04X OAMDATA Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X OAMDATA Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		oam[oamAddr++] = value;
 		break;
 	case PPUSCROLL:
-		dbg(L"(%d) 0x%04X PPUSCROLL Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUSCROLL Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		renderer->writeScroll(value);
 		break;
 	case PPUADDR: // PPUADDR
-		dbg(L"(%d) 0x%04X PPUADDR Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUADDR Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		if (value == 0x3F) {
 			int i = 0;
 		}
 		renderer->ppuWriteAddr(value);
 		break;
 	case PPUDATA: // PPUDATA
-		dbg(L"(%d) 0x%04X PPUDATA Write 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUDATA Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		uint16_t vramAddr = renderer->getPPUAddr();
 		if (vramAddr >= 0x3F00) {
 			int i = 0;
@@ -120,12 +120,12 @@ uint8_t PPU::read_register(uint16_t addr)
 	{
 	case PPUCTRL:
 	{
-		dbg(L"(%d) 0x%04X PPUCTRL Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), m_ppuCtrl);
+		dbg(L"(%d) 0x%04X PPUCTRL Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), m_ppuCtrl);
 		return m_ppuCtrl;
 	}
 	case PPUMASK:
 	{
-		dbg(L"(%d) 0x%04X PPUMASK Read\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC());
+		dbg(L"(%d) 0x%04X PPUMASK Read\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC());
 		// not typically readable, return 0
 		return 0;
 	}
@@ -134,30 +134,30 @@ uint8_t PPU::read_register(uint16_t addr)
 		renderer->ppuReadStatus(); // Reset write toggle on reading PPUSTATUS
 		// Return PPU status register value and clear VBlank flag
 		uint8_t status = m_ppuStatus;
-		dbg(L"(%d) 0x%04X PPUSTATUS Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), status);
+		dbg(L"(%d) 0x%04X PPUSTATUS Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), status);
 		m_ppuStatus &= ~PPUSTATUS_VBLANK;
 		return status;
 	}
 	case OAMADDR:
 	{
-		dbg(L"(%d) 0x%04X OAMADDR Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), oamAddr);
+		dbg(L"(%d) 0x%04X OAMADDR Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), oamAddr);
 		return oamAddr;
 	}
 	case OAMDATA:
 	{
-		dbg(L"(%d) 0x%04X OAMDATA Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), oam[oamAddr]);
+		dbg(L"(%d) 0x%04X OAMDATA Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), oam[oamAddr]);
 		// Return OAM data at current OAMADDR
 		return oam[oamAddr];
 	}
 	case PPUSCROLL:
 	{
-		dbg(L"(%d) 0x%04X PPUSCROLL Read\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC());
+		dbg(L"(%d) 0x%04X PPUSCROLL Read\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC());
 		// PPUSCROLL is write-only, return 0
 		return 0;
 	}
 	case PPUADDR:
 	{
-		dbg(L"(%d) 0x%04X PPUADDR Read\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC());
+		dbg(L"(%d) 0x%04X PPUADDR Read\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC());
 		// PPUADDR is write-only, return 0
 		return 0;
 	}
@@ -186,7 +186,7 @@ uint8_t PPU::read_register(uint16_t addr)
 			value = paletteTable[paletteAddr];
 			// But buffer is filled with the underlying nametable byte
 			uint16_t mirroredAddr = vramAddr & 0x2FFF; // Mirror nametables every 4KB
-			mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
+			mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
 			ppuDataBuffer = m_vram[mirroredAddr];
 			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
 		}
@@ -197,7 +197,7 @@ uint8_t PPU::read_register(uint16_t addr)
 		//	return value;
 		//}
 		//vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
-		dbg(L"(%d) 0x%04X PPUDATA Read 0x%02X\n", bus->cpu->GetCycleCount(), bus->cpu->GetPC(), value);
+		dbg(L"(%d) 0x%04X PPUDATA Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		return value;
 	}
 	}
@@ -222,7 +222,7 @@ uint8_t PPU::ReadVRAM(uint16_t addr)
 	uint8_t value = 0;
 	if (addr < 0x2000) {
 		// Reading from CHR-ROM/RAM
-		value = bus->cart->ReadCHR(addr);
+		value = bus->cart.ReadCHR(addr);
 		//if (m_mapper) {
 		//	if (addr >= 0x1000) {
 		//		int i = 0;
@@ -233,7 +233,7 @@ uint8_t PPU::ReadVRAM(uint16_t addr)
 	else if (addr < 0x3F00) {
 		// Reading from nametables and attribute tables
 		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
-		mirroredAddr = bus->cart->MirrorNametable(mirroredAddr);
+		mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
 		value = m_vram[mirroredAddr];
 	}
 	else if (addr < 0x4000) {
@@ -253,7 +253,7 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	addr &= 0x3FFF; // Mask to 14 bits
 	if (addr < 0x2000) {
 		// Write to CHR-RAM (if enabled)
-		bus->cart->WriteCHR(addr, value);
+		bus->cart.WriteCHR(addr, value);
 		//if (m_mapper) {
 		//	m_mapper->ClockIRQCounter(addr);
 		//}
@@ -263,7 +263,7 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	else if (addr < 0x3F00) {
 		// Name tables and attribute tables
 		addr &= 0x2FFF; // Mirror nametables every 4KB
-		addr = bus->cart->MirrorNametable(addr);
+		addr = bus->cart.MirrorNametable(addr);
 		m_vram[addr] = value;
 		return;
 	}
@@ -331,8 +331,8 @@ uint8_t PPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX,
 	
 	int tileBase = patternTableBase + (tileIndex * 16); // 16 bytes per tile
 
-	uint8_t byte1 = bus->cart->ReadCHR(tileBase + pixelInTileY);     // bitplane 0
-	uint8_t byte2 = bus->cart->ReadCHR(tileBase + pixelInTileY + 8); // bitplane 1
+	uint8_t byte1 = bus->cart.ReadCHR(tileBase + pixelInTileY);     // bitplane 0
+	uint8_t byte2 = bus->cart.ReadCHR(tileBase + pixelInTileY + 8); // bitplane 1
 
 	uint8_t bit0 = (byte1 >> (7 - pixelInTileX)) & 1;
 	uint8_t bit1 = (byte2 >> (7 - pixelInTileX)) & 1;

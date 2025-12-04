@@ -12,6 +12,7 @@
 #include "APU.h"
 #include "Input.h"
 #include "PPUViewer.h"
+#include "EmulatorWrapper.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -47,6 +48,7 @@ class Core
 {
 public:
 	Core();
+	EmulatorWrapper emulator;
 	AudioBackend* audioBackend;
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
@@ -59,11 +61,7 @@ public:
 	HWND GetWindowHandle();
 	// Process and dispatch messages
 	void RunMessageLoop();
-	Bus bus;
-	PPU ppu;
-	Cartridge cart;
-	Processor_6502 cpu;
-	APU apu;
+
 	Input input;
 	// Declare a function pointer
 	void (*Update)();

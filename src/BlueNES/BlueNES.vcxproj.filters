@@ -81,6 +81,9 @@
     <ClCompile Include="Nes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EmulatorWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -159,6 +162,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Nes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EmulatorWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

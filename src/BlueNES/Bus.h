@@ -6,24 +6,14 @@
 #include "Cartridge.h"
 
 class PPU;
-class Core;
 class APU;
 class Input;
 
 class Bus
 {
 public:
-	Bus();
+	Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart);
 	~Bus() = default;
-	void Initialize(Core* core);
-
-	// Devices connected to the bus
-	Processor_6502* cpu = nullptr;
-	PPU* ppu = nullptr;
-	APU* apu = nullptr;
-	Cartridge* cart = nullptr;
-	Core* core = nullptr;
-	Input* input = nullptr;
 
 	// 2KB internal RAM (mirrored)
 	std::array<uint8_t, 2048> cpuRAM{};
@@ -36,4 +26,14 @@ public:
 	void performDMA(uint8_t page);
 
 	void reset();
+
+	// Devices connected to the bus
+	Processor_6502& cpu;
+	PPU& ppu;
+	APU& apu;
+	Cartridge& cart;
+	Input& input;
+
+private:
+
 };

@@ -23,9 +23,9 @@ inline void MMC3::dbg(const wchar_t* fmt, ...) {
 }
 
 MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
-	this->cpu = bus->cpu;
+	this->cpu = &bus->cpu;
 	this->bus = bus;
-	renderLoopy = bus->ppu->renderer;
+	renderLoopy = bus->ppu.renderer;
 	// init registers to reset-like defaults
 	prgMode = 0;
 	chrMode = 0;
@@ -43,9 +43,9 @@ MMC3::MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize) {
 	irq_enabled = false;
 	last_a12 = false;
 	renderLoopy->setMapper(this);
-	this->bus->ppu->setMapper(this);
+	this->bus->ppu.setMapper(this);
 
-	this->cart = bus->cart;
+	this->cart = &bus->cart;
 	uint32_t lastBankStart = (prgBank8kCount - 1) * BANK_SIZE_PRG;
 	//lastPrg = &cartridge->m_prgRomData[lastBankStart];
 	//secondLastPrg = &cartridge->m_prgRomData[lastBankStart - BANK_SIZE_PRG];
@@ -59,7 +59,7 @@ MMC3::~MMC3() {
 
 void MMC3::shutdown() {
 	renderLoopy->setMapper(nullptr);
-	this->bus->ppu->setMapper(nullptr);
+	this->bus->ppu.setMapper(nullptr);
 }
 
 void MMC3::updateChrMapping() {
@@ -210,7 +210,7 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
 				if (cpu) {
-					dbg(L"IRQ Triggered at line %d\n", bus->ppu->renderer->m_scanline);
+					dbg(L"IRQ Triggered at line %d\n", bus->ppu.renderer->m_scanline);
 					cpu->setIRQ(true);
 				}
 			}

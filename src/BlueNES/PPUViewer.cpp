@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include "Bus.h"
 #include "Core.h"
+#include "EmulatorWrapper.h"
 
 bool PPUViewer::Initialize(HINSTANCE hInstance, Core* core) {
     this->core = core;
@@ -132,7 +133,7 @@ void PPUViewer::DrawNametables(HDC hdcPPU)
     RECT clientRect;
     GetClientRect(m_hwndPPUViewer, &clientRect);
     HDC *hdc0, *hdc1, *hdc2, *hdc3;
-    if (core->cart.GetMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) {
+    if (core->emulator.nes.cart.GetMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) {
         hdc0 = &hdcPPUMem0;
         hdc1 = &hdcPPUMem0;
         hdc2 = &hdcPPUMem1;
@@ -170,7 +171,7 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
     for (int row = 0; row < 30; row++) {
         for (int col = 0; col < 32; col++) {
             // Get the tile index from the nametable in VRAM
-            uint8_t tileIndex = core->ppu.m_vram[nametableAddr + row * 32 + col];
+            uint8_t tileIndex = core->emulator.nes.ppu.m_vram[nametableAddr + row * 32 + col];
 
             // Calculate pixel coordinates
             int pixelX = col * 8;  // Each tile is 8x8 pixels
@@ -180,14 +181,14 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
             int attrCol = col / 4;
             // Get attribute byte for the tile
             uint16_t attrAddr = (nametableAddr | 0x3c0) + attrRow * 8 + attrCol;
-            uint8_t attributeByte = core->ppu.m_vram[attrAddr];
+            uint8_t attributeByte = core->emulator.nes.ppu.m_vram[attrAddr];
             if (attributeByte > 0) {
                 int i = 0;
             }
 
             uint8_t paletteIndex = 0;
             get_palette_index_from_attribute(attributeByte, row, col, paletteIndex);
-            core->ppu.get_palette(paletteIndex, palette);
+            core->emulator.nes.ppu.get_palette(paletteIndex, palette);
             // Render the tile at the calculated position
             render_tile(buffer, pixelY, pixelX, tileIndex, palette);
         }
@@ -200,11 +201,11 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
 
     for (int y = 0; y < 8; y++) {
         // Determine the pattern table base address
-        uint16_t patternTableBase = core->ppu.GetBackgroundPatternTableBase();
+        uint16_t patternTableBase = core->emulator.nes.ppu.GetBackgroundPatternTableBase();
         int tileBase = patternTableBase + tileOffset; // 16 bytes per tile
 
-        uint8_t byte1 = core->bus.cart->ReadCHR(tileBase + y);     // bitplane 0
-        uint8_t byte2 = core->bus.cart->ReadCHR(tileBase + y + 8); // bitplane 1
+        uint8_t byte1 = core->emulator.nes.bus.cart.ReadCHR(tileBase + y);     // bitplane 0
+        uint8_t byte2 = core->emulator.nes.bus.cart.ReadCHR(tileBase + y + 8); // bitplane 1
 
         for (int x = 0; x < 8; x++) {
             uint8_t bit0 = (byte1 >> (7 - x)) & 1;
@@ -213,7 +214,7 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
 
             uint32_t actualColor = 0;
             if (colorIndex == 0) {
-                actualColor = m_nesPalette[core->ppu.paletteTable[0]]; // Transparent color (background color)
+                actualColor = m_nesPalette[core->emulator.nes.ppu.paletteTable[0]]; // Transparent color (background color)
             }
             else {
                 actualColor = colors[colorIndex]; // Map to actual color from palette

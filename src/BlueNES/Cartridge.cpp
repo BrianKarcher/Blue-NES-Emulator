@@ -17,7 +17,7 @@ Cartridge::Cartridge() {
 }
 
 void Cartridge::initialize(Bus* bus) {
-    cpu = bus->cpu;
+    cpu = &bus->cpu;
     m_bus = bus;
 }
 

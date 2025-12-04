@@ -133,6 +133,7 @@
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="EmulatorWrapper.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
     <ClCompile Include="Input.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="Bus.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="EmulatorWrapper.h" />
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
     <ClInclude Include="Input.h" />

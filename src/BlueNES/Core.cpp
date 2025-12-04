@@ -76,17 +76,9 @@ HRESULT Core::Initialize()
     //g_buffer.resize(g_bufferSize);
     //for (size_t i = 0; i < g_bufferSize; ++i) g_buffer[i] = static_cast<uint8_t>(i & 0xFF);
 
-
-    // Register the window class.
-
-    /*bus.cart = &cart;
-    bus.cpu = &cpu;
-    bus.ppu = &ppu;
-    bus.core = this;*/
-    bus.Initialize(this);
-    ppu.Initialize(&bus, this);
-    cart.initialize(&bus);
-	cpu.bus = &bus;
+    emulator.nes.ppu.Initialize(&emulator.nes.bus, this);
+    emulator.nes.cart.initialize(&emulator.nes.bus);
+    emulator.nes.cpu.bus = &emulator.nes.bus;
     //ppu.set_hwnd(m_hwnd);
     
     //UpdateWindow(m_hwnd);
@@ -99,8 +91,8 @@ HRESULT Core::Initialize()
     }
 
     // Set up DMC read callback
-    apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-        return bus.read(address);
+    emulator.nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+        return emulator.nes.bus.read(address);
     });
 
     // --- Debug: force a tone on Pulse 1 ---
@@ -224,11 +216,11 @@ HRESULT Core::CreateWindows() {
 }
 
 uint8_t hexReadPPU(Core* core, uint16_t val) {
-    return core->ppu.ReadVRAM(val);
+    return core->emulator.nes.ppu.ReadVRAM(val);
 }
 
 uint8_t hexReadCPU(Core* core, uint16_t val) {
-    return core->bus.read(val);
+    return core->emulator.nes.bus.read(val);
 }
 
 LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -763,23 +755,23 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     PostQuitMessage(0);
 					break;
                 case ID_FILE_CLOSE:
-                    pMain->cart.unload();
-                    pMain->ppu.reset();
-                    pMain->bus.reset();
+                    pMain->emulator.nes.cart.unload();
+                    pMain->emulator.nes.ppu.reset();
+                    pMain->emulator.nes.bus.reset();
                     pMain->isPlaying = false;
 					InvalidateRect(hwnd, NULL, FALSE);
                     pMain->updateMenu();
                     break;
                 case ID_NES_RESET:
-                    pMain->ppu.reset();
-                    pMain->bus.reset();
-                    pMain->cpu.PowerOn();
+                    pMain->emulator.nes.ppu.reset();
+                    pMain->emulator.nes.bus.reset();
+                    pMain->emulator.nes.cpu.PowerOn();
                     pMain->isPlaying = true;
                     break;
                 case ID_NES_POWER:
-                    pMain->ppu.reset();
-                    pMain->bus.reset();
-                    pMain->cpu.PowerOn();
+                    pMain->emulator.nes.ppu.reset();
+                    pMain->emulator.nes.bus.reset();
+                    pMain->emulator.nes.cpu.PowerOn();
                     pMain->isPlaying = true;
                     break;
                 }
@@ -834,18 +826,18 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 }
 
 void Core::updateMenu() {
-	EnableMenuItem(hMenu, ID_FILE_CLOSE, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_RESET, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_POWER, cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+	EnableMenuItem(hMenu, ID_FILE_CLOSE, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_RESET, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_POWER, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
 }
 
 void Core::LoadGame(const std::wstring& filePath)
 {
-    cart.unload();
-    ppu.reset();
-    bus.reset();
-    cart.LoadROM(filePath);
-    cpu.PowerOn();
+    emulator.nes.cart.unload();
+    emulator.nes.ppu.reset();
+    emulator.nes.bus.reset();
+    emulator.nes.cart.LoadROM(filePath);
+    emulator.nes.cpu.PowerOn();
     isPlaying = true;
 	//audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
 }
@@ -944,7 +936,7 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
         int x = (i % cols) * cellWidth;
         int y = (i / cols) * cellHeight;
 
-        uint8_t paletteIndex = ppu.paletteTable[i];
+        uint8_t paletteIndex = emulator.nes.ppu.paletteTable[i];
         uint32_t color = m_nesPalette[paletteIndex & 0x3F];
         //uint32_t color = m_nesPalette[i];
         // Debugging: Log palette index and color
@@ -964,7 +956,7 @@ bool Core::RenderFrame()
     SDL_UpdateTexture(
         nesTexture,
         nullptr,
-        ppu.get_back_buffer().data(),
+        emulator.nes.ppu.get_back_buffer().data(),
         256 * sizeof(uint32_t)
     );
 
@@ -1075,36 +1067,36 @@ void Core::RunMessageLoop()
         const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
         const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 
-        cpu.cyclesThisFrame = 0;
+        emulator.nes.cpu.cyclesThisFrame = 0;
 
         // Run PPU until frame complete (89342 cycles per frame)
         int cpuCyclesThisFrame = 0;
-        while (!ppu.isFrameComplete()) {
-            ppu.Clock();
+        while (!emulator.nes.ppu.isFrameComplete()) {
+            emulator.nes.ppu.Clock();
             // CPU runs at 1/3 the speed of the PPU
             cpuCycleDebt++;
 
             while (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
                 //cpuCycleDebt -= ppuCyclesPerCPUCycle;
-                uint64_t cyclesElapsed = cpu.Clock();
+                uint64_t cyclesElapsed = emulator.nes.cpu.Clock();
                 cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
 
                 // Clock APU for each CPU cycle
                 for (uint64_t i = 0; i < cyclesElapsed; ++i) {
-                    apu.step();
+                    emulator.nes.apu.step();
 
                     // Generate audio sample based on cycle timing
                     audioFraction += 1.0;
                     while (audioFraction >= cyclesPerSample) {
-                        audioBuffer.push_back(apu.get_output());
+                        audioBuffer.push_back(emulator.nes.apu.get_output());
                         audioFraction -= cyclesPerSample;
                     }
                 }
             }
         }
         //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-        cpu.nmiRequested = false;
-        ppu.setFrameComplete(false);
+        emulator.nes.cpu.nmiRequested = false;
+        emulator.nes.ppu.setFrameComplete(false);
 
         // Submit the exact samples generated this frame
         // Check audio queue to prevent unbounded growth
@@ -1140,7 +1132,7 @@ void Core::RunMessageLoop()
             // and also in real time rather than once per second
             InvalidateRect(hHexDrawArea, nullptr, TRUE);
             double fps = frameCount / timeSinceStart;
-            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(cpu.GetCycleCount());
+            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
             SetWindowText(m_hwnd, title.c_str());
             frameStartTime = currentTime;
             frameCount = 0;
@@ -1166,7 +1158,7 @@ void Core::RunMessageLoop()
             } while (frameTimeElapsed < targetFrameTime * frameCount);
         }
     }
-    cart.unload();
+    emulator.nes.cart.unload();
     audioBackend->Shutdown();
     input.CloseController();
     /*for (int i = 0; i < controllers.size(); ++i) {

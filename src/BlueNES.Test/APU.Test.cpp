@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "nes_apu.h"
+#include "APU.h"
 #include "AudioBackend.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -11,7 +11,7 @@ namespace APUTest
     TEST_CLASS(APUTest)
     {
     private:
-        NES_APU apu;
+        APU apu;
         AudioBackend audioBackend;
 
     public:
@@ -27,7 +27,7 @@ namespace APUTest
 
         TEST_METHOD(TestAPUTone)
         {
-            NES_APU apu;
+            APU apu;
 
             // Setup pulse channel 1 for 440 Hz tone (with halt to prevent decay)
             const uint16_t timer = 253;  // ~440 Hz: CPU / (16 * (timer + 1))
@@ -86,7 +86,7 @@ namespace APUTest
 
         TEST_METHOD(TestTriangle_440Hz)
         {
-            NES_APU apu;
+            APU apu;
 
             // === Setup Triangle Channel for ~440 Hz ===
             // freq = CPU / (32 * (timer + 1))

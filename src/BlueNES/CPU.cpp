@@ -39,6 +39,10 @@ Processor_6502::Processor_6502() {
 	buildMap();
 }
 
+void Processor_6502::connectBus(Bus* bus) {
+	this->bus = bus;
+}
+
 void Processor_6502::PowerOn()
 {
 	m_pc = 0xFFFC;
@@ -223,7 +227,7 @@ uint8_t Processor_6502::Clock()
 
 	// Mario 3 toad house scroll
 	if (m_pc == 0xF795) {
-		int scanline = bus->ppu->renderer->m_scanline;
+		int scanline = bus->ppu.renderer->m_scanline;
 		int i = 0;
 	}
 

@@ -25,7 +25,7 @@ namespace BlueNESTest
 			processor.bus = &bus;
 			ines_file_t inesLoader;
 			cart.initialize(&bus);
-			bus.cart->SetMapper(0, inesLoader);
+			bus.cart.SetMapper(0, inesLoader);
 			processor.PowerOn();
 			processor.SetPC(0x8000);
 			processor.Activate(true);
