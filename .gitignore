@@ -34,3 +34,4 @@
 # Visual Studio
 .vs/
 debug/
+/src/BlueNES/BlueNES.aps

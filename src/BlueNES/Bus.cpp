@@ -1,5 +1,5 @@
 #include "Bus.h"
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "Cartridge.h"
 #include "Core.h"
 #include "Input.h"

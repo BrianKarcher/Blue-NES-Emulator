@@ -5,12 +5,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "A12Mapper.h"
 #include "Core.h"
 #include "Bus.h"
 
-void RendererLoopy::initialize(NesPPU* ppu) {
+void RendererLoopy::initialize(PPU* ppu) {
     m_ppu = ppu;
     m_bus = &ppu->core->bus;
 }

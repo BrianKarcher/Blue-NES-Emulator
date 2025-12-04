@@ -3,7 +3,7 @@
 #include "CPU.h"
 #include "Cartridge.h"
 #include "Bus.h"
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "RendererLoopy.h"
 #include <array>
 

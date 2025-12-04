@@ -7,9 +7,9 @@
 #include <math.h>
 #include <array>
 #include "bus.h"
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "CPU.h"
-#include "NES_APU.h"
+#include "APU.h"
 #include "Input.h"
 #include "PPUViewer.h"
 
@@ -60,10 +60,10 @@ public:
 	// Process and dispatch messages
 	void RunMessageLoop();
 	Bus bus;
-	NesPPU ppu;
+	PPU ppu;
 	Cartridge cart;
 	Processor_6502 cpu;
-	NES_APU apu;
+	APU apu;
 	Input input;
 	// Declare a function pointer
 	void (*Update)();
@@ -91,8 +91,9 @@ public:
 private:
 	HMENU hMenu;
 	void updateMenu();
-	void PollControllerState();
 	bool RenderFrame();
+
+	void PollControllerState();
 	void LoadGame(const std::wstring& filePath);
 	bool isPaused;
 	// The windows procedure.

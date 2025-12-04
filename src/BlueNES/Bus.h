@@ -5,9 +5,9 @@
 #include "cpu.h"
 #include "Cartridge.h"
 
-class NesPPU;
+class PPU;
 class Core;
-class NES_APU;
+class APU;
 class Input;
 
 class Bus
@@ -19,8 +19,8 @@ public:
 
 	// Devices connected to the bus
 	Processor_6502* cpu = nullptr;
-	NesPPU* ppu = nullptr;
-	NES_APU* apu = nullptr;
+	PPU* ppu = nullptr;
+	APU* apu = nullptr;
 	Cartridge* cart = nullptr;
 	Core* core = nullptr;
 	Input* input = nullptr;

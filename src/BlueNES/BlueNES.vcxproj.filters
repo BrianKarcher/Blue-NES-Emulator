@@ -24,7 +24,7 @@
     <ClCompile Include="INESLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="nes_ppu.cpp">
+    <ClCompile Include="PPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Bus.cpp">
@@ -39,7 +39,7 @@
     <ClCompile Include="HexViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NES_APU.cpp">
+    <ClCompile Include="APU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioBackend.cpp">
@@ -48,7 +48,7 @@
     <ClCompile Include="Input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PPU.cpp">
+    <ClCompile Include="PPUold.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RendererSlow.cpp">
@@ -75,6 +75,12 @@
     <ClCompile Include="UxROMMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Nes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -86,7 +92,7 @@
     <ClInclude Include="INESLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nes_ppu.h">
+    <ClInclude Include="PPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Bus.h">
@@ -104,7 +110,7 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NES_APU.h">
+    <ClInclude Include="APU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioBackend.h">
@@ -113,7 +119,7 @@
     <ClInclude Include="Input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PPU.h">
+    <ClInclude Include="PPUold.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RendererSlow.h">
@@ -147,6 +153,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="UxROMMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Nes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

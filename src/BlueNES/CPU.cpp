@@ -1,7 +1,7 @@
 #include "CPU.h"
 #include "Bus.h"
 #include <Windows.h>
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "RendererLoopy.h"
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/

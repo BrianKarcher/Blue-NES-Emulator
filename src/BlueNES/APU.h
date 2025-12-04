@@ -6,9 +6,9 @@
 #include <array>
 #include <functional>
 
-class NES_APU {
+class APU {
 public:
-    NES_APU() : cycle_counter(0), frame_counter_mode(0),
+    APU() : cycle_counter(0), frame_counter_mode(0),
         frame_counter_irq_inhibit(false), frame_counter_irq_flag(false),
         frame_counter_step(0), frame_counter_reset_delay(0) {
         reset();

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <array>
 
-class NesPPU;
+class PPU;
 class Bus;
 class A12Mapper;
 
@@ -68,7 +68,7 @@ public:
     PPURegisters loopy;
     ShiftRegisters m_shifts;
 
-    void initialize(NesPPU* ppu);
+    void initialize(PPU* ppu);
     void reset();
     const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
     void setPPUCTRL(uint8_t value);
@@ -96,7 +96,7 @@ public:
 
 private:
     Bus* m_bus;
-    NesPPU* m_ppu;
+    PPU* m_ppu;
     A12Mapper* m_mapper;
     // Overflow can only be set once per frame
     bool hasOverflowBeenSet = false;
