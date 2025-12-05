@@ -193,7 +193,6 @@ public:
 	uint64_t GetCycleCount();
 	Bus* bus;
 	bool nmiRequested = false;
-	void NMI();
 	void Activate(bool active);
 	void SetPC(uint16_t address);
 	uint16_t GetPC();
@@ -217,7 +216,7 @@ private:
 
 	bool irq_line;
 
-	void checkInterrupts();
+	int checkInterrupts();
 	void handleNMI();
 	void handleIRQ();
 

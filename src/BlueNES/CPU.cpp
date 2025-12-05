@@ -177,7 +177,7 @@ void Processor_6502::handleIRQ() {
 	m_cycle_count += 7;
 }
 
-void Processor_6502::checkInterrupts() {
+int Processor_6502::checkInterrupts() {
 	// NMI - Edge-triggered (detects 0->1 transition)
 	if (nmi_line && !nmi_previous) {
 		nmi_pending = true;
@@ -188,7 +188,7 @@ void Processor_6502::checkInterrupts() {
 	if (nmi_pending) {
 		handleNMI();
 		nmi_pending = false;
-		return;  // Don't check IRQ if NMI occurred
+		return 7;  // Don't check IRQ if NMI occurred
 	}
 
 	// IRQ - Level-triggered, maskable by I flag
@@ -197,7 +197,9 @@ void Processor_6502::checkInterrupts() {
 	//if (irq_line) {
 		handleIRQ();
 		irq_line = false; // Clear IRQ line after handling
+		return 7;
 	}
+	return 0;
 }
 
 /// <summary>
@@ -1613,7 +1615,7 @@ uint8_t Processor_6502::Clock()
 	// NOTE TO NES developers: When interrupts are enabled, you should avoid reading $2002 in a tight loop like that.
 	// You might miss the NMI entirely if it happens between your read and the interrupt check!
 	// Have NMI set a variable that your loop waits for. Thank you!
-	checkInterrupts();
+	cyclesThisFrame += checkInterrupts();
 	return cyclesPassed;
 }
 

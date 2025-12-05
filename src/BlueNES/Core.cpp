@@ -83,13 +83,6 @@ HRESULT Core::Initialize()
     
     //UpdateWindow(m_hwnd);
 
-	audioBackend = new AudioBackend();
-    // Initialize audio backend
-    if (!audioBackend->Initialize(44100, 1)) {  // 44.1kHz, mono
-        // Handle error - audio failed to initialize
-        MessageBox(m_hwnd, L"Failed to initialize audio!", L"Error", MB_OK);
-    }
-
     // Set up DMC read callback
     emulator.nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
         return emulator.nes.bus.read(address);
@@ -706,37 +699,6 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 }
                 break;
 			}
-            case WM_KEYUP:
-            {
-                switch (wParam)
-                {
-                case 'A':
-                    pMain->input.ButtonUp(BUTTON_B);
-                    break;
-                case 'S':
-                    pMain->input.ButtonUp(BUTTON_A);
-                    break;
-                case 'Z':
-                    pMain->input.ButtonUp(BUTTON_SELECT);
-                    break;
-                case 'X':
-                    pMain->input.ButtonUp(BUTTON_START);
-                    break;
-                case VK_UP:
-                    pMain->input.ButtonUp(BUTTON_UP);
-                    break;
-                case VK_DOWN:
-                    pMain->input.ButtonUp(BUTTON_DOWN);
-                    break;
-                case VK_LEFT:
-                    pMain->input.ButtonUp(BUTTON_LEFT);
-                    break;
-                case VK_RIGHT:
-                    pMain->input.ButtonUp(BUTTON_RIGHT);
-                    break;
-                }
-                break;
-            }
             case WM_COMMAND:
                 switch (LOWORD(wParam))
                 {
@@ -1003,19 +965,7 @@ void Core::RunMessageLoop()
     double nextUpdate = 0.0;
     int frameCount = 0;
 
-    // --- Audio setup ---
-    // Audio sample rate (44.1kHz is standard)
-    const int AUDIO_SAMPLE_RATE = 44100;
-    const double AUDIO_SAMPLE_PERIOD = 1.0 / AUDIO_SAMPLE_RATE;
-    double audioAccumulator = 0.0;
-
-    // Audio buffer for queueing samples
-    std::vector<float> audioBuffer;
-    audioBuffer.reserve(4096);
-
-    double audioFraction = 0.0;  // Per-frame fractional pos
     int cpuCycleDebt = 0;
-    const int ppuCyclesPerCPUCycle = 3;
     
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -1035,11 +985,11 @@ void Core::RunMessageLoop()
                 running = false;
                 break;
             case SDL_CONTROLLERDEVICEADDED:
-                input.OpenFirstController();
+                emulator.nes.input.OpenFirstController();
                 break;
 
             case SDL_CONTROLLERDEVICEREMOVED:
-				input.CloseController();
+                emulator.nes.input.CloseController();
                 break;
 
             default:
@@ -1061,57 +1011,8 @@ void Core::RunMessageLoop()
         if (Update) {
             Update();
         }
-        input.PollControllerState();
 
-        const double CPU_FREQ = 1789773.0;
-        const double cyclesPerSample = CPU_FREQ / 44100.0;  // 40.58 exact
-        const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
-
-        emulator.nes.cpu.cyclesThisFrame = 0;
-
-        // Run PPU until frame complete (89342 cycles per frame)
-        int cpuCyclesThisFrame = 0;
-        while (!emulator.nes.ppu.isFrameComplete()) {
-            emulator.nes.ppu.Clock();
-            // CPU runs at 1/3 the speed of the PPU
-            cpuCycleDebt++;
-
-            while (cpuCycleDebt >= ppuCyclesPerCPUCycle) {
-                //cpuCycleDebt -= ppuCyclesPerCPUCycle;
-                uint64_t cyclesElapsed = emulator.nes.cpu.Clock();
-                cpuCycleDebt -= ppuCyclesPerCPUCycle * cyclesElapsed;
-
-                // Clock APU for each CPU cycle
-                for (uint64_t i = 0; i < cyclesElapsed; ++i) {
-                    emulator.nes.apu.step();
-
-                    // Generate audio sample based on cycle timing
-                    audioFraction += 1.0;
-                    while (audioFraction >= cyclesPerSample) {
-                        audioBuffer.push_back(emulator.nes.apu.get_output());
-                        audioFraction -= cyclesPerSample;
-                    }
-                }
-            }
-        }
-        //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-        emulator.nes.cpu.nmiRequested = false;
-        emulator.nes.ppu.setFrameComplete(false);
-
-        // Submit the exact samples generated this frame
-        // Check audio queue to prevent unbounded growth
-        size_t queuedSamples = audioBackend->GetQueuedSampleCount();
-        const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-
-        if (queuedSamples < MAX_QUEUED_SAMPLES) {
-            audioBackend->SubmitSamples(audioBuffer.data(), audioBuffer.size());
-            // Clear audio buffer for next frame
-            audioBuffer.clear();
-        }
-        else {
-            // Audio queue is too large - skip this frame's audio to catch up
-            //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
-        }
+        emulator.runFrame();
 
         //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
         //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
@@ -1158,9 +1059,7 @@ void Core::RunMessageLoop()
             } while (frameTimeElapsed < targetFrameTime * frameCount);
         }
     }
-    emulator.nes.cart.unload();
-    audioBackend->Shutdown();
-    input.CloseController();
+
     /*for (int i = 0; i < controllers.size(); ++i) {
         SDL_GameControllerClose(controllers[i]);
         controllers[i] = nullptr;

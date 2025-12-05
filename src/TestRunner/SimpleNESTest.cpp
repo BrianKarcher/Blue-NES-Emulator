@@ -1,5 +1,5 @@
 #include "SimpleNESTest.h"
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "Core.h"
 #include "Bus.h"
 #include <iostream>

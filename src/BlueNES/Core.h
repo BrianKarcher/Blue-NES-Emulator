@@ -39,8 +39,6 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
-class AudioBackend;
-
 uint8_t hexReadPPU(Core* core, uint16_t val);
 uint8_t hexReadCPU(Core* core, uint16_t val);
 
@@ -49,7 +47,7 @@ class Core
 public:
 	Core();
 	EmulatorWrapper emulator;
-	AudioBackend* audioBackend;
+	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
 	HRESULT CreateWindows();
@@ -62,8 +60,6 @@ public:
 	// Process and dispatch messages
 	void RunMessageLoop();
 
-	Input input;
-	// Declare a function pointer
 	void (*Update)();
 	// Hex dump window
 	// Example buffer: replace these with your emulator memory pointer and size.
