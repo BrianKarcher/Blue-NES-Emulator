@@ -23,31 +23,57 @@ EmulatorCore::~EmulatorCore() {
     nes.input.CloseController();
 }
 
-void EmulatorCore::run() {
-    while (context.is_running) {
-        runFrame();
+void EmulatorCore::start() {
+    core_thread = std::thread(&EmulatorCore::run, this);
+}
 
+void EmulatorCore::stop() {
+    context.is_running = false;
+    if (core_thread.joinable()) core_thread.join();
+}
+
+void EmulatorCore::run() {
+    using clock = std::chrono::high_resolution_clock;
+    using namespace std::chrono;
+
+    constexpr double TARGET_FRAME_TIME = 1.0 / 60.0; // 60 FPS
+    auto lastFrameTime = clock::now();
+    auto fpsUpdateTime = clock::now();
+    int frameCount = 0;
+    while (context.is_running) {
+        CommandQueue::Command cmd;
+        while (context.command_queue.TryPop(cmd)) {
+            processCommand(cmd);
+        }
+        if (m_paused) {
+            continue;
+        }
+
+        nes.input.PollControllerState();
+        runFrame();
+        context.SwapBuffers();
+
+        // Frame timing
+        auto frameEnd = clock::now();
+        duration<double> frameDuration = frameEnd - lastFrameTime;
+        lastFrameTime = frameEnd;
+
+        // Sleep to maintain 60 FPS
+        double sleepTime = TARGET_FRAME_TIME - frameDuration.count();
+        if (sleepTime > 0) {
+            std::this_thread::sleep_for(duration<double>(sleepTime));
+        }
 	}
 }
 
 void EmulatorCore::runFrame() {
-	CommandQueue::Command cmd;
-    while (context.command_queue.TryPop(cmd)) {
-        processCommand(cmd);
-    }
-    if (m_paused) {
-        return;
-    }
-
-	nes.input.PollControllerState();
-
 	nes.cpu.cyclesThisFrame = 0;
     nes.ppu.setBuffer(context.GetBackBuffer());
     // Run PPU until frame complete (89342 cycles per frame)
 	while (!nes.frameReady()) {
         nes.clock();
 	}
-    context.SwapBuffers();
+    
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
     nes.cpu.nmiRequested = false;
     nes.ppu.setFrameComplete(false);

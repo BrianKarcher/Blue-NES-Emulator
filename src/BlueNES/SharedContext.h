@@ -10,6 +10,7 @@
 class SharedContext {
 private:
     std::mutex video_mutex;
+    std::condition_variable cv_frame_ready; // The signal object
 
     // We allocate the memory once.
     std::vector<uint32_t> buffer_1;
@@ -19,6 +20,8 @@ private:
     uint32_t* p_front_buffer = nullptr; // UI Reads this
     uint32_t* p_back_buffer = nullptr;  // Core Writes this
 
+    // Flag to prevent spurious wakeups
+    bool has_new_frame = false;
 public:
     // Lock-free atomic input (UI writes, Core reads)
     std::atomic<uint8_t> atomic_input{ 0 };
@@ -43,8 +46,33 @@ public:
     // --- CORE calls this ---
     // Signals that the back buffer is full and ready to be shown.
     void SwapBuffers() {
-        std::lock_guard<std::mutex> lock(video_mutex);
-        std::swap(p_front_buffer, p_back_buffer);
+        {
+            std::lock_guard<std::mutex> lock(video_mutex);
+            std::swap(p_front_buffer, p_back_buffer);
+            has_new_frame = true;
+        } // Mutex releases here
+        // Wake up the UI thread immediately
+        cv_frame_ready.notify_one();
+    }
+
+    // --- UI calls this ---
+    // Returns nullptr if timeout occurs (no new frame)
+    const uint32_t* WaitForNewFrame(int timeout_ms) {
+        std::unique_lock<std::mutex> lock(video_mutex);
+
+        // This puts the thread to SLEEP. It releases the mutex while sleeping.
+        // It wakes up ONLY if:
+        // 1. notify_one() is called AND has_new_frame is true
+        // 2. timeout_ms passes
+        bool received = cv_frame_ready.wait_for(lock, std::chrono::milliseconds(timeout_ms),
+            [this] { return has_new_frame; });
+
+        if (received) {
+            has_new_frame = false; // Reset for next time
+            return p_front_buffer;
+        }
+
+        return nullptr; // Timed out (Core is lagging or paused)
     }
 
     // --- UI calls this ---

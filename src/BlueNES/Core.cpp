@@ -683,6 +683,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                         pMain->LoadGame(filePath);
                         pMain->isPaused = false;
                         pMain->updateMenu();
+                        pMain->emulator.start();
                     }
                     break;
                 }
@@ -697,6 +698,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     pMain->isPlaying = false;
                     InvalidateRect(hwnd, NULL, FALSE);
                     pMain->updateMenu();
+                    pMain->emulator.stop();
                 }
                     break;
                 case ID_NES_RESET:
@@ -739,7 +741,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->RenderFrame();
+                //pMain->RenderFrame();
                 EndPaint(hwnd, &ps);
                 ValidateRect(hwnd, NULL);
             }
@@ -885,13 +887,13 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
     //}
 }
 
-bool Core::RenderFrame()
+bool Core::RenderFrame(const uint32_t* frame_data)
 {
     // Update texture with NES framebuffer
     SDL_UpdateTexture(
         nesTexture,
         nullptr,
-        context.GetFrontBuffer(),
+        frame_data,
         256 * sizeof(uint32_t)
     );
 
@@ -985,15 +987,19 @@ void Core::RunMessageLoop()
             Update();
         }
 
-        emulator.runFrame();
+        // Wait for the Core (The "Sleep" phase)
+        // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
+        // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
+        const uint32_t* frame_data = context.WaitForNewFrame(20);
 
         //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
         //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
         //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
+        if (frame_data) {
+            RenderFrame(frame_data);
+            frameCount++;
+        }
 
-        RenderFrame();
-
-        frameCount++;
         // Debug output every second
         QueryPerformanceCounter(&currentTime);
         double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;

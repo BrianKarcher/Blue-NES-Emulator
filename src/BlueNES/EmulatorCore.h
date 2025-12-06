@@ -2,6 +2,7 @@
 #include "Nes.h"
 #include "AudioBackend.h"
 #include "SharedContext.h"
+#include <thread>
 
 class EmulatorCore
 {
@@ -17,6 +18,7 @@ public:
 	void stop();
 	
 private:
+	std::thread core_thread;
 	void run();
 	Nes nes;
 	SharedContext& context;
