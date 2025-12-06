@@ -14,7 +14,7 @@ class RendererLoopy;
 class MMC3 : public Mapper, public A12Mapper
 {
 public:
-	MMC3(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	MMC3(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 	~MMC3();
 
 	void shutdown();
@@ -46,8 +46,8 @@ private:
 	uint8_t m_regSelect;
 
 	Cartridge* cart;
-	Processor_6502* cpu;
-	Bus* bus;
+	Processor_6502& cpu;
+	Bus& bus;
 
 	// IRQ state
 	uint8_t irq_latch;

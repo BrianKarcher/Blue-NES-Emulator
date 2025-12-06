@@ -8,7 +8,6 @@ class EmulatorCore
 public:
 	EmulatorCore(SharedContext& ctx);
 	~EmulatorCore();
-	Nes nes;
 
 	void Initialize();
 	void loadROM(const char* filepath);
@@ -18,6 +17,10 @@ public:
 	void stop();
 	
 private:
+	void run();
+	Nes nes;
 	SharedContext& context;
 	AudioBackend audioBackend;
+	void processCommand(const CommandQueue::Command& cmd);
+	bool m_paused;
 };

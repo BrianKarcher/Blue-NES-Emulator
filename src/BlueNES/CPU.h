@@ -173,8 +173,7 @@ class Bus;
 class Processor_6502
 {
 public:
-	Processor_6502();
-	void connectBus(Bus* bus);
+	Processor_6502(Bus& bus);
 	void setNMI(bool state);
 	void setIRQ(bool state);
 	// Power On and Reset are different
@@ -191,7 +190,7 @@ public:
 	void Reset();
 	void AddCycles(int count);
 	uint64_t GetCycleCount();
-	Bus* bus;
+	Bus& bus;
 	bool nmiRequested = false;
 	void Activate(bool active);
 	void SetPC(uint16_t address);

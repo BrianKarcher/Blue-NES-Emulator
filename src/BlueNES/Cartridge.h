@@ -21,8 +21,7 @@ public:
 		SINGLE_UPPER = 3,
 		FOUR_SCREEN = 4
 	};
-	Cartridge();
-	void initialize(Bus* bus);
+	Cartridge(Bus& b, Processor_6502 c);
 	std::vector<uint8_t> m_prgRomData;
 	std::vector<uint8_t> m_prgRamData;
 	std::vector<uint8_t> m_chrData;
@@ -48,10 +47,10 @@ public:
 	void unload();
 	bool isLoaded();
 private:
-	Bus* m_bus;
+	Bus& m_bus;
 	MirrorMode m_mirrorMode;
 	Mapper* mapper;
-	Processor_6502* cpu;
+	Processor_6502& cpu;
 	std::filesystem::path getAndEnsureSavePath();
 	void loadSRAM();
 	void saveSRAM();

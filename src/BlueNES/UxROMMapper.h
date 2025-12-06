@@ -13,7 +13,7 @@ class RendererLoopy;
 class UxROMMapper : public Mapper
 {
 public:
-	UxROMMapper(Bus* bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	UxROMMapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	//uint8_t readPRGROM(uint16_t address);
@@ -33,8 +33,8 @@ private:
 	uint8_t prgBank16kCount;
 
 	Cartridge* cart;
-	Processor_6502* cpu;
-	Bus* bus;
+	Processor_6502& cpu;
+	Bus& bus;
 
 	void recomputeMappings();
 };

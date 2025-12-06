@@ -2,8 +2,7 @@
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
-Nes::Nes(SharedContext& ctx) : bus(cpu, ppu, apu, input, cart), context(ctx), ppu(ctx) {
-	cpu.connectBus(&bus);
+Nes::Nes(SharedContext& ctx) : bus(cpu, ppu, apu, input, cart), context(ctx), ppu(ctx, bus), cpu(bus), cart(bus, cpu) {
     audioBuffer.reserve(4096);
 }
 

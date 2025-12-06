@@ -83,7 +83,7 @@ public:
 	HWND hHexCombo = NULL;
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
-	PPUViewer ppuViewer;
+	//PPUViewer ppuViewer;
 private:
 	HMENU hMenu;
 	void updateMenu();

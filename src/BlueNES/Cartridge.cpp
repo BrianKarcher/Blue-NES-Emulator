@@ -12,13 +12,8 @@
 #include <fstream>
 #include "UxROMMapper.h"
 
-Cartridge::Cartridge() {
+Cartridge::Cartridge(Bus& b, Processor_6502 c) : m_bus(b), cpu(c) {
 	m_isLoaded = false;
-}
-
-void Cartridge::initialize(Bus* bus) {
-    cpu = &bus->cpu;
-    m_bus = bus;
 }
 
 std::filesystem::path getAppFolderPath()
@@ -234,7 +229,7 @@ uint8_t Cartridge::ReadPRG(uint16_t address) {
 }
 
 void Cartridge::WritePRG(uint16_t address, uint8_t data) {
-    mapper->writePRGROM(address, data, cpu->GetCycleCount());
+    mapper->writePRGROM(address, data, cpu.GetCycleCount());
 }
 
 uint8_t Cartridge::ReadCHR(uint16_t address) {

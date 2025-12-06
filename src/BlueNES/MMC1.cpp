@@ -5,8 +5,7 @@
 #include <bitset>
 #include "CPU.h"
 
-MMC1::MMC1(Cartridge* cartridge, Processor_6502* cpu, uint8_t prgRomSize, uint8_t chrRomSize) {
-	this->cpu = cpu;
+MMC1::MMC1(Cartridge* cartridge, Processor_6502& c, uint8_t prgRomSize, uint8_t chrRomSize) : cpu(c) {
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
 	shiftRegister = 0b10000;
 	// init registers to reset-like defaults
@@ -50,10 +49,10 @@ void MMC1::dbg(const wchar_t* fmt, ...) const {
 
 void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	// Ignore writes that happen too close together (within 2 CPU cycles)
-	if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
-		dbg(L"MMC1: Ignoring consecutive-cycle write\n");
-		return;
-	}
+	//if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
+	//	dbg(L"MMC1: Ignoring consecutive-cycle write\n");
+	//	return;
+	//}
 	lastWriteCycle = currentCycle;
 	// Debug print
 	//std::string bits = std::bitset<8>(shiftRegister).to_string();

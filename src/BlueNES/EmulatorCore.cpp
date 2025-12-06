@@ -8,6 +8,12 @@ EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
 		throw std::runtime_error("Failed to initialize audio backend");
         //MessageBox(nullptr, L"Failed to initialize audio!", L"Error", MB_OK);
     }
+    m_paused = true;
+
+    // Set up DMC read callback
+    nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+        return nes.bus.read(address);
+    });
 }
 
 EmulatorCore::~EmulatorCore() {
@@ -17,7 +23,22 @@ EmulatorCore::~EmulatorCore() {
     nes.input.CloseController();
 }
 
+void EmulatorCore::run() {
+    while (context.is_running) {
+        runFrame();
+
+	}
+}
+
 void EmulatorCore::runFrame() {
+	CommandQueue::Command cmd;
+    while (context.command_queue.TryPop(cmd)) {
+        processCommand(cmd);
+    }
+    if (m_paused) {
+        return;
+    }
+
 	nes.input.PollControllerState();
 
 	nes.cpu.cyclesThisFrame = 0;
@@ -44,5 +65,39 @@ void EmulatorCore::runFrame() {
     else {
         // Audio queue is too large - skip this frame's audio to catch up
         //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
+    }
+}
+
+void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
+    switch (cmd.type) {
+    case CommandQueue::CommandType::LOAD_ROM:
+        nes.cart.unload();
+        nes.ppu.reset();
+        nes.bus.reset();
+        nes.cart.LoadROM(cmd.data);
+        nes.cpu.PowerOn();
+        m_paused = false;
+        break;
+    case CommandQueue::CommandType::RESET:
+        nes.ppu.reset();
+        nes.bus.reset();
+        nes.cpu.PowerOn();
+        //m_core.Reset();
+        break;
+    case CommandQueue::CommandType::PAUSE:
+        m_paused = true;
+        break;
+    case CommandQueue::CommandType::RESUME:
+        m_paused = false;
+        break;
+    case CommandQueue::CommandType::STEP_FRAME:
+        //if (m_paused) {
+        //    m_core.StepFrame(m_frameBuffer.GetWriteBuffer(),
+        //        m_audioBuffer,
+        //        m_inputState);
+        //    m_frameBuffer.SwapBuffers();
+        //}
+        break;
+        // Handle other commands...
     }
 }

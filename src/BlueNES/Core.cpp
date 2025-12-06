@@ -64,39 +64,9 @@ static int g_lineHeight = 16;     // px, will be measured
 static int g_charWidth = 8;       // px, measured
 static const int BYTES_PER_LINE = 16;
 
-//void Core::PPURenderToBackBuffer()
-//{
-//    ppu.render_frame();
-//}
-
 HRESULT Core::Initialize()
 {
-    // Fill example buffer with demo data (0x0000 - 0x0FF)
-    //g_bufferSize = 0x300; // e.g. 768 bytes
 	g_bufferSize = 0x10000; // 64KB
-    //g_buffer.resize(g_bufferSize);
-    //for (size_t i = 0; i < g_bufferSize; ++i) g_buffer[i] = static_cast<uint8_t>(i & 0xFF);
-
-    emulator.nes.ppu.Initialize(&emulator.nes.bus, this);
-    emulator.nes.cart.initialize(&emulator.nes.bus);
-    emulator.nes.cpu.bus = &emulator.nes.bus;
-    //ppu.set_hwnd(m_hwnd);
-    
-    //UpdateWindow(m_hwnd);
-
-    // Set up DMC read callback
-    emulator.nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-        return emulator.nes.bus.read(address);
-    });
-
-    // --- Debug: force a tone on Pulse 1 ---
-    //apu.write_register(0x4000, 0x30); // duty + envelope: constant volume 0x0 / vol 0x0? adjust below
-    //apu.write_register(0x4002, 0xFF); // timer low
-    //apu.write_register(0x4003, 0x07); // timer high -> make very low frequency (adjust)
-    //apu.write_register(0x4015, 0x01); // enable pulse 1
-
-    //// Increase volume to audible: 0x10 sets constant volume, low nibble is volume (0x0 - 0xF).
-    //apu.write_register(0x4000, 0x90); // 1 0 0 1 0000 -> constant volume + volume 0 (tweak to 0x9..0xF)
 
     return S_OK;
 }
@@ -195,9 +165,9 @@ HRESULT Core::CreateWindows() {
     if (!m_hwndPalette)
         return S_FALSE;
 
-    if (!ppuViewer.Initialize(HINST_THISCOMPONENT, this)) {
-        return S_FALSE;
-    }
+    //if (!ppuViewer.Initialize(HINST_THISCOMPONENT, this)) {
+    //    return S_FALSE;
+    //}
 
     hexSources[0] = hexReadCPU;
     hexSources[1] = hexReadPPU;
@@ -210,11 +180,13 @@ HRESULT Core::CreateWindows() {
 }
 
 uint8_t hexReadPPU(Core* core, uint16_t val) {
-    return core->emulator.nes.ppu.ReadVRAM(val);
+    //return core->emulator.nes.ppu.ReadVRAM(val);
+    return 0;
 }
 
 uint8_t hexReadCPU(Core* core, uint16_t val) {
-    return core->emulator.nes.bus.read(val);
+    //return core->emulator.nes.bus.read(val);
+    return 0;
 }
 
 LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -718,24 +690,30 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     PostQuitMessage(0);
 					break;
                 case ID_FILE_CLOSE:
-                    pMain->emulator.nes.cart.unload();
-                    pMain->emulator.nes.ppu.reset();
-                    pMain->emulator.nes.bus.reset();
+                {
+                    CommandQueue::Command cmd;
+                    cmd.type = CommandQueue::CommandType::RESET;
+                    pMain->context.command_queue.Push(cmd);
                     pMain->isPlaying = false;
-					InvalidateRect(hwnd, NULL, FALSE);
+                    InvalidateRect(hwnd, NULL, FALSE);
                     pMain->updateMenu();
+                }
                     break;
                 case ID_NES_RESET:
-                    pMain->emulator.nes.ppu.reset();
-                    pMain->emulator.nes.bus.reset();
-                    pMain->emulator.nes.cpu.PowerOn();
+                {
+                    CommandQueue::Command cmd;
+                    cmd.type = CommandQueue::CommandType::RESET;
+                    pMain->context.command_queue.Push(cmd);
                     pMain->isPlaying = true;
+                }
                     break;
                 case ID_NES_POWER:
-                    pMain->emulator.nes.ppu.reset();
-                    pMain->emulator.nes.bus.reset();
-                    pMain->emulator.nes.cpu.PowerOn();
+                {
+                    CommandQueue::Command cmd;
+                    cmd.type = CommandQueue::CommandType::RESET;
+                    pMain->context.command_queue.Push(cmd);
                     pMain->isPlaying = true;
+                }
                     break;
                 }
                 break;
@@ -789,18 +767,17 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 }
 
 void Core::updateMenu() {
-	EnableMenuItem(hMenu, ID_FILE_CLOSE, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_RESET, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_POWER, emulator.nes.cart.isLoaded() ? MF_ENABLED : MF_GRAYED);
+	EnableMenuItem(hMenu, ID_FILE_CLOSE, isPlaying ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_RESET, isPlaying ? MF_ENABLED : MF_GRAYED);
+    EnableMenuItem(hMenu, ID_NES_POWER, isPlaying ? MF_ENABLED : MF_GRAYED);
 }
 
 void Core::LoadGame(const std::wstring& filePath)
 {
-    emulator.nes.cart.unload();
-    emulator.nes.ppu.reset();
-    emulator.nes.bus.reset();
-    emulator.nes.cart.LoadROM(filePath);
-    emulator.nes.cpu.PowerOn();
+    CommandQueue::Command cmd;
+    cmd.type = CommandQueue::CommandType::LOAD_ROM;
+    cmd.data = filePath;
+    context.command_queue.Push(cmd);
     isPlaying = true;
 	//audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
 }
@@ -883,34 +860,29 @@ COLORREF ToColorRef(uint32_t argb)
 
 void Core::DrawPalette(HWND wnd, HDC hdc)
 {
-    RECT clientRect;
-    GetClientRect(wnd, &clientRect);
+    //RECT clientRect;
+    //GetClientRect(wnd, &clientRect);
 
-    int width = clientRect.right - clientRect.left;
-    int height = clientRect.bottom - clientRect.top;
+    //int width = clientRect.right - clientRect.left;
+    //int height = clientRect.bottom - clientRect.top;
 
-    int cols = 4; // Number of colors per row
-    int rows = 8; // Total rows (32 colors / 4 per row)
-    int cellWidth = width / cols;
-    int cellHeight = height / rows;
+    //int cols = 4; // Number of colors per row
+    //int rows = 8; // Total rows (32 colors / 4 per row)
+    //int cellWidth = width / cols;
+    //int cellHeight = height / rows;
 
-    for (int i = 0; i < 32; ++i)
-    {
-        int x = (i % cols) * cellWidth;
-        int y = (i / cols) * cellHeight;
+    //for (int i = 0; i < 32; ++i)
+    //{
+    //    int x = (i % cols) * cellWidth;
+    //    int y = (i / cols) * cellHeight;
 
-        uint8_t paletteIndex = emulator.nes.ppu.paletteTable[i];
-        uint32_t color = m_nesPalette[paletteIndex & 0x3F];
-        //uint32_t color = m_nesPalette[i];
-        // Debugging: Log palette index and color
-        //OutputDebugString((L"Palette Index: " + std::to_wstring(paletteIndex) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
-
-        //OutputDebugString((L"x: " + std::to_wstring(x) + L", y: " + std::to_wstring(y) + L", w: " + std::to_wstring(cellWidth) + L", h: " + std::to_wstring(cellHeight) + L", Color: " + stringToWstring(uint32ToHex(color)) + L"\n").c_str());
-        HBRUSH brush = CreateSolidBrush(ToColorRef(color));
-        RECT rect = { x, y, x + cellWidth, y + cellHeight };
-        FillRect(hdc, &rect, brush);
-        DeleteObject(brush);
-    }
+    //    uint8_t paletteIndex = emulator.nes.ppu.paletteTable[i];
+    //    uint32_t color = m_nesPalette[paletteIndex & 0x3F];
+    //    HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+    //    RECT rect = { x, y, x + cellWidth, y + cellHeight };
+    //    FillRect(hdc, &rect, brush);
+    //    DeleteObject(brush);
+    //}
 }
 
 bool Core::RenderFrame()
@@ -986,11 +958,11 @@ void Core::RunMessageLoop()
                 running = false;
                 break;
             case SDL_CONTROLLERDEVICEADDED:
-                emulator.nes.input.OpenFirstController();
+                //emulator.nes.input.OpenFirstController();
                 break;
 
             case SDL_CONTROLLERDEVICEREMOVED:
-                emulator.nes.input.CloseController();
+                //emulator.nes.input.CloseController();
                 break;
 
             default:
@@ -1027,15 +999,15 @@ void Core::RunMessageLoop()
         double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
 
         if (timeSinceStart >= 0.25) {
-            ppuViewer.DrawNametables();
+            //ppuViewer.DrawNametables();
 
             // Updates the hex window
             // TODO - Make this more efficient by only updating changed areas
             // and also in real time rather than once per second
             InvalidateRect(hHexDrawArea, nullptr, TRUE);
             double fps = frameCount / timeSinceStart;
-            std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
-            SetWindowText(m_hwnd, title.c_str());
+            //std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
+            //SetWindowText(m_hwnd, title.c_str());
             frameStartTime = currentTime;
             frameCount = 0;
         }

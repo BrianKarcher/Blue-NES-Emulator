@@ -49,7 +49,7 @@ class A12Mapper;
 class PPU
 {
 public:
-	PPU(SharedContext& ctx);
+	PPU(SharedContext& ctx, Bus& bus);
 	~PPU();
 	RendererLoopy* renderer;
 	void reset();
@@ -74,8 +74,7 @@ public:
 	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
-	Bus* bus;
-	Core* core;
+	Bus& bus;
 	A12Mapper* m_mapper;
 
 	void Clock();
@@ -94,7 +93,6 @@ public:
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite);
 	bool isFrameComplete();
 	void setFrameComplete(bool complete);
-	void Initialize(Bus* bus, Core* core);
 	void SetPPUStatus(uint8_t flag);
 	uint16_t GetBackgroundPatternTableBase() const {
 		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL

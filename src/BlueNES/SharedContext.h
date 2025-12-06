@@ -2,6 +2,7 @@
 #include <mutex>
 #include <cstdint>
 #include <vector>
+#include "CommandQueue.h"
 
 #define WIDTH 256
 #define HEIGHT 240
@@ -53,4 +54,6 @@ public:
         std::lock_guard<std::mutex> lock(video_mutex);
         return p_front_buffer;
     }
+
+	CommandQueue command_queue;
 };

@@ -159,6 +159,7 @@
     <ClInclude Include="AudioBackend.h" />
     <ClInclude Include="Bus.h" />
     <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="EmulatorCore.h" />
     <ClInclude Include="HexViewer.h" />

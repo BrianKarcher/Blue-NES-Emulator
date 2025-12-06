@@ -16,7 +16,7 @@ RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
 
 void RendererLoopy::initialize(PPU* ppu) {
     m_ppu = ppu;
-    m_bus = ppu->bus;
+    m_bus = &ppu->bus;
 }
 
 void RendererLoopy::reset() {
