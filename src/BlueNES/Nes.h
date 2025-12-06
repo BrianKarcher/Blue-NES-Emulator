@@ -6,6 +6,7 @@
 #include "CPU.h"
 #include "APU.h"
 #include "Input.h"
+#include "SharedContext.h"
 
 const double CPU_FREQ = 1789773.0;
 const double CYCLES_PER_SAMPLE = CPU_FREQ / 44100.0;  // 40.58 exact
@@ -20,8 +21,9 @@ public:
 	Processor_6502 cpu;
 	APU apu;
 	Input input;
+	SharedContext& context;
 
-	Nes();
+	Nes(SharedContext& ctx);
 
 	bool loadRom(const std::wstring& filepath);
 	void reset();

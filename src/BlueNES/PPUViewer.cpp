@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include "Bus.h"
 #include "Core.h"
-#include "EmulatorWrapper.h"
+#include "EmulatorCore.h"
 
 bool PPUViewer::Initialize(HINSTANCE hInstance, Core* core) {
     this->core = core;

@@ -81,7 +81,10 @@
     <ClCompile Include="Nes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EmulatorWrapper.cpp">
+    <ClCompile Include="EmulatorCore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SharedContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -164,7 +167,10 @@
     <ClInclude Include="Nes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EmulatorWrapper.h">
+    <ClInclude Include="EmulatorCore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

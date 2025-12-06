@@ -12,7 +12,8 @@
 #include "APU.h"
 #include "Input.h"
 #include "PPUViewer.h"
-#include "EmulatorWrapper.h"
+#include "EmulatorCore.h"
+#include "SharedContext.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -46,7 +47,8 @@ class Core
 {
 public:
 	Core();
-	EmulatorWrapper emulator;
+	EmulatorCore emulator;
+	SharedContext context;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();

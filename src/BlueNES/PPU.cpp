@@ -11,7 +11,7 @@
 
 HWND m_hwnd;
 
-PPU::PPU() {
+PPU::PPU(SharedContext& ctx) : context(ctx) {
 	oam.fill(0xFF);
 	m_ppuCtrl = 0;
 	oamAddr = 0;
@@ -28,7 +28,7 @@ PPU::~PPU()
 void PPU::Initialize(Bus* bus, Core* core) {
 	this->bus = bus;
 	this->core = core;
-	renderer = new RendererLoopy();
+	renderer = new RendererLoopy(context);
 	renderer->initialize(this);
 }
 
@@ -286,24 +286,8 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	}
 }
 
-const std::array<uint32_t, 256 * 240>& PPU::get_back_buffer() {
-	return renderer->getBackBuffer();
-}
-
-// OAM DMA - Direct Memory Access for sprites
-//void NesPPU::OAMDMA(uint8_t* cpuMemory, uint16_t page) {
-//	uint16_t addr = page << 8;
-//	for (int i = 0; i < 256; i++) {
-//		oam[oamAddr++] = cpuMemory[addr + i];
-//	}
-//	// OAM DMA takes 513 or 514 CPU cycles depending on odd/even alignment
-//	// OAMADDR wraps around automatically in hardware
-//	oamAddr &= 0xFF;
-//}
-
 void PPU::Clock() {
-	// TODO - Send to renderer
-	renderer->clock();
+	renderer->clock(buffer);
 }
 
 uint8_t PPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite)

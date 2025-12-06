@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <array>
+#include "SharedContext.h"
 
 class PPU;
 class Bus;
@@ -68,9 +69,9 @@ public:
     PPURegisters loopy;
     ShiftRegisters m_shifts;
 
+    RendererLoopy(SharedContext& ctx);
     void initialize(PPU* ppu);
     void reset();
-    const std::array<uint32_t, 256 * 240>& getBackBuffer() const { return m_backBuffer; };
     void setPPUCTRL(uint8_t value);
     void setPPUMask(uint8_t value) { ppumask = value; }
     void writeScroll(uint8_t value);
@@ -85,7 +86,7 @@ public:
     void ppuCopyY();
     uint16_t ppuGetVramAddr();
     void ppuIncrementVramAddr(uint8_t increment);
-    void clock();
+    void clock(uint32_t* buffer);
     bool isFrameComplete() { return m_frameComplete; }
     void setFrameComplete(bool complete) { m_frameComplete = complete; }
     uint16_t get_attribute_address(LoopyRegister& regV);
@@ -98,6 +99,7 @@ private:
     Bus* m_bus;
     PPU* m_ppu;
     A12Mapper* m_mapper;
+    SharedContext& context;
     // Overflow can only be set once per frame
     bool hasOverflowBeenSet = false;
     bool hasSprite0HitBeenSet = false;
@@ -120,16 +122,10 @@ private:
 
     // Tile info
     TileFetch tile;
-    //uint8_t attributeByte;
-    //std::array<uint32_t, 4> palette;
-    // CHR-ROM/RAM data for tile
-    //uint8_t chrLowByte;
-    //uint8_t chrHighByte;
-    std::array<uint32_t, 256 * 240> m_backBuffer;
 
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
     uint8_t get_pixel();
-    void renderPixel();
+    void renderPixel(uint32_t* buffer);
 
     // Internal helpers
     inline bool renderingEnabled() const { return (ppumask & 0x18) != 0; } // bg or sprites

@@ -1,6 +1,7 @@
-#include "EmulatorWrapper.h"
+#include "EmulatorCore.h"
+#include "SharedContext.h"
 
-EmulatorWrapper::EmulatorWrapper() {
+EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     // Initialize audio backend
     if (!audioBackend.Initialize(44100, 1)) {  // 44.1kHz, mono
         // Handle error - audio failed to initialize
@@ -9,22 +10,23 @@ EmulatorWrapper::EmulatorWrapper() {
     }
 }
 
-EmulatorWrapper::~EmulatorWrapper() {
+EmulatorCore::~EmulatorCore() {
     audioBackend.Shutdown();
     nes.cart.unload();
 
     nes.input.CloseController();
 }
 
-void EmulatorWrapper::runFrame() {
+void EmulatorCore::runFrame() {
 	nes.input.PollControllerState();
 
 	nes.cpu.cyclesThisFrame = 0;
+    nes.ppu.setBuffer(context.GetBackBuffer());
     // Run PPU until frame complete (89342 cycles per frame)
 	while (!nes.frameReady()) {
         nes.clock();
 	}
-
+    context.SwapBuffers();
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
     nes.cpu.nmiRequested = false;
     nes.ppu.setFrameComplete(false);

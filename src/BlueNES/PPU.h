@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <array>
 #include <utility>
+#include "SharedContext.h"
 
 #define NMI_ENABLE 0x80
 
@@ -48,7 +49,7 @@ class A12Mapper;
 class PPU
 {
 public:
-	PPU();
+	PPU(SharedContext& ctx);
 	~PPU();
 	RendererLoopy* renderer;
 	void reset();
@@ -84,9 +85,7 @@ public:
 	void SetVRAMAddress(uint16_t addr);
 	uint8_t GetPPUStatus() const { return m_ppuStatus; }
 	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
-	const std::array<uint32_t, 256 * 240>& get_back_buffer();
 	
-
 	uint8_t m_ppuMask = 0;
 	uint8_t m_ppuStatus = 0;
 	uint8_t m_ppuCtrl = 0;
@@ -108,8 +107,11 @@ public:
 			return (tileId & 1) == 1 ? 0x1000 : 0x000;
 		}
 	}
+	void setBuffer(uint32_t* buf) { buffer = buf; }
 
 private:
+	SharedContext& context;
+	uint32_t* buffer;
 	bool is_failure = false;
 
 	// register v in hardware PPU

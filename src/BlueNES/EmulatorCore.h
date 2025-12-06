@@ -1,12 +1,13 @@
 #pragma once
 #include "Nes.h"
 #include "AudioBackend.h"
+#include "SharedContext.h"
 
-class EmulatorWrapper
+class EmulatorCore
 {
 public:
-	EmulatorWrapper();
-	~EmulatorWrapper();
+	EmulatorCore(SharedContext& ctx);
+	~EmulatorCore();
 	Nes nes;
 
 	void Initialize();
@@ -17,5 +18,6 @@ public:
 	void stop();
 	
 private:
+	SharedContext& context;
 	AudioBackend audioBackend;
 };

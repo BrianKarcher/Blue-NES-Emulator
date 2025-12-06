@@ -1,5 +1,3 @@
-#include "RendererLoopy.h"
-
 // NES PPU Loopy Registers Implementation
 // Based on the loopy register behavior documented by loopy
 
@@ -9,6 +7,12 @@
 #include "A12Mapper.h"
 #include "Core.h"
 #include "Bus.h"
+#include "SharedContext.h"
+#include "RendererLoopy.h"
+
+RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
+
+}
 
 void RendererLoopy::initialize(PPU* ppu) {
     m_ppu = ppu;
@@ -20,7 +24,7 @@ void RendererLoopy::reset() {
     *(uint16_t*)&loopy.t = 0;
     loopy.x = 0;
     loopy.w = false;
-    m_backBuffer.fill(0x00);
+    memset(context.GetBackBuffer(), 0x00, WIDTH * HEIGHT * sizeof(uint32_t));
 }
 
 // Write to PPUCTRL ($2000)
@@ -169,7 +173,7 @@ uint8_t RendererLoopy::get_pixel() {
     return (palette << 2) | pixel;
 }
 
-void RendererLoopy::renderPixel() {
+void RendererLoopy::renderPixel(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
     
@@ -211,7 +215,7 @@ void RendererLoopy::renderPixel() {
         }
     }
 
-    m_backBuffer[y * 256 + x] = finalColor;
+    buffer[y * 256 + x] = finalColor;
 }
 
 uint16_t RendererLoopy::get_attribute_address(LoopyRegister& regV) {
@@ -283,14 +287,14 @@ void RendererLoopy::shift_registers() {
     m_shifts.attr_hi_shift <<= 1;
 }
 
-void RendererLoopy::clock() {
+void RendererLoopy::clock(uint32_t* buffer) {
     bool rendering = renderingEnabled();
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
 
     // Pixel rendering (visible)
     if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
-        renderPixel();
+        renderPixel(buffer);
         // Shift registers every cycle
         shift_registers();
     }

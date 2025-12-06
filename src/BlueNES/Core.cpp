@@ -7,6 +7,10 @@
 #include <commdlg.h>
 #include "AudioBackend.h"
 #include <SDL.h>
+#include "SharedContext.h"
+
+Core::Core() : emulator(context) {
+}
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -59,9 +63,6 @@ static HFONT g_hFont = nullptr;
 static int g_lineHeight = 16;     // px, will be measured
 static int g_charWidth = 8;       // px, measured
 static const int BYTES_PER_LINE = 16;
-
-Core::Core() {
-}
 
 //void Core::PPURenderToBackBuffer()
 //{
@@ -918,7 +919,7 @@ bool Core::RenderFrame()
     SDL_UpdateTexture(
         nesTexture,
         nullptr,
-        emulator.nes.ppu.get_back_buffer().data(),
+        context.GetFrontBuffer(),
         256 * sizeof(uint32_t)
     );
 
@@ -1060,9 +1061,5 @@ void Core::RunMessageLoop()
         }
     }
 
-    /*for (int i = 0; i < controllers.size(); ++i) {
-        SDL_GameControllerClose(controllers[i]);
-        controllers[i] = nullptr;
-	}*/
     SDL_Quit();
 }
