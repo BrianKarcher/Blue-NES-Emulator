@@ -1,5 +1,7 @@
+// EmulatorCore.cpp
 #include "EmulatorCore.h"
 #include "SharedContext.h"
+#include <chrono>
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     // Initialize audio backend
@@ -33,14 +35,44 @@ void EmulatorCore::stop() {
 }
 
 void EmulatorCore::run() {
+    // Get high-resolution timer frequency once
+    LARGE_INTEGER freq_li;
+    if (!QueryPerformanceFrequency(&freq_li)) {
+        //std::cerr << "High-resolution performance counter not available.\n";
+        return;
+    }
+    const long long freq = freq_li.QuadPart;
+
     using clock = std::chrono::high_resolution_clock;
     using namespace std::chrono;
 
-    constexpr double TARGET_FRAME_TIME = 1.0 / 60.0; // 60 FPS
-    auto lastFrameTime = clock::now();
-    auto fpsUpdateTime = clock::now();
+    //constexpr double TARGET_FRAME_TIME = 1.0 / 60.0; // 60 FPS
+    //// Calculate the target duration in milliseconds (16 ms + fraction)
+    //constexpr auto TARGET_DURATION = duration_cast<microseconds>(
+    //    duration<double>(TARGET_FRAME_TIME)
+    //);
+    // For 60 FPS, this is approximately 16.666... milliseconds.
+    /*constexpr auto TARGET_DURATION = duration_cast<milliseconds>(
+        duration<double>(TARGET_FRAME_TIME_S)
+    );*/
+    //double targetFrameTime = 1.0 / 60.0;
+    //auto lastFrameTime = clock::now();
+    //auto fpsUpdateTime = clock::now();
     int frameCount = 0;
+
+    // Target frame rate
+    const double targetFps = 60.0;
+    const long long ticksPerFrame = static_cast<long long>(freq / targetFps);
+
+    LARGE_INTEGER fpsUpdateTime_li;
+    QueryPerformanceCounter(&fpsUpdateTime_li);
+	long long nextFpsUpdateTime = fpsUpdateTime_li.QuadPart;
     while (context.is_running) {
+        // Frame start timestamp
+        LARGE_INTEGER frameStart_li;
+        QueryPerformanceCounter(&frameStart_li);
+        long long frameStart = frameStart_li.QuadPart;
+
         CommandQueue::Command cmd;
         while (context.command_queue.TryPop(cmd)) {
             processCommand(cmd);
@@ -52,21 +84,71 @@ void EmulatorCore::run() {
         nes.input.PollControllerState();
         runFrame();
         context.SwapBuffers();
+        frameCount++;
 
         // Frame timing
-        auto frameEnd = clock::now();
-        duration<double> frameDuration = frameEnd - lastFrameTime;
-        lastFrameTime = frameEnd;
+        //auto frameEnd = clock::now();
+        //duration<double> frameDuration = frameEnd - lastFrameTime;
+		//lastFrameTime += milliseconds(static_cast<int>((1.0 / 60.0) * 1000)); // 60 FPS target
+        //lastFrameTime = frameEnd;
+		//lastFrameTime += TARGET_DURATION;
 
-        // Sleep to maintain 60 FPS
-        double sleepTime = TARGET_FRAME_TIME - frameDuration.count();
-        if (sleepTime > 0) {
-            std::this_thread::sleep_for(duration<double>(sleepTime));
+        // Measure time spent so far this frame
+        LARGE_INTEGER frameEnd_li;
+        QueryPerformanceCounter(&frameEnd_li);
+        long long elapsedTicks = frameEnd_li.QuadPart - frameStart;
+
+
+        //std::this_thread::sleep_for(milliseconds(500));
+        if (elapsedTicks < ticksPerFrame) { // If more than 1ms to wait
+            // Remaining ticks to wait to hit target frame time
+            long long remainingTicks = ticksPerFrame - elapsedTicks;
+
+            // Convert remaining ticks to milliseconds for Sleep()
+            // Use integer math to avoid floating rounding issues.
+            long long remainingMs = (remainingTicks * 1000) / freq;
+
+            // Sleep for most of the remaining time (if enough to be worthwhile).
+            // Subtract 1 ms to avoid oversleeping due to Sleep granularity.
+            if (remainingMs > 1) {
+                Sleep(static_cast<DWORD>(remainingMs - 1));
+            }
+
+            // Busy-wait the final tiny interval for precision
+            while (true) {
+                LARGE_INTEGER now_li;
+                QueryPerformanceCounter(&now_li);
+                if ((now_li.QuadPart - frameStart) >= ticksPerFrame) break;
+                // Optionally call YieldProcessor() or std::this_thread::yield()
+                // to avoid hammering the CPU too hard:
+                YieldProcessor(); // on x86 this is a PAUSE; on MSVC resolves to intrinsic
+            }
         }
+
+        if (frameEnd_li.QuadPart >= nextFpsUpdateTime) {
+			dbg(L"FPS: %d\n", frameCount);
+            context.current_fps = frameCount;
+            frameCount = 0;
+            nextFpsUpdateTime = frameEnd_li.QuadPart + freq;
+		}
 	}
 }
 
+inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
+#ifdef EMULATORCORE_DEBUG
+    //if (!debug) return;
+    wchar_t buf[512];
+    va_list args;
+    va_start(args, fmt);
+    _vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+    va_end(args);
+    OutputDebugStringW(buf);
+#endif
+}
+
 void EmulatorCore::runFrame() {
+    // Ensure the audio buffer is clear before starting the frame
+    nes.audioBuffer.clear();
 	nes.cpu.cyclesThisFrame = 0;
     nes.ppu.setBuffer(context.GetBackBuffer());
     // Run PPU until frame complete (89342 cycles per frame)
@@ -82,8 +164,8 @@ void EmulatorCore::runFrame() {
     // Check audio queue to prevent unbounded growth
     size_t queuedSamples = audioBackend.GetQueuedSampleCount();
     const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-
-    if (queuedSamples < MAX_QUEUED_SAMPLES) {
+    dbg(L"Samples this frame: %d\n", nes.audioBuffer.size());
+    if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
         // Clear audio buffer for next frame
         nes.audioBuffer.clear();

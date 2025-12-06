@@ -26,6 +26,7 @@ public:
     // Lock-free atomic input (UI writes, Core reads)
     std::atomic<uint8_t> atomic_input{ 0 };
     std::atomic<bool> is_running{ true };
+    std::atomic<uint8_t> current_fps{ 0 };
 
     SharedContext() {
         buffer_1.resize(WIDTH * HEIGHT, 0xFF000000); // Fill Black

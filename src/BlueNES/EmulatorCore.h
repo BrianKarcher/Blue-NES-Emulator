@@ -1,8 +1,11 @@
+// EmulatorCore.h
 #pragma once
 #include "Nes.h"
 #include "AudioBackend.h"
 #include "SharedContext.h"
 #include <thread>
+
+#define EMULATORCORE_DEBUG
 
 class EmulatorCore
 {
@@ -18,6 +21,7 @@ public:
 	void stop();
 	
 private:
+	inline void dbg(const wchar_t* fmt, ...);
 	std::thread core_thread;
 	void run();
 	Nes nes;

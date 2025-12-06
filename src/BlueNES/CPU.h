@@ -4,7 +4,7 @@
 #include <string>
 
 //#define CPUDEBUG
-#define NMIDEBUG
+//#define NMIDEBUG
 
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02

@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClInclude Include="A12Mapper.h" />
     <ClInclude Include="AudioBackend.h" />
+    <ClInclude Include="AudioRingBuffer.h" />
     <ClInclude Include="Bus.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CommandQueue.h" />

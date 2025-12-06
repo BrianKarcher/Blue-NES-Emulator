@@ -176,6 +176,7 @@ HRESULT Core::CreateWindows() {
     ShowWindow(m_hwndHex, SW_SHOWNORMAL);
     ShowWindow(m_hwndPalette, SW_SHOWNORMAL);
 
+    emulator.start();
     return S_OK;
 }
 
@@ -683,7 +684,6 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                         pMain->LoadGame(filePath);
                         pMain->isPaused = false;
                         pMain->updateMenu();
-                        pMain->emulator.start();
                     }
                     break;
                 }
@@ -932,15 +932,9 @@ void Core::RunMessageLoop()
 {
     MSG msg;
     bool running = true;
-    // --- FPS tracking variables ---
-    LARGE_INTEGER frequency, frameStartTime, currentTime;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&frameStartTime);
-    double targetFrameTime = 1.0 / 60.0;
-    double nextUpdate = 0.0;
-    int frameCount = 0;
 
     int cpuCycleDebt = 0;
+    const int RENDER_TIMEOUT_MS = 16;
     
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -952,9 +946,13 @@ void Core::RunMessageLoop()
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-
+        if (!running) {
+            break;
+        }
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
+        SDL_PollEvent(&event);
+        
+        do {
             switch (event.type) {
             case SDL_QUIT:
                 running = false;
@@ -970,10 +968,8 @@ void Core::RunMessageLoop()
             default:
                 break;
             }
-        }
-        if (!running) {
-            break;
-        }
+        } while (SDL_PollEvent(&event));
+
         if (!isPlaying) {
             continue;
         }
@@ -990,54 +986,29 @@ void Core::RunMessageLoop()
         // Wait for the Core (The "Sleep" phase)
         // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
         // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
-        const uint32_t* frame_data = context.WaitForNewFrame(20);
+        const uint32_t* frame_data = context.WaitForNewFrame(0);
 
         //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
         //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
         //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
         if (frame_data) {
             RenderFrame(frame_data);
-            frameCount++;
         }
 
-        // Debug output every second
-        QueryPerformanceCounter(&currentTime);
-        double timeSinceStart = (currentTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
+        //if (timeSinceStart >= 0.25) {
+        //    //ppuViewer.DrawNametables();
 
-        if (timeSinceStart >= 0.25) {
-            //ppuViewer.DrawNametables();
-
-            // Updates the hex window
-            // TODO - Make this more efficient by only updating changed areas
-            // and also in real time rather than once per second
-            InvalidateRect(hHexDrawArea, nullptr, TRUE);
-            double fps = frameCount / timeSinceStart;
-            //std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
-            //SetWindowText(m_hwnd, title.c_str());
-            frameStartTime = currentTime;
-            frameCount = 0;
-        }
-
-        // === FRAME PACING: Wait for correct frame time ===
-        LARGE_INTEGER frameEndTime;
-        QueryPerformanceCounter(&frameEndTime);
-
-        double frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
-        double timeToWait = targetFrameTime * frameCount - frameTimeElapsed;
-
-        if (timeToWait > 0.001) { // If more than 1ms to wait
-            DWORD sleepMs = (DWORD)((timeToWait - 0.001) * 1000.0); // Sleep for most of it
-            if (sleepMs > 0) {
-                Sleep(sleepMs);
-            }
-
-            // Busy wait for the remaining time for accuracy
-            do {
-                QueryPerformanceCounter(&frameEndTime);
-                frameTimeElapsed = (frameEndTime.QuadPart - frameStartTime.QuadPart) / (double)frequency.QuadPart;
-            } while (frameTimeElapsed < targetFrameTime * frameCount);
-        }
+        //    // Updates the hex window
+        //    // TODO - Make this more efficient by only updating changed areas
+        //    // and also in real time rather than once per second
+        //    InvalidateRect(hHexDrawArea, nullptr, TRUE);
+        //    double fps = frameCount / timeSinceStart;
+        //    //std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
+        //    //SetWindowText(m_hwnd, title.c_str());
+        //    frameStartTime = currentTime;
+        //    frameCount = 0;
+        //}
     }
-
+    emulator.stop();
     SDL_Quit();
 }

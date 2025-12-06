@@ -1,8 +1,8 @@
 // AudioBackend.h
 #pragma once
+#include "AudioRingBuffer.h"
 #include <xaudio2.h>
 #include <vector>
-#include <queue>
 #include <mutex>
 
 #pragma comment(lib, "xaudio2.lib")
@@ -13,18 +13,21 @@ public:
     ~AudioBackend();
 
     bool Initialize(int sampleRate = 44100, int channels = 1);
-    void AddBuffer(int buffer);
     void Shutdown();
 
-    // Submit audio samples to the queue
+    // Submit audio samples (Producer side)
     void SubmitSamples(const float* samples, size_t count);
 
     // Get the number of queued samples
-    size_t GetQueuedSampleCount();
+    size_t GetQueuedSampleCount() { return m_ringBuffer.GetAvailableRead(); }
 
     // Check if audio is initialized
     bool IsInitialized() const { return m_initialized; }
-    static const int SAMPLES_PER_BUFFER = 2048;
+
+    // SAMPLES_PER_CHUNK is the size of the small XAudio2 chunks
+    static const int SAMPLES_PER_CHUNK = 2048;
+    // The total size of the circular buffer (Must be power of 2)
+    static const int RING_BUFFER_CAPACITY = SAMPLES_PER_CHUNK * 8; // e.g., 16384 samples
 
 private:
     // XAudio2 voice callback
@@ -47,8 +50,8 @@ private:
         AudioBackend* m_backend;
     };
 
-    void ProcessAudioQueue();
-    void SubmitBuffer();
+    // Helper to submit the next contiguous chunk from the ring buffer
+    void TrySubmitChunk();
 
     IXAudio2* m_xaudio2;
     IXAudio2MasteringVoice* m_masteringVoice;
@@ -60,17 +63,18 @@ private:
     bool m_initialized;
 
     // Audio buffer management
-    static const int BUFFER_COUNT = 3;
+    AudioRingBuffer<float> m_ringBuffer; // The single continuous buffer
 
-    struct AudioBuffer {
-        std::vector<float> data;
-        bool inUse = false;
+    // The fixed size XAudio2 submission chunks (used for context pointers)
+    struct AudioChunk {
+        int index; // Index used for tracking, or can be a chunk copy if ring buffer wasn't big enough
     };
+    static const int CHUNK_COUNT = 3; // Number of chunks XAudio2 will have queued
+    AudioChunk m_chunks[CHUNK_COUNT];
+    int m_currentChunkIndex = 0;
 
-    AudioBuffer m_buffers[BUFFER_COUNT];
-    int m_currentBuffer;
-
-    // Sample queue
-    std::queue<float> m_sampleQueue;
-    std::mutex m_queueMutex;
+    // No more m_queueMutex needed for sample submission! (Ring Buffer is lock-free)
+    // A separate mutex for XAudio2 submission might still be required if called from multiple threads,
+    // but typically the core only calls SubmitSamples, and the callback only calls TrySubmitChunk.
+    std::mutex m_submissionMutex;
 };

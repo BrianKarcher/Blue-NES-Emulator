@@ -1,31 +1,21 @@
 #include "AudioBackend.h"
+#include <mutex>
 
 AudioBackend::AudioBackend()
-    : m_xaudio2(nullptr)
-    , m_masteringVoice(nullptr)
-    , m_sourceVoice(nullptr)
-    , m_voiceCallback(this)
-    , m_sampleRate(44100)
-    , m_channels(1)
+    : m_xaudio2(nullptr), m_masteringVoice(nullptr), m_sourceVoice(nullptr)
+    , m_voiceCallback(this), m_sampleRate(44100), m_channels(1)
     , m_initialized(false)
-    , m_currentBuffer(0)
+    , m_ringBuffer(RING_BUFFER_CAPACITY)
 {
-    for (int i = 0; i < BUFFER_COUNT; i++) {
-        m_buffers[i].data.resize(SAMPLES_PER_BUFFER);
-        m_buffers[i].inUse = false;
+    // Initialize chunk contexts
+    for (int i = 0; i < CHUNK_COUNT; i++) {
+        m_chunks[i].index = i; // Assign simple index context
     }
 }
 
 AudioBackend::~AudioBackend()
 {
     Shutdown();
-}
-
-void AudioBackend::AddBuffer(int buffer) {
-    std::vector<float> silence(buffer, 0.0f);
-    for (int i = 0; i < 8; ++i) {
-        SubmitSamples(silence.data(), silence.size());
-    }
 }
 
 bool AudioBackend::Initialize(int sampleRate, int channels)
@@ -105,80 +95,67 @@ void AudioBackend::Shutdown()
 
 void AudioBackend::SubmitSamples(const float* samples, size_t count)
 {
-    if (!m_initialized) {
-        return;
-    }
+    if (!m_initialized) return;
 
-    std::lock_guard<std::mutex> lock(m_queueMutex);
+    // --- Ring Buffer Write (Lock-Free) ---
+    m_ringBuffer.Write(samples, count);
 
-    // Add samples to queue
-    for (size_t i = 0; i < count; i++) {
-        m_sampleQueue.push(samples[i]);
-    }
-
-    // Try to submit buffers if we have enough samples
-    ProcessAudioQueue();
+    // Try to submit chunks (Needs mutex if called concurrently with OnBufferEnd)
+    std::lock_guard<std::mutex> lock(m_submissionMutex);
+    TrySubmitChunk();
 }
 
-size_t AudioBackend::GetQueuedSampleCount()
+void AudioBackend::TrySubmitChunk()
 {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    return m_sampleQueue.size();
-}
+    // Check how many buffers XAudio2 currently has queued
+    XAUDIO2_VOICE_STATE state;
+    m_sourceVoice->GetState(&state);
 
-void AudioBackend::ProcessAudioQueue()
-{
-    // Check if we have enough samples and an available buffer
-    while (m_sampleQueue.size() >= SAMPLES_PER_BUFFER) {
-        // Find an available buffer
-        bool foundBuffer = false;
-        for (int i = 0; i < BUFFER_COUNT; i++) {
-            if (!m_buffers[i].inUse) {
-                m_currentBuffer = i;
-                foundBuffer = true;
-                break;
-            }
-        }
+    // Only queue if we have less than the max (CHUNK_COUNT) queued
+    while (state.BuffersQueued < CHUNK_COUNT) {
 
-        if (!foundBuffer) {
-            // All buffers are in use, wait for one to become available
+        // ... (check for contiguous_samples remains the same) ...
+        const float* chunk_ptr;
+        size_t contiguous_samples = m_ringBuffer.ReadPointer(&chunk_ptr);
+
+        if (contiguous_samples < SAMPLES_PER_CHUNK) {
             break;
         }
 
-        // Fill the buffer
-        AudioBuffer& buffer = m_buffers[m_currentBuffer];
-        for (int i = 0; i < SAMPLES_PER_BUFFER; i++) {
-            buffer.data[i] = m_sampleQueue.front();
-            m_sampleQueue.pop();
+        // 2. Submit the buffer (Zero-Copy Submission)
+        XAUDIO2_BUFFER xaudioBuffer = {};
+        xaudioBuffer.AudioBytes = SAMPLES_PER_CHUNK * sizeof(float);
+        xaudioBuffer.pAudioData = reinterpret_cast<const BYTE*>(chunk_ptr);
+
+        // --- FIX: Use the cycling index to set the context pointer ---
+        // Pass the actual pointer to the chunk structure as context
+        xaudioBuffer.pContext = &m_chunks[m_currentChunkIndex];
+
+        xaudioBuffer.Flags = 0;
+
+        HRESULT hr = m_sourceVoice->SubmitSourceBuffer(&xaudioBuffer);
+        if (FAILED(hr)) {
+            break;
         }
 
-        // Submit the buffer
-        SubmitBuffer();
+        // Cycle the index for the next submission
+        m_currentChunkIndex = (m_currentChunkIndex + 1) % CHUNK_COUNT;
+
+        // 3. Advance the ring buffer's read pointer
+        m_ringBuffer.AdvanceRead(SAMPLES_PER_CHUNK);
+
+        // Update state for the next loop iteration
+        m_sourceVoice->GetState(&state);
     }
-}
-
-void AudioBackend::SubmitBuffer()
-{
-    AudioBuffer& buffer = m_buffers[m_currentBuffer];
-    buffer.inUse = true;
-
-    XAUDIO2_BUFFER xaudioBuffer = {};
-    xaudioBuffer.AudioBytes = SAMPLES_PER_BUFFER * sizeof(float);
-    xaudioBuffer.pAudioData = reinterpret_cast<const BYTE*>(buffer.data.data());
-    xaudioBuffer.pContext = &m_buffers[m_currentBuffer]; // Pass buffer pointer as context
-    xaudioBuffer.Flags = 0;
-    m_sourceVoice->SubmitSourceBuffer(&xaudioBuffer);
 }
 
 void AudioBackend::VoiceCallback::OnBufferEnd(void* pBufferContext)
 {
-    // Mark buffer as available
-    if (pBufferContext) {
-        AudioBuffer* buffer = static_cast<AudioBuffer*>(pBufferContext);
-        buffer->inUse = false;
+    // OnBufferEnd is called by an internal XAudio2 thread, so it must be thread-safe.
+    std::lock_guard<std::mutex> lock(m_backend->m_submissionMutex);
 
-        // Try to process more samples
-        std::lock_guard<std::mutex> lock(m_backend->m_queueMutex);
-        m_backend->ProcessAudioQueue();
-    }
+    // NOTE: In the ring buffer model, we no longer need to free/mark specific chunks.
+    // The ring buffer is always being advanced by the consumer (TrySubmitChunk).
+    // The only action needed is to try and submit the next chunk.
+    m_backend->TrySubmitChunk();
 }
