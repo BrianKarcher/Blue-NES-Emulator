@@ -35,6 +35,11 @@ void EmulatorCore::stop() {
 }
 
 void EmulatorCore::run() {
+    // Wait until a game is loaded.
+    while (m_paused && context.is_running) {
+        Sleep(1);
+        processCommands();
+    }
     // Get high-resolution timer frequency once
     LARGE_INTEGER freq_li;
     if (!QueryPerformanceFrequency(&freq_li)) {
@@ -46,6 +51,7 @@ void EmulatorCore::run() {
     using namespace std::chrono;
 
     int frameCount = 0;
+	int audioCycleCounter = 0;
 
     // Target frame rate
     const double targetFps = 60.0;
@@ -54,39 +60,45 @@ void EmulatorCore::run() {
     LARGE_INTEGER fpsUpdateTime_li;
     QueryPerformanceCounter(&fpsUpdateTime_li);
 	long long nextFpsUpdateTime = fpsUpdateTime_li.QuadPart;
-    while (context.is_running) {
-        // Frame start timestamp
-        LARGE_INTEGER frameStart_li;
-        QueryPerformanceCounter(&frameStart_li);
-        long long frameStart = frameStart_li.QuadPart;
 
-        CommandQueue::Command cmd;
-        while (context.command_queue.TryPop(cmd)) {
-            processCommand(cmd);
-        }
+    // Measure time spent so far this frame
+    LARGE_INTEGER frameEnd_li;
+    QueryPerformanceCounter(&frameEnd_li);
+    long long nextFrameUpdateTime = frameEnd_li.QuadPart + ticksPerFrame;
+    while (context.is_running) {
+        processCommands();
+        
         if (m_paused) {
             continue;
         }
 
         nes.input.PollControllerState();
-        runFrame();
+        audioCycleCounter += runFrame();
         context.SwapBuffers();
         frameCount++;
 
-        // Measure time spent so far this frame
-        LARGE_INTEGER frameEnd_li;
-        QueryPerformanceCounter(&frameEnd_li);
-        long long elapsedTicks = frameEnd_li.QuadPart - frameStart;
+        // 1. Advance the target time *before* checking the difference
+        //    This maintains the fixed-time step clock.
+        //    If we are slow, this means nextFrameUpdateTime is now in the past.
+        long long targetTime = nextFrameUpdateTime;
+        nextFrameUpdateTime += ticksPerFrame;
 
+        // 2. Get current time (actual time frame execution finished)
+        LARGE_INTEGER currentFrame_li;
+        QueryPerformanceCounter(&currentFrame_li);
+        long long currentTime = currentFrame_li.QuadPart;
+
+        // 3. Calculate remaining time (Wait time = Target Time - Current Time)
+        //    If positive: we finished early, so wait.
+        //    If zero/negative: we finished on time or late, so don't wait.
+        long long time_to_wait_ticks = targetTime - currentTime;
 
         //std::this_thread::sleep_for(milliseconds(500));
-        if (elapsedTicks < ticksPerFrame) { // If more than 1ms to wait
-            // Remaining ticks to wait to hit target frame time
-            long long remainingTicks = ticksPerFrame - elapsedTicks;
+        if (time_to_wait_ticks > 0) { // If more than 1ms to wait
 
             // Convert remaining ticks to milliseconds for Sleep()
             // Use integer math to avoid floating rounding issues.
-            long long remainingMs = (remainingTicks * 1000) / freq;
+            long long remainingMs = (time_to_wait_ticks * 1000) / freq;
 
             // Sleep for most of the remaining time (if enough to be worthwhile).
             // Subtract 1 ms to avoid oversleeping due to Sleep granularity.
@@ -98,7 +110,7 @@ void EmulatorCore::run() {
             while (true) {
                 LARGE_INTEGER now_li;
                 QueryPerformanceCounter(&now_li);
-                if ((now_li.QuadPart - frameStart) >= ticksPerFrame) break;
+                if ((now_li.QuadPart - nextFrameUpdateTime) >= ticksPerFrame) break;
                 // Optionally call YieldProcessor() or std::this_thread::yield()
                 // to avoid hammering the CPU too hard:
                 YieldProcessor(); // on x86 this is a PAUSE; on MSVC resolves to intrinsic
@@ -106,12 +118,21 @@ void EmulatorCore::run() {
         }
 
         if (frameEnd_li.QuadPart >= nextFpsUpdateTime) {
-			dbg(L"FPS: %d\n", frameCount);
+			// Update FPS once per second
+			dbg(L"FPS: %d, cycles: %d\n", frameCount, audioCycleCounter);
             context.current_fps = frameCount;
             frameCount = 0;
+            audioCycleCounter = 0;
             nextFpsUpdateTime = frameEnd_li.QuadPart + freq;
 		}
 	}
+}
+
+inline void EmulatorCore::processCommands() {
+    CommandQueue::Command cmd;
+    while (context.command_queue.TryPop(cmd)) {
+        processCommand(cmd);
+    }
 }
 
 inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
@@ -125,7 +146,7 @@ inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-void EmulatorCore::runFrame() {
+int EmulatorCore::runFrame() {
     // Ensure the audio buffer is clear before starting the frame
     nes.audioBuffer.clear();
 	nes.cpu.cyclesThisFrame = 0;
@@ -143,7 +164,12 @@ void EmulatorCore::runFrame() {
     // Check audio queue to prevent unbounded growth
     size_t queuedSamples = audioBackend.GetQueuedSampleCount();
     const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
+    while (nes.audioBuffer.size() < 735) {
+        // Not enough samples generated - pad with last value
+		nes.audioBuffer.push_back(nes.audioBuffer[nes.audioBuffer.size() - 1]);
+    }
     dbg(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu.cyclesThisFrame, nes.audioBuffer.size());
+    int cycleCount = nes.audioBuffer.size();
     if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
         // Clear audio buffer for next frame
@@ -153,6 +179,7 @@ void EmulatorCore::runFrame() {
         // Audio queue is too large - skip this frame's audio to catch up
         //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
     }
+    return cycleCount;
 }
 
 void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {

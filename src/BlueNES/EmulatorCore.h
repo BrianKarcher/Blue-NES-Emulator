@@ -16,12 +16,13 @@ public:
 	void Initialize();
 	void loadROM(const char* filepath);
 	void reset();
-	void runFrame();
+	int runFrame();
 	void start();
 	void stop();
 	
 private:
 	inline void dbg(const wchar_t* fmt, ...);
+	inline void processCommands();
 	std::thread core_thread;
 	void run();
 	Nes nes;
