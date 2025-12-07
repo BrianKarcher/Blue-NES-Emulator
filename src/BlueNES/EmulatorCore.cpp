@@ -38,7 +38,6 @@ void EmulatorCore::run() {
     // Get high-resolution timer frequency once
     LARGE_INTEGER freq_li;
     if (!QueryPerformanceFrequency(&freq_li)) {
-        //std::cerr << "High-resolution performance counter not available.\n";
         return;
     }
     const long long freq = freq_li.QuadPart;
@@ -46,18 +45,6 @@ void EmulatorCore::run() {
     using clock = std::chrono::high_resolution_clock;
     using namespace std::chrono;
 
-    //constexpr double TARGET_FRAME_TIME = 1.0 / 60.0; // 60 FPS
-    //// Calculate the target duration in milliseconds (16 ms + fraction)
-    //constexpr auto TARGET_DURATION = duration_cast<microseconds>(
-    //    duration<double>(TARGET_FRAME_TIME)
-    //);
-    // For 60 FPS, this is approximately 16.666... milliseconds.
-    /*constexpr auto TARGET_DURATION = duration_cast<milliseconds>(
-        duration<double>(TARGET_FRAME_TIME_S)
-    );*/
-    //double targetFrameTime = 1.0 / 60.0;
-    //auto lastFrameTime = clock::now();
-    //auto fpsUpdateTime = clock::now();
     int frameCount = 0;
 
     // Target frame rate
@@ -85,13 +72,6 @@ void EmulatorCore::run() {
         runFrame();
         context.SwapBuffers();
         frameCount++;
-
-        // Frame timing
-        //auto frameEnd = clock::now();
-        //duration<double> frameDuration = frameEnd - lastFrameTime;
-		//lastFrameTime += milliseconds(static_cast<int>((1.0 / 60.0) * 1000)); // 60 FPS target
-        //lastFrameTime = frameEnd;
-		//lastFrameTime += TARGET_DURATION;
 
         // Measure time spent so far this frame
         LARGE_INTEGER frameEnd_li;
@@ -136,7 +116,6 @@ void EmulatorCore::run() {
 
 inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
 #ifdef EMULATORCORE_DEBUG
-    //if (!debug) return;
     wchar_t buf[512];
     va_list args;
     va_start(args, fmt);
@@ -164,7 +143,7 @@ void EmulatorCore::runFrame() {
     // Check audio queue to prevent unbounded growth
     size_t queuedSamples = audioBackend.GetQueuedSampleCount();
     const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-    dbg(L"Samples this frame: %d\n", nes.audioBuffer.size());
+    dbg(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu.cyclesThisFrame, nes.audioBuffer.size());
     if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
         // Clear audio buffer for next frame

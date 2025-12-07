@@ -292,6 +292,12 @@ void RendererLoopy::clock(uint32_t* buffer) {
     bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
     bool preRenderLine = (m_scanline == 261);
 
+    if (dot == 0) {
+        dot++;
+        // Idle dot, do nothing
+		return;
+    }
+
     // Pixel rendering (visible)
     if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
         renderPixel(buffer);
@@ -402,7 +408,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
 
     dot++;
     if (dot > DOTS_PER_SCANLINE) {
-        dot = 1;
+        dot = 0;
         m_scanline++;
         if (m_scanline > SCANLINES_PER_FRAME) {
             m_scanline = 0;

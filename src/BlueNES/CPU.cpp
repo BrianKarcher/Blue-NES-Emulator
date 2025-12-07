@@ -1598,8 +1598,6 @@ uint8_t Processor_6502::Clock()
 			break;
 		}
 	}
-	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
-	cyclesThisFrame += cyclesPassed;
 	// Check for interrupts before fetching next instruction
 	// This must be placed AFTER the clock above. The reason is vblank related.
 	// Some games, namely Dragon Warrior 3, wait for vblank in a dumb way. It loops on 2002 high bit while
@@ -1611,7 +1609,9 @@ uint8_t Processor_6502::Clock()
 	// NOTE TO NES developers: When interrupts are enabled, you should avoid reading $2002 in a tight loop like that.
 	// You might miss the NMI entirely if it happens between your read and the interrupt check!
 	// Have NMI set a variable that your loop waits for. Thank you!
-	cyclesThisFrame += checkInterrupts();
+	checkInterrupts();
+	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
+	cyclesThisFrame += cyclesPassed;
 	return cyclesPassed;
 }
 
