@@ -667,7 +667,11 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     ShowWindow(pMain->m_hwndHex, SW_SHOWNORMAL);
                     break;
                 case VK_ESCAPE:
-                    pMain->isPaused = !pMain->isPaused;
+                    CommandQueue::Command cmd;
+					bool newPauseState = !pMain->isPaused;
+                    cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
+                    pMain->context.command_queue.Push(cmd);
+                    pMain->isPaused = newPauseState;
 					//pMain->cpu.toggleFrozen(); // Toggle freeze
                     break;
                 }

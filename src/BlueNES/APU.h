@@ -941,7 +941,7 @@ private:
         float pulse_out = 0.0f;
         uint8_t pulse_sum = p1 + p2;
         if (pulse_sum > 0) {
-            pulse_out = 95.88f / (8128.0f / pulse_sum + 100.0f);
+            pulse_out = 95.88f / ((8128.0f / pulse_sum) + 100.0f);
         }
 
         // TND mixing (non-linear) - CRITICAL FIX HERE
