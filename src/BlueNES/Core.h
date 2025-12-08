@@ -88,6 +88,7 @@ private:
 	HMENU hMenu;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);
+	bool ClearFrame();
 
 	void PollControllerState();
 	void LoadGame(const std::wstring& filePath);

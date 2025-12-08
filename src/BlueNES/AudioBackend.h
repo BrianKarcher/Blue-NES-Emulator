@@ -29,6 +29,10 @@ public:
     // The total size of the circular buffer (Must be power of 2)
     static const int RING_BUFFER_CAPACITY = SAMPLES_PER_CHUNK * 8; // e.g., 16384 samples
 
+    void resetBuffer() {
+        m_ringBuffer.Reset();
+	}
+
 private:
     // XAudio2 voice callback
     class VoiceCallback : public IXAudio2VoiceCallback {

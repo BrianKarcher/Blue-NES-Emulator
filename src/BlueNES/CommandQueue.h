@@ -12,6 +12,7 @@ public:
     enum class CommandType {
         LOAD_ROM,
         RESET,
+        CLOSE,
         SAVE_STATE,
         LOAD_STATE,
         PAUSE,

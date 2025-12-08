@@ -43,6 +43,15 @@ void PPU::reset()
 	paletteTable.fill(0x00);
 	m_vram.fill(0x00);
 	renderer->reset();
+	clearBuffer(context.GetBackBuffer());
+	context.SwapBuffers();
+	clearBuffer(context.GetBackBuffer());
+}
+
+void PPU::clearBuffer(uint32_t* buffer) {
+	for (int i = 0; i < 256 * 240; i++) {
+		buffer[i] = 0x00000000; // Black
+	}
 }
 
 void PPU::step()

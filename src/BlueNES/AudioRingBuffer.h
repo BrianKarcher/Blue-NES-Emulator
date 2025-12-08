@@ -63,6 +63,11 @@ public:
         m_read.store((m_read.load(std::memory_order_relaxed) + count) & (m_capacity - 1), std::memory_order_release);
     }
 
+    void Reset() {
+        m_write.store(0, std::memory_order_relaxed);
+		m_read.store(0, std::memory_order_relaxed);
+    }
+
 private:
     size_t GetAvailableWrite() const {
         return m_capacity - GetAvailableRead();

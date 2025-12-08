@@ -30,4 +30,8 @@ private:
 	AudioBackend audioBackend;
 	void processCommand(const CommandQueue::Command& cmd);
 	bool m_paused;
+	long long nextFrameUpdateTime;
+	long long ticksPerFrame;
+	long long freq;
+	void UpdateNextFrameTime();
 };

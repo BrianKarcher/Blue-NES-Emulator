@@ -684,6 +684,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                         pMain->LoadGame(filePath);
                         pMain->isPaused = false;
                         pMain->updateMenu();
+                        //pMain->emulator.start();
                     }
                     break;
                 }
@@ -693,12 +694,13 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 case ID_FILE_CLOSE:
                 {
                     CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::RESET;
+                    cmd.type = CommandQueue::CommandType::CLOSE;
                     pMain->context.command_queue.Push(cmd);
                     pMain->isPlaying = false;
-                    InvalidateRect(hwnd, NULL, FALSE);
+                    //InvalidateRect(hwnd, NULL, FALSE);
                     pMain->updateMenu();
-                    pMain->emulator.stop();
+                    //pMain->emulator.stop();
+                    pMain->ClearFrame();
                 }
                     break;
                 case ID_NES_RESET:
@@ -887,6 +889,15 @@ void Core::DrawPalette(HWND wnd, HDC hdc)
     //}
 }
 
+bool Core::ClearFrame()
+{
+    // Clear screen
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+    return true;
+}
+
 bool Core::RenderFrame(const uint32_t* frame_data)
 {
     // Update texture with NES framebuffer
@@ -935,6 +946,7 @@ void Core::RunMessageLoop()
 
     int cpuCycleDebt = 0;
     const int RENDER_TIMEOUT_MS = 16;
+    static int titleUpdateDelay = 60;
     
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -993,6 +1005,11 @@ void Core::RunMessageLoop()
         //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
         if (frame_data) {
             RenderFrame(frame_data);
+            if (titleUpdateDelay-- <= 0) {
+                std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)context.current_fps);
+                SetWindowText(m_hwnd, title.c_str());
+                titleUpdateDelay = 60;
+            }
         }
 
         //if (timeSinceStart >= 0.25) {
@@ -1003,8 +1020,6 @@ void Core::RunMessageLoop()
         //    // and also in real time rather than once per second
         //    InvalidateRect(hHexDrawArea, nullptr, TRUE);
         //    double fps = frameCount / timeSinceStart;
-        //    //std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)fps) + L" Cycle " + std::to_wstring(emulator.nes.cpu.GetCycleCount());
-        //    //SetWindowText(m_hwnd, title.c_str());
         //    frameStartTime = currentTime;
         //    frameCount = 0;
         //}

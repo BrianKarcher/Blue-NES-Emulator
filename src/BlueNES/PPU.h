@@ -121,10 +121,7 @@ private:
 
 	void write_vram(uint16_t addr, uint8_t value);
 	
-	
 	//void render_nametable();
 	inline void dbg(const wchar_t* fmt, ...);
-
-	
-	
+	void clearBuffer(uint32_t* buffer);
 };
