@@ -72,6 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -124,7 +125,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sdl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -151,6 +152,7 @@
     <ClCompile Include="..\BlueNES\SharedContext.cpp" />
     <ClCompile Include="..\BlueNES\UxROMMapper.cpp" />
     <ClCompile Include="BlueNES.LoadTest.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\A12Mapper.h" />
@@ -180,11 +182,7 @@
     <ClInclude Include="..\BlueNES\RendererWithReg.h" />
     <ClInclude Include="..\BlueNES\SharedContext.h" />
     <ClInclude Include="..\BlueNES\UxROMMapper.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BlueNES\BlueNES.vcxproj">
-      <Project>{816b9c88-cadf-4eba-97b6-522ad49092a9}</Project>
-    </ProjectReference>
+    <ClInclude Include="BlueNES.LoadTest.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

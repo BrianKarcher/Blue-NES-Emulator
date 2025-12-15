@@ -87,6 +87,9 @@
     <ClCompile Include="..\BlueNES\UxROMMapper.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\BlueNES\A12Mapper.h">
@@ -169,6 +172,9 @@
     </ClInclude>
     <ClInclude Include="..\BlueNES\UxROMMapper.h">
       <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="BlueNES.LoadTest.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

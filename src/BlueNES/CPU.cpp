@@ -4,8 +4,12 @@
 #include "PPU.h"
 #include "RendererLoopy.h"
 
-Processor_6502::Processor_6502(Bus& b) : bus(b) {
+Processor_6502::Processor_6502() : bus(b) {
 	buildMap();
+}
+
+void Processor_6502::connectBus(Bus* bus) {
+	this->bus = bus;
 }
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
@@ -69,7 +73,7 @@ void Processor_6502::Activate(bool active)
 void Processor_6502::Reset()
 {
 	// TODO : Add the reset vector read from the bus
-	m_pc = (static_cast<uint16_t>(bus.read(0xFFFD) << 8)) | bus.read(0xFFFC);
+	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
 	m_a = 0;
 	m_x = 0;
 	m_y = 0;
@@ -105,11 +109,11 @@ void Processor_6502::handleNMI() {
 	}
 	dbgNmi(L"\nTaking NMI (%d) (cycle %d)\n", nmiCount, m_cycle_count);
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
-	bus.write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
+	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
-	bus.write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
+	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
 	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
-	bus.write(0x0100 + m_sp--, m_p);                 // Push processor status
+	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
 	// THIS MUST BE DONE AFTER PUSHING P TO STACK. OTHERWISE WILL BREAK MMC3 FOREVER!
 	// Technically it is because RTI pulls its state from the stack, and that state needs
 	// to have the interrupt flag set to whatever it was PRIOR to the NMI occurring.
@@ -117,7 +121,7 @@ void Processor_6502::handleNMI() {
 	// Yes, this bug pissed me off.
 	m_p |= FLAG_INTERRUPT;
 	// Set PC to NMI vector
-	m_pc = (static_cast<uint16_t>(bus.read(0xFFFB) << 8)) | bus.read(0xFFFA);
+	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
 	//dbgNmi(L"pc set to 0x%04X\n", m_pc);
 	//dbgNmi(L"Stack set to ");
 	//for (uint8_t i = m_sp + 1; i != 0; i++) {
@@ -141,13 +145,13 @@ void Processor_6502::setIRQ(bool state) {
 }
 
 void Processor_6502::push(uint8_t value) {
-	bus.write(0x0100 + m_sp, value);
+	bus->write(0x0100 + m_sp, value);
 	m_sp--;
 }
 
 uint8_t Processor_6502::pull() {
 	m_sp++;
-	return bus.read(0x0100 + m_sp);
+	return bus->read(0x0100 + m_sp);
 }
 
 void Processor_6502::handleIRQ() {
@@ -225,7 +229,7 @@ uint8_t Processor_6502::Clock()
 
 	// Mario 3 toad house scroll
 	if (m_pc == 0xF795) {
-		int scanline = bus.ppu.renderer->m_scanline;
+		int scanline = bus->ppu.renderer->m_scanline;
 		int i = 0;
 	}
 
@@ -263,7 +267,7 @@ uint8_t Processor_6502::Clock()
 		case ADC_ABSOLUTE:
 		{
 			uint16_t memoryLocation = ReadNextWord();
-			ADC(bus.read(memoryLocation));
+			ADC(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
@@ -275,7 +279,7 @@ uint8_t Processor_6502::Clock()
 			// This could all be sped up if I programmed it in Assembly but I don't want my code to be
 			// CPU specific.
 			uint16_t memoryLocation = ReadNextWord(m_x);
-			ADC(bus.read(memoryLocation));
+			ADC(bus->read(memoryLocation));
 			m_cycle_count += 4;
 			break;
 		}
@@ -382,7 +386,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			ASL(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 5;
 			break;
 		}
@@ -391,7 +395,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			ASL(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -402,7 +406,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t data = ReadByte(addr);
 			ASL(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -411,7 +415,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord(m_x);
 			uint8_t data = ReadByte(addr);
 			ASL(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -518,9 +522,9 @@ uint8_t Processor_6502::Clock()
 			uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
 			//m_pc += 1; 
 			// Push PC and P to stack
-			bus.write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
-			bus.write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
-			bus.write(0x0100 + m_sp--, flags);                // Push processor status
+			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
+			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
+			bus->write(0x0100 + m_sp--, flags);                // Push processor status
 			// Set PC to NMI vector
 			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
 			// Set Interrupt Disable flag in real status so IRQs are masked
@@ -696,7 +700,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			data--;
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 5;
@@ -707,7 +711,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			data--;
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 6;
@@ -720,7 +724,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t data = ReadByte(addr);
 			data--;
-			bus.write(addr, data);
+			bus->write(addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 6;
@@ -731,7 +735,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord(m_x);
 			uint8_t data = ReadByte(addr);
 			data--;
-			bus.write(addr, data);
+			bus->write(addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 7;
@@ -824,7 +828,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			data++;
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 5;
@@ -835,7 +839,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			data++;
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 6;
@@ -849,7 +853,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t data = ReadByte(addr);
 			dbg(L"0x%04X = 0x%02X", addr, data);
 			data++;
-			bus.write(addr, data);
+			bus->write(addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 6;
@@ -860,7 +864,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord(m_x);
 			uint8_t data = ReadByte(addr);
 			data++;
-			bus.write(addr, data);
+			bus->write(addr, data);
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 7;
@@ -911,9 +915,9 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t return_addr = m_pc + 1; // Address to return to after subroutine
 			// Push return address onto stack (high byte first)
-			bus.write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
+			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
 			dbg(L"Pushing 0x%02X to stack 0x%02X\n", (return_addr >> 8) & 0xFF, m_sp + 1);
-			bus.write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
+			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
 			dbg(L"Pushing 0x%02X to stack 0x%02X\n", return_addr & 0xFF, m_sp + 1);
 			// Set PC to target address
 			m_pc = ReadNextWord();
@@ -1117,7 +1121,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			LSR(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 5;
 			break;
 		}
@@ -1126,7 +1130,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			LSR(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1135,7 +1139,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord();
 			uint8_t data = ReadByte(addr);
 			LSR(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1144,7 +1148,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord(m_x);
 			uint8_t data = ReadByte(addr);
 			LSR(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -1219,13 +1223,13 @@ uint8_t Processor_6502::Clock()
 		}
 		case PHA_IMPLIED:
 		{
-			bus.write(0x0100 + m_sp--, m_a);
+			bus->write(0x0100 + m_sp--, m_a);
 			m_cycle_count += 3;
 			break;
 		}
 		case PHP_IMPLIED:
 		{
-			bus.write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
+			bus->write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
 			m_cycle_count += 3;
 			break;
 		}
@@ -1256,7 +1260,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			ROL(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 5;
 			break;
 		}
@@ -1265,7 +1269,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			ROL(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1274,7 +1278,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord();
 			uint8_t data = ReadByte(addr);
 			ROL(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1283,7 +1287,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWordNoCycle(m_x);
 			uint8_t data = ReadByte(addr);
 			ROL(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -1298,7 +1302,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte();
 			uint8_t data = ReadByte(zp_addr);
 			ROR(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 5;
 			break;
 		}
@@ -1307,7 +1311,7 @@ uint8_t Processor_6502::Clock()
 			uint8_t zp_addr = ReadNextByte(m_x);
 			uint8_t data = ReadByte(zp_addr);
 			ROR(data);
-			bus.write(zp_addr, data);
+			bus->write(zp_addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1316,7 +1320,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWord();
 			uint8_t data = ReadByte(addr);
 			ROR(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 6;
 			break;
 		}
@@ -1325,7 +1329,7 @@ uint8_t Processor_6502::Clock()
 			uint16_t addr = ReadNextWordNoCycle(m_x);
 			uint8_t data = ReadByte(addr);
 			ROR(data);
-			bus.write(addr, data);
+			bus->write(addr, data);
 			m_cycle_count += 7;
 			break;
 		}
@@ -1447,14 +1451,14 @@ uint8_t Processor_6502::Clock()
 		case STA_ZEROPAGE:
 		{
 			uint8_t zp_addr = ReadNextByte();
-			bus.write(zp_addr, m_a);
+			bus->write(zp_addr, m_a);
 			m_cycle_count += 3;
 			break;
 		}
 		case STA_ZEROPAGE_X:
 		{
 			uint8_t zp_addr = ReadNextByte(m_x);
-			bus.write(zp_addr, m_a);
+			bus->write(zp_addr, m_a);
 			m_cycle_count += 4;
 			break;
 		}
@@ -1470,7 +1474,7 @@ uint8_t Processor_6502::Clock()
 					int j = 0;
 				}
 			}
-			bus.write(addr, m_a);
+			bus->write(addr, m_a);
 			m_cycle_count += 4;
 			break;
 		}
@@ -1480,7 +1484,7 @@ uint8_t Processor_6502::Clock()
 			if (addr >= 0x0200 && addr <= 0x02FF) {
 				int i = 0;
 			}
-			bus.write(addr, m_a);
+			bus->write(addr, m_a);
 			m_cycle_count += 5;
 			break;
 		}
@@ -1490,63 +1494,63 @@ uint8_t Processor_6502::Clock()
 			if (addr >= 0x0200 && addr <= 0x02FF) {
 				int i = 0;
 			}
-			bus.write(addr, m_a);
+			bus->write(addr, m_a);
 			m_cycle_count += 5;
 			break;
 		}
 		case STA_INDEXEDINDIRECT:
 		{
 			uint16_t target_addr = ReadIndexedIndirect();
-			bus.write(target_addr, m_a);
+			bus->write(target_addr, m_a);
 			m_cycle_count += 6;
 			break;
 		}
 		case STA_INDIRECTINDEXED:
 		{
 			uint16_t target_addr = ReadIndirectIndexedNoCycle();
-			bus.write(target_addr, m_a);
+			bus->write(target_addr, m_a);
 			m_cycle_count += 6;
 			break;
 		}
 		case STX_ZEROPAGE:
 		{
 			uint8_t zp_addr = ReadNextByte();
-			bus.write(zp_addr, m_x);
+			bus->write(zp_addr, m_x);
 			m_cycle_count += 3;
 			break;
 		}
 		case STX_ZEROPAGE_Y:
 		{
 			uint8_t zp_addr = ReadNextByte(m_y);
-			bus.write(zp_addr, m_x);
+			bus->write(zp_addr, m_x);
 			m_cycle_count += 4;
 			break;
 		}
 		case STX_ABSOLUTE:
 		{
 			uint16_t addr = ReadNextWord();
-			bus.write(addr, m_x);
+			bus->write(addr, m_x);
 			m_cycle_count += 4;
 			break;
 		}
 		case STY_ZEROPAGE:
 		{
 			uint8_t zp_addr = ReadNextByte();
-			bus.write(zp_addr, m_y);
+			bus->write(zp_addr, m_y);
 			m_cycle_count += 3;
 			break;
 		}
 		case STY_ZEROPAGE_X:
 		{
 			uint8_t zp_addr = ReadNextByte(m_x);
-			bus.write(zp_addr, m_y);
+			bus->write(zp_addr, m_y);
 			m_cycle_count += 4;
 			break;
 		}
 		case STY_ABSOLUTE:
 		{
 			uint16_t addr = ReadNextWord();
-			bus.write(addr, m_y);
+			bus->write(addr, m_y);
 			m_cycle_count += 4;
 			break;
 		}
@@ -1628,7 +1632,7 @@ void Processor_6502::SetSP(uint8_t sp)
 inline uint8_t Processor_6502::ReadNextByte()
 {
 	//dbg(L"0x%02X ", bus->read(m_pc));
-	return bus.read(m_pc++);
+	return bus->read(m_pc++);
 }
 
 inline uint8_t Processor_6502::ReadNextByte(uint8_t offset)
@@ -1678,16 +1682,16 @@ inline uint16_t Processor_6502::ReadIndexedIndirect()
 	uint8_t zp_base = ReadNextByte();
 	// Add X register to base (with zp wraparound)
 	uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-	uint8_t addr_lo = bus.read(zp_addr);
-	uint8_t addr_hi = bus.read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
+	uint8_t addr_lo = bus->read(zp_addr);
+	uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
 	return (addr_hi << 8) | addr_lo;
 }
 
 inline uint16_t Processor_6502::ReadIndirectIndexed()
 {
 	uint8_t zp_base = ReadNextByte();
-	uint8_t addr_lo = bus.read(zp_base);
-	uint8_t addr_hi = bus.read((zp_base + 1) & 0xFF); // Wraparound for the high byte
+	uint8_t addr_lo = bus->read(zp_base);
+	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
 	// Add Y register to the low byte of the address
 	addr_lo += m_y;
 	if (addr_lo < m_y) {
@@ -1700,8 +1704,8 @@ inline uint16_t Processor_6502::ReadIndirectIndexed()
 inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
 {
 	uint8_t zp_base = ReadNextByte();
-	uint8_t addr_lo = bus.read(zp_base);
-	uint8_t addr_hi = bus.read((zp_base + 1) & 0xFF); // Wraparound for the high byte
+	uint8_t addr_lo = bus->read(zp_base);
+	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
 	// Add Y register to the low byte of the address
 	addr_lo += m_y;
 	if (addr_lo < m_y) {
@@ -1712,7 +1716,7 @@ inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
 
 inline uint8_t Processor_6502::ReadByte(uint16_t addr)
 {
-	return bus.read(addr);
+	return bus->read(addr);
 }
 
 uint8_t Processor_6502::GetStatus()

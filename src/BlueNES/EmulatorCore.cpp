@@ -1,6 +1,7 @@
 // EmulatorCore.cpp
 #include "EmulatorCore.h"
 #include "SharedContext.h"
+#include "AudioRingBuffer.h"
 #include <chrono>
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {

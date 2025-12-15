@@ -49,8 +49,9 @@ class A12Mapper;
 class PPU
 {
 public:
-	PPU(SharedContext& ctx, Bus& bus);
+	PPU(SharedContext& ctx);
 	~PPU();
+	void connectBus(Bus* bus) { this->bus = bus; }
 	RendererLoopy* renderer;
 	void reset();
 	void step();
@@ -74,7 +75,7 @@ public:
 	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
-	Bus& bus;
+	Bus* bus;
 	A12Mapper* m_mapper;
 
 	void Clock();

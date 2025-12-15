@@ -1,6 +1,3 @@
-// BlueNES.LoadTest.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -9,6 +6,7 @@
 #include <iomanip>
 #include <atomic>
 #include "Nes.h"
+#include "BlueNES.LoadTest.h"
 
 // Cache line flush helper (platform specific)
 inline void flushCacheLine(const void* ptr) {
@@ -22,23 +20,144 @@ inline void flushCacheLine(const void* ptr) {
 // Prevent compiler optimizations
 volatile uint8_t sink = 0;
 
-//MMC1 mmc;
-//Cartridge cart;
-std::vector<uint16_t> testAddresses;
-std::mt19937 rng;
+BusLoadTest::BusLoadTest(Nes& ness, size_t romSize) : nes(ness), rng(std::random_device{}()) {
+    // Initialize cartridge with random data
+    nes.cart.m_prgRomData.resize(romSize);
+    for (auto& byte : nes.cart.m_prgRomData) {
+        byte = static_cast<uint8_t>(rng() & 0xFF);
+    }
 
-int main()
-{
-    std::cout << "Hello World!\n";
+    // Setup MMC1
+    //mmc.cartridge = &cart;
+    //mmc.prg0Addr = 0;
+    //mmc.prg1Addr = romSize / 2;
+
+    // Generate randomized test addresses to defeat cache prediction
+    generateRandomAddresses(100000);
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
+void BusLoadTest::generateRandomAddresses(size_t count) {
+    testAddresses.clear();
+    testAddresses.reserve(count);
 
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+    std::uniform_int_distribution<uint16_t> dist(0x0000, 0xFFFF);
+    for (size_t i = 0; i < count; ++i) {
+        testAddresses.push_back(dist(rng));
+    }
+}
+
+// Test with sequential access (worst case for cache avoidance)
+void BusLoadTest::runSequentialTest(size_t iterations) {
+    std::cout << "\n=== Sequential Access Test ===" << std::endl;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (size_t i = 0; i < iterations; ++i) {
+        for (uint16_t addr = 0x8000; addr < 0xFFFF; addr += 64) {
+            // Flush the cache line containing the result
+            flushCacheLine(&nes.cart.m_prgRomData[0]);
+
+            //uint8_t result = mmc.readPRGROM(addr);
+            uint8_t result = nes.bus.read(addr);
+            sink = result; // Prevent optimization
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    size_t totalOps = iterations * ((0xFFFF - 0x8000) / 64);
+    printResults("Sequential", totalOps, duration.count());
+}
+
+// Test with random access (better for cache avoidance)
+void BusLoadTest::runRandomTest(size_t iterations) {
+    std::cout << "\n=== Random Access Test ===" << std::endl;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (size_t i = 0; i < iterations; ++i) {
+        for (const auto& addr : testAddresses) {
+            // Flush cache periodically
+            if ((i & 0x3F) == 0) {
+                flushCacheLine(&nes.cart.m_prgRomData[addr & 0x3FFF]);
+            }
+
+            uint8_t result = nes.bus.read(addr);
+            sink = result;
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    size_t totalOps = iterations * testAddresses.size();
+    printResults("Random", totalOps, duration.count());
+}
+
+// Strided access to maximize cache misses
+void BusLoadTest::runStridedTest(size_t iterations, size_t stride) {
+    std::cout << "\n=== Strided Access Test (stride=" << stride << ") ===" << std::endl;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (size_t i = 0; i < iterations; ++i) {
+        for (uint16_t addr = 0x8000; addr < 0xFFFF; addr += stride) {
+            // Large stride should naturally avoid cache hits
+            uint8_t result = nes.bus.read(addr);
+            sink = result;
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    size_t totalOps = iterations * ((0xFFFF - 0x8000) / stride);
+    printResults("Strided", totalOps, duration.count());
+}
+
+// Multi-threaded load test
+void BusLoadTest::runMultiThreadedTest(size_t iterations, size_t threadCount) {
+    std::cout << "\n=== Multi-threaded Test (" << threadCount << " threads) ===" << std::endl;
+
+    std::atomic<size_t> completedOps{ 0 };
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (size_t t = 0; t < threadCount; ++t) {
+        threads.emplace_back([&, t]() {
+            // Each thread gets its own random seed
+            std::mt19937 localRng(t);
+            std::uniform_int_distribution<uint16_t> dist(0x8000, 0xFFFF);
+
+            for (size_t i = 0; i < iterations; ++i) {
+                uint16_t addr = dist(localRng);
+                uint8_t result = nes.bus.read(addr);
+                sink = result;
+                completedOps.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    printResults("Multi-threaded", completedOps.load(), duration.count());
+}
+
+void BusLoadTest::printResults(const std::string& testName, size_t operations, long long microseconds) {
+    double opsPerSecond = (operations * 1000000.0) / microseconds;
+    double nsPerOp = (microseconds * 1000.0) / operations;
+
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << testName << " Test Results:" << std::endl;
+    std::cout << "  Total operations: " << operations << std::endl;
+    std::cout << "  Time elapsed: " << microseconds / 1000.0 << " ms" << std::endl;
+    std::cout << "  Throughput: " << opsPerSecond / 1000000.0 << " million ops/sec" << std::endl;
+    std::cout << "  Latency: " << nsPerOp << " ns/op" << std::endl;
+}

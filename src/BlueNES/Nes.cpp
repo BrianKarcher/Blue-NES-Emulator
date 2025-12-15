@@ -1,8 +1,21 @@
 #include "Nes.h"
+#include "Bus.h"
+#include "PPU.h"
+#include "Cartridge.h"
+#include "CPU.h"
+#include "APU.h"
+#include "Input.h"
+#include "SharedContext.h"
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
-Nes::Nes(SharedContext& ctx) : bus(cpu, ppu, apu, input, cart), context(ctx), ppu(ctx, bus), cpu(bus), cart(bus, cpu) {
+Nes::Nes(SharedContext& ctx) : cart(bus, cpu) {
+    context_ = &ctx;
+	bus_ = new Bus(apu, input, cart);
+    cpu_ = new Processor_6502();
+	cpu_->connectBus(bus_);
+	ppu_ = new PPU(ctx, *bus_);
+	ppu_->connectBus(bus_);
     audioBuffer.reserve(4096);
 }
 
