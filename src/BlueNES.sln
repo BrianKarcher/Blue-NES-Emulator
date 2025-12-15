@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestRunner", "TestRunner\Te
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BlueNES.Test", "BlueNES.Test\BlueNES.Test.vcxproj", "{93B8402C-BA3F-3C78-45F3-74E3C2C05D92}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BlueNES.LoadTest", "BlueNES.LoadTest\BlueNES.LoadTest.vcxproj", "{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -46,6 +48,14 @@ Global
 		{93B8402C-BA3F-3C78-45F3-74E3C2C05D92}.Release|x64.Build.0 = Release|x64
 		{93B8402C-BA3F-3C78-45F3-74E3C2C05D92}.Release|x86.ActiveCfg = Release|Win32
 		{93B8402C-BA3F-3C78-45F3-74E3C2C05D92}.Release|x86.Build.0 = Release|Win32
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Debug|x64.ActiveCfg = Debug|x64
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Debug|x64.Build.0 = Debug|x64
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Debug|x86.ActiveCfg = Debug|Win32
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Debug|x86.Build.0 = Debug|Win32
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Release|x64.ActiveCfg = Release|x64
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Release|x64.Build.0 = Release|x64
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Release|x86.ActiveCfg = Release|Win32
+		{77C0A9F2-1E0E-47D6-82AC-B265078B5B69}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

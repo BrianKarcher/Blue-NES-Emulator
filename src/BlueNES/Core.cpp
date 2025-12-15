@@ -1002,7 +1002,7 @@ void Core::RunMessageLoop()
         // Wait for the Core (The "Sleep" phase)
         // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
         // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
-        const uint32_t* frame_data = context.WaitForNewFrame(0);
+        const uint32_t* frame_data = context.WaitForNewFrame(20);
 
         //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
         //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +

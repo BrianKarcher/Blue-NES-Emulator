@@ -6,7 +6,8 @@
 #include "Bus.h"
 #include "PPU.h"
 #include "RendererWithReg.h"
-#include "Core.h"
+#include "Nes.h"
+#include "SharedContext.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -19,34 +20,37 @@ namespace PPUTest
 		//Bus bus;
 		//Cartridge cart;
 		//NesPPU ppu;
-		Core core;
+		SharedContext context;
+		//Nes nes(SharedContext);
+		Nes* nes;
 
 	public:
 		TEST_METHOD_INITIALIZE(TestSetup)
 		{
-			core.Initialize();
+			nes = new Nes(context);
+			//core.Initialize();
 			ines_file_t inesLoader;
-			core.bus.cart->SetMapper(0, inesLoader);
-			core.cpu.PowerOn();
-			core.cpu.Activate(true);
-			core.cpu.SetPC(0x8000);
+			nes->bus.cart.SetMapper(0, inesLoader);
+			nes->cpu.PowerOn();
+			nes->cpu.Activate(true);
+			nes->cpu.SetPC(0x8000);
 		}
 
 		TEST_METHOD(TestReadWritePPUCTRL)
 		{
-			core.ppu.write_register(0x2000, 0x80);
-			Assert::AreEqual((uint8_t)0x80, core.ppu.read_register(0x2000));
+			nes->ppu.write_register(0x2000, 0x80);
+			Assert::AreEqual((uint8_t)0x80, nes->ppu.read_register(0x2000));
 		}
 
 		TEST_METHOD(TestWritePPUADDR)
 		{
-			core.ppu.write_register(PPUADDR, 0x20);
+			nes->ppu.write_register(PPUADDR, 0x20);
 			// The first write sets the high byte of the TEMP address
 			// But does not update the actual VRAM address yet
-			Assert::AreEqual((uint16_t)0x0000, core.ppu.GetVRAMAddress());
-			core.ppu.write_register(PPUADDR, 0x00);
+			Assert::AreEqual((uint16_t)0x0000, nes->ppu.GetVRAMAddress());
+			nes->ppu.write_register(PPUADDR, 0x00);
 			// The second write sets the low byte and updates the VRAM address
-			Assert::AreEqual((uint16_t)0x2000, core.ppu.GetVRAMAddress());
+			Assert::AreEqual((uint16_t)0x2000, nes->ppu.GetVRAMAddress());
 		}
 		TEST_METHOD(TestWritePPUSCROLL)
 		{

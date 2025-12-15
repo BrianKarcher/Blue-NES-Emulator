@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="EmulatorCore">
+      <UniqueIdentifier>{6a8dc570-2960-41f2-a848-2636662ab74c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BlueNES.LoadTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\APU.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\AudioBackend.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Bus.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Cartridge.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Core.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\CPU.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\EmulatorCore.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\HexViewer.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\INESLoader.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Input.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\MainWindow.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\MMC1.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\MMC3.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Nes.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\NROM.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\PPU.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\PPUViewer.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\RendererLoopy.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\RendererSlow.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\RendererWithReg.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\SharedContext.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\UxROMMapper.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\BlueNES\A12Mapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\APU.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\AudioBackend.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\AudioRingBuffer.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Bus.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Cartridge.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\CommandQueue.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Core.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\CPU.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\EmulatorCore.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\HexViewer.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\INESLoader.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Input.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\MainWindow.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Mapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\MMC1.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\MMC3.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Nes.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\NROM.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\PPU.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\PPUViewer.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\Renderer.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\RendererLoopy.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\RendererSlow.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\RendererWithReg.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\SharedContext.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\UxROMMapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -6,6 +6,7 @@
 #include <thread>
 
 #define EMULATORCORE_DEBUG
+//#define FPS_CAP
 
 class EmulatorCore
 {

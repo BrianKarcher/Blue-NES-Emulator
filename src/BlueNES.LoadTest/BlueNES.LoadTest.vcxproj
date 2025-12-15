@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{01a8e33b-fa24-473e-a569-bd1785c8918b}</ProjectGuid>
-    <RootNamespace>TestRunner</RootNamespace>
+    <ProjectGuid>{77c0a9f2-1e0e-47d6-82ac-b265078b5b69}</ProjectGuid>
+    <RootNamespace>BlueNESLoadTest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,8 +70,8 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;$(IncludePath)</IncludePath>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -105,10 +105,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -125,90 +124,67 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BlueNES\BlueNES.vcxproj">
-      <Project>{816b9c88-cadf-4eba-97b6-522ad49092a9}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
+    <ClCompile Include="..\BlueNES\APU.cpp" />
     <ClCompile Include="..\BlueNES\AudioBackend.cpp" />
     <ClCompile Include="..\BlueNES\Bus.cpp" />
     <ClCompile Include="..\BlueNES\Cartridge.cpp" />
     <ClCompile Include="..\BlueNES\Core.cpp" />
     <ClCompile Include="..\BlueNES\CPU.cpp" />
+    <ClCompile Include="..\BlueNES\EmulatorCore.cpp" />
+    <ClCompile Include="..\BlueNES\HexViewer.cpp" />
     <ClCompile Include="..\BlueNES\INESLoader.cpp" />
     <ClCompile Include="..\BlueNES\Input.cpp" />
+    <ClCompile Include="..\BlueNES\MainWindow.cpp" />
     <ClCompile Include="..\BlueNES\MMC1.cpp" />
-    <ClCompile Include="..\BlueNES\NES_APU.cpp" />
-    <ClCompile Include="..\BlueNES\nes_ppu.cpp" />
+    <ClCompile Include="..\BlueNES\MMC3.cpp" />
+    <ClCompile Include="..\BlueNES\Nes.cpp" />
     <ClCompile Include="..\BlueNES\NROM.cpp" />
+    <ClCompile Include="..\BlueNES\PPU.cpp" />
     <ClCompile Include="..\BlueNES\PPUViewer.cpp" />
     <ClCompile Include="..\BlueNES\RendererLoopy.cpp" />
     <ClCompile Include="..\BlueNES\RendererSlow.cpp" />
     <ClCompile Include="..\BlueNES\RendererWithReg.cpp" />
-    <ClCompile Include="IntegrationRunner.cpp" />
-    <ClCompile Include="IntegrationTest.cpp" />
-    <ClCompile Include="SimpleNESTest.cpp" />
-    <ClCompile Include="VertScrollTest.cpp" />
+    <ClCompile Include="..\BlueNES\SharedContext.cpp" />
+    <ClCompile Include="..\BlueNES\UxROMMapper.cpp" />
+    <ClCompile Include="BlueNES.LoadTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\BlueNES\A12Mapper.h" />
+    <ClInclude Include="..\BlueNES\APU.h" />
     <ClInclude Include="..\BlueNES\AudioBackend.h" />
+    <ClInclude Include="..\BlueNES\AudioRingBuffer.h" />
     <ClInclude Include="..\BlueNES\Bus.h" />
     <ClInclude Include="..\BlueNES\Cartridge.h" />
+    <ClInclude Include="..\BlueNES\CommandQueue.h" />
     <ClInclude Include="..\BlueNES\Core.h" />
     <ClInclude Include="..\BlueNES\CPU.h" />
+    <ClInclude Include="..\BlueNES\EmulatorCore.h" />
+    <ClInclude Include="..\BlueNES\HexViewer.h" />
     <ClInclude Include="..\BlueNES\INESLoader.h" />
     <ClInclude Include="..\BlueNES\Input.h" />
+    <ClInclude Include="..\BlueNES\MainWindow.h" />
+    <ClInclude Include="..\BlueNES\Mapper.h" />
     <ClInclude Include="..\BlueNES\MMC1.h" />
-    <ClInclude Include="..\BlueNES\NES_APU.h" />
-    <ClInclude Include="..\BlueNES\nes_ppu.h" />
+    <ClInclude Include="..\BlueNES\MMC3.h" />
+    <ClInclude Include="..\BlueNES\Nes.h" />
     <ClInclude Include="..\BlueNES\NROM.h" />
+    <ClInclude Include="..\BlueNES\PPU.h" />
     <ClInclude Include="..\BlueNES\PPUViewer.h" />
     <ClInclude Include="..\BlueNES\Renderer.h" />
     <ClInclude Include="..\BlueNES\RendererLoopy.h" />
     <ClInclude Include="..\BlueNES\RendererSlow.h" />
     <ClInclude Include="..\BlueNES\RendererWithReg.h" />
-    <ClInclude Include="IntegrationRunner.h" />
-    <ClInclude Include="IntegrationTest.h" />
-    <ClInclude Include="SimpleNESTest.h" />
-    <ClInclude Include="VertScrollTest.h" />
+    <ClInclude Include="..\BlueNES\SharedContext.h" />
+    <ClInclude Include="..\BlueNES\UxROMMapper.h" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="test-chr-rom.chr">
-      <DeploymentContent>true</DeploymentContent>
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="simple.nes">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="sprite.nes">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="hello_world.nes">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="roms\Donkey Kong.nes" />
-    <None Include="roms\dual_pattern_tables.nes" />
-    <None Include="roms\hor_scroll.nes" />
-    <None Include="roms\hor_scroll_full.nes" />
-    <CopyFileToFolders Include="roms\vert_nt_draw.nes">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-    <None Include="roms\snake.nes" />
-    <None Include="roms\vert_scroll.nes" />
+    <ProjectReference Include="..\BlueNES\BlueNES.vcxproj">
+      <Project>{816b9c88-cadf-4eba-97b6-522ad49092a9}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

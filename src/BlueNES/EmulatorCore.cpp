@@ -96,6 +96,7 @@ void EmulatorCore::run() {
         //    If zero/negative: we finished on time or late, so don't wait.
         long long time_to_wait_ticks = targetTime - currentTime;
 
+#ifdef FPS_CAP
         //std::this_thread::sleep_for(milliseconds(500));
         if (time_to_wait_ticks > 0) { // If more than 1ms to wait
 
@@ -119,6 +120,7 @@ void EmulatorCore::run() {
                 YieldProcessor(); // on x86 this is a PAUSE; on MSVC resolves to intrinsic
             }
         }
+#endif
 
         if (currentTime >= nextFpsUpdateTime) {
 			// Update FPS once per second

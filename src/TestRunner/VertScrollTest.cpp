@@ -1,5 +1,5 @@
 #include "VertScrollTest.h"
-#include "nes_ppu.h"
+#include "PPU.h"
 #include "Core.h"
 #include <iostream>
 #include "IntegrationRunner.h"
