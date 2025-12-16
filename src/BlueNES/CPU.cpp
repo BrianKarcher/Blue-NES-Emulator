@@ -4,7 +4,7 @@
 #include "PPU.h"
 #include "RendererLoopy.h"
 
-Processor_6502::Processor_6502() : bus(b) {
+Processor_6502::Processor_6502() {
 	buildMap();
 }
 
@@ -1466,14 +1466,6 @@ uint8_t Processor_6502::Clock()
 		{
 			uint16_t addr = ReadNextWord();
 			dbg(L"0x%04X", addr);
-			if (addr >= 0x2000 && addr <= 0x2FFF) {
-				int i = 0;
-			}
-			if (addr == 0x2007) {
-				if (cnt2 == 2000) {
-					int j = 0;
-				}
-			}
 			bus->write(addr, m_a);
 			m_cycle_count += 4;
 			break;

@@ -3,6 +3,12 @@
 #include "SharedContext.h"
 #include "AudioRingBuffer.h"
 #include <chrono>
+#include "CPU.h"
+#include "PPU.h"
+#include "APU.h"
+#include "Bus.h"
+#include "Input.h"
+#include <vector>
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     // Initialize audio backend
@@ -14,8 +20,8 @@ EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     m_paused = true;
 
     // Set up DMC read callback
-    nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-        return nes.bus.read(address);
+    nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+        return nes.bus_->read(address);
     });
 
     // Get high-resolution timer frequency once
@@ -32,9 +38,9 @@ EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
 
 EmulatorCore::~EmulatorCore() {
     audioBackend.Shutdown();
-    nes.cart.unload();
+    nes.cart_->unload();
 
-    nes.input.CloseController();
+    nes.input_->CloseController();
 }
 
 void EmulatorCore::start() {
@@ -76,7 +82,7 @@ void EmulatorCore::run() {
             continue;
         }
 
-        nes.input.PollControllerState();
+        nes.input_->PollControllerState();
         audioCycleCounter += runFrame();
         context.SwapBuffers();
         frameCount++;
@@ -155,16 +161,16 @@ inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
 int EmulatorCore::runFrame() {
     // Ensure the audio buffer is clear before starting the frame
     nes.audioBuffer.clear();
-	nes.cpu.cyclesThisFrame = 0;
-    nes.ppu.setBuffer(context.GetBackBuffer());
+	nes.cpu_->cyclesThisFrame = 0;
+    nes.ppu_->setBuffer(context.GetBackBuffer());
     // Run PPU until frame complete (89342 cycles per frame)
 	while (!nes.frameReady()) {
         nes.clock();
 	}
     
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-    nes.cpu.nmiRequested = false;
-    nes.ppu.setFrameComplete(false);
+    nes.cpu_->nmiRequested = false;
+    nes.ppu_->setFrameComplete(false);
 
     // Submit the exact samples generated this frame
     // Check audio queue to prevent unbounded growth
@@ -174,7 +180,7 @@ int EmulatorCore::runFrame() {
         // Not enough samples generated - pad with last value
 		nes.audioBuffer.push_back(nes.audioBuffer[nes.audioBuffer.size() - 1]);
     }
-    dbg(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu.cyclesThisFrame, nes.audioBuffer.size());
+    dbg(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu_->cyclesThisFrame, nes.audioBuffer.size());
     int cycleCount = nes.audioBuffer.size();
     if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
@@ -192,36 +198,36 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
     switch (cmd.type) {
     case CommandQueue::CommandType::LOAD_ROM:
         audioBackend.resetBuffer();
-        nes.cart.unload();
-        nes.ppu.reset();
-        nes.apu.reset();
-        nes.bus.reset();
-        nes.cart.LoadROM(cmd.data);
-        nes.cpu.PowerOn();
+        nes.cart_->unload();
+        nes.ppu_->reset();
+        nes.apu_->reset();
+        nes.bus_->reset();
+        nes.cart_->LoadROM(cmd.data);
+        nes.cpu_->PowerOn();
         m_paused = false;
         UpdateNextFrameTime();
         // Set up DMC read callback
-        nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-            return nes.bus.read(address);
+        nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+            return nes.bus_->read(address);
         });
         break;
     case CommandQueue::CommandType::RESET:
         audioBackend.resetBuffer();
-        nes.ppu.reset();
-        nes.apu.reset();
-        nes.bus.reset();
-        nes.cpu.PowerOn();
+        nes.ppu_->reset();
+        nes.apu_->reset();
+        nes.bus_->reset();
+        nes.cpu_->PowerOn();
         //m_core.Reset();
         break;
     case CommandQueue::CommandType::CLOSE:
         audioBackend.resetBuffer();
-        nes.ppu.reset();
-        nes.apu.reset();
-        nes.bus.reset();
+        nes.ppu_->reset();
+        nes.apu_->reset();
+        nes.bus_->reset();
         m_paused = true;
         // Set up DMC read callback
-        nes.apu.set_dmc_read_callback([this](uint16_t address) -> uint8_t {
-            return nes.bus.read(address);
+        nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
+            return nes.bus_->read(address);
         });
         break;
     case CommandQueue::CommandType::PAUSE:

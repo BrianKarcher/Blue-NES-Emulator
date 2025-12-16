@@ -12,7 +12,7 @@
 #include <fstream>
 #include "UxROMMapper.h"
 
-Cartridge::Cartridge(Bus& b, Processor_6502 c) : m_bus(b), cpu(c) {
+Cartridge::Cartridge(Processor_6502& c) : cpu(c) {
 	m_isLoaded = false;
 }
 
@@ -122,10 +122,10 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 2:
-		mapper = new UxROMMapper(m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+		mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 4:
-        mapper = new MMC3(m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     default:
         mapper = new NROM(this);

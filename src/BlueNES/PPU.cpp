@@ -15,8 +15,6 @@ PPU::PPU(SharedContext& ctx) : context(ctx) {
 	oam.fill(0xFF);
 	m_ppuCtrl = 0;
 	oamAddr = 0;
-	renderer = new RendererLoopy(context);
-	renderer->initialize(this);
 }
 
 PPU::~PPU()
@@ -25,6 +23,11 @@ PPU::~PPU()
 		delete renderer;
 		renderer = nullptr;
 	}
+}
+
+void PPU::initialize() {
+	renderer = new RendererLoopy(context);
+	renderer->initialize(this);
 }
 
 void PPU::set_hwnd(HWND hwnd) {

@@ -51,6 +51,7 @@ class PPU
 public:
 	PPU(SharedContext& ctx);
 	~PPU();
+	void initialize();
 	void connectBus(Bus* bus) { this->bus = bus; }
 	RendererLoopy* renderer;
 	void reset();
