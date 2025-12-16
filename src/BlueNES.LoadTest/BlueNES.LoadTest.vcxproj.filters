@@ -18,7 +18,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlueNES.LoadTest.cpp">
+    <ClCompile Include="BusLoadTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\BlueNES\APU.cpp">
@@ -88,6 +88,9 @@
       <Filter>EmulatorCore</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPULoadTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -176,5 +179,11 @@
     <ClInclude Include="BlueNES.LoadTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CPULoadTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Bus Read LoadTestResults.md" />
   </ItemGroup>
 </Project>

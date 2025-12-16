@@ -47,10 +47,10 @@ public:
 	void SetMapper(uint8_t value, ines_file_t& inesFile);
 	void unload();
 	bool isLoaded();
+	Mapper* mapper;
 private:
 	Bus* m_bus;
 	MirrorMode m_mirrorMode;
-	Mapper* mapper;
 	Processor_6502& cpu;
 	std::filesystem::path getAndEnsureSavePath();
 	void loadSRAM();

@@ -7,6 +7,9 @@
 #include <atomic>
 #include "Nes.h"
 #include "BlueNES.LoadTest.h"
+#include "Cartridge.h"
+#include "Bus.h"
+#include "NROM.h"
 
 // Cache line flush helper (platform specific)
 inline void flushCacheLine(const void* ptr) {
@@ -22,8 +25,11 @@ volatile uint8_t sink = 0;
 
 BusLoadTest::BusLoadTest(Nes& ness, size_t romSize) : nes(ness), rng(std::random_device{}()) {
     // Initialize cartridge with random data
-    nes.cart.m_prgRomData.resize(romSize);
-    for (auto& byte : nes.cart.m_prgRomData) {
+    nes.cart_->m_prgRomData.resize(romSize);
+	nes.cart_->m_prgRamData.resize(0x2000); // 8KB PRG RAM
+	nes.cart_->m_chrData.resize(0x2000);    // 8KB CHR ROM
+	nes.cart_->mapper = new NROM(nes.cart_); // Using NROM for simplicity
+    for (auto& byte : nes.cart_->m_prgRomData) {
         byte = static_cast<uint8_t>(rng() & 0xFF);
     }
 
@@ -47,20 +53,22 @@ void BusLoadTest::generateRandomAddresses(size_t count) {
 }
 
 // Test with sequential access (worst case for cache avoidance)
-void BusLoadTest::runSequentialTest(size_t iterations) {
+void BusLoadTest::runSequentialTest(int iterations) {
     std::cout << "\n=== Sequential Access Test ===" << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    for (size_t i = 0; i < iterations; ++i) {
-        for (uint16_t addr = 0x8000; addr < 0xFFFF; addr += 64) {
+    for (int i = 0; i < iterations; ++i) {
+        for (uint32_t addr = 0x8000; addr < 0xFFFF; addr += 64) {
             // Flush the cache line containing the result
-            flushCacheLine(&nes.cart.m_prgRomData[0]);
+            flushCacheLine(&nes.cart_->m_prgRomData[0]);
 
             //uint8_t result = mmc.readPRGROM(addr);
-            uint8_t result = nes.bus.read(addr);
+            uint8_t result = nes.bus_->read(addr);
             sink = result; // Prevent optimization
+			//std::cout << "Read from " << std::hex << addr << ": " << std::dec << (int)result << std::endl;
         }
+		//std::cout << "Iteration " << i << " complete." << std::endl;
     }
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -71,7 +79,7 @@ void BusLoadTest::runSequentialTest(size_t iterations) {
 }
 
 // Test with random access (better for cache avoidance)
-void BusLoadTest::runRandomTest(size_t iterations) {
+void BusLoadTest::runRandomTest(int iterations) {
     std::cout << "\n=== Random Access Test ===" << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -80,10 +88,10 @@ void BusLoadTest::runRandomTest(size_t iterations) {
         for (const auto& addr : testAddresses) {
             // Flush cache periodically
             if ((i & 0x3F) == 0) {
-                flushCacheLine(&nes.cart.m_prgRomData[addr & 0x3FFF]);
+                flushCacheLine(&nes.cart_->m_prgRomData[addr & 0x3FFF]);
             }
 
-            uint8_t result = nes.bus.read(addr);
+            uint8_t result = nes.bus_->read(addr);
             sink = result;
         }
     }
@@ -96,15 +104,15 @@ void BusLoadTest::runRandomTest(size_t iterations) {
 }
 
 // Strided access to maximize cache misses
-void BusLoadTest::runStridedTest(size_t iterations, size_t stride) {
+void BusLoadTest::runStridedTest(int iterations, size_t stride) {
     std::cout << "\n=== Strided Access Test (stride=" << stride << ") ===" << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
 
     for (size_t i = 0; i < iterations; ++i) {
-        for (uint16_t addr = 0x8000; addr < 0xFFFF; addr += stride) {
+        for (uint32_t addr = 0x8000; addr < 0xFFFF; addr += stride) {
             // Large stride should naturally avoid cache hits
-            uint8_t result = nes.bus.read(addr);
+            uint8_t result = nes.bus_->read(addr);
             sink = result;
         }
     }
@@ -117,7 +125,7 @@ void BusLoadTest::runStridedTest(size_t iterations, size_t stride) {
 }
 
 // Multi-threaded load test
-void BusLoadTest::runMultiThreadedTest(size_t iterations, size_t threadCount) {
+void BusLoadTest::runMultiThreadedTest(int iterations, size_t threadCount) {
     std::cout << "\n=== Multi-threaded Test (" << threadCount << " threads) ===" << std::endl;
 
     std::atomic<size_t> completedOps{ 0 };
@@ -133,7 +141,7 @@ void BusLoadTest::runMultiThreadedTest(size_t iterations, size_t threadCount) {
 
             for (size_t i = 0; i < iterations; ++i) {
                 uint16_t addr = dist(localRng);
-                uint8_t result = nes.bus.read(addr);
+                uint8_t result = nes.bus_->read(addr);
                 sink = result;
                 completedOps.fetch_add(1, std::memory_order_relaxed);
             }

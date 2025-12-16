@@ -20,16 +20,16 @@ public:
     void generateRandomAddresses(size_t count);
 
     // Test with sequential access (worst case for cache avoidance)
-    void runSequentialTest(size_t iterations);
+    void runSequentialTest(int iterations);
 
     // Test with random access (better for cache avoidance)
-    void runRandomTest(size_t iterations);
+    void runRandomTest(int iterations);
 
     // Strided access to maximize cache misses
-    void runStridedTest(size_t iterations, size_t stride = 4096);
+    void runStridedTest(int iterations, size_t stride = 4096);
 
     // Multi-threaded load test
-    void runMultiThreadedTest(size_t iterations, size_t threadCount);
+    void runMultiThreadedTest(int iterations, size_t threadCount);
 
     void printResults(const std::string& testName, size_t operations, long long microseconds);
 };

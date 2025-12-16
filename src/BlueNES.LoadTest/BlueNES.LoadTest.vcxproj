@@ -151,7 +151,8 @@
     <ClCompile Include="..\BlueNES\RendererWithReg.cpp" />
     <ClCompile Include="..\BlueNES\SharedContext.cpp" />
     <ClCompile Include="..\BlueNES\UxROMMapper.cpp" />
-    <ClCompile Include="BlueNES.LoadTest.cpp" />
+    <ClCompile Include="BusLoadTest.cpp" />
+    <ClCompile Include="CPULoadTest.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -183,6 +184,10 @@
     <ClInclude Include="..\BlueNES\SharedContext.h" />
     <ClInclude Include="..\BlueNES\UxROMMapper.h" />
     <ClInclude Include="BlueNES.LoadTest.h" />
+    <ClInclude Include="CPULoadTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Bus Read LoadTestResults.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
