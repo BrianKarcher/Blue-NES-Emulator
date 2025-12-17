@@ -185,5 +185,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Bus Read LoadTestResults.md" />
+    <None Include="CPU Clock LoadTestResults.md" />
   </ItemGroup>
 </Project>

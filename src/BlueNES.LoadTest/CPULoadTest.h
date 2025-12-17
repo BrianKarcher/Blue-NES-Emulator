@@ -27,9 +27,7 @@ private:
     volatile uint64_t sink = 0;
 
 public:
-    CPULoadTest(Nes& nesInstance)
-        : nes(nesInstance)
-        , rng(std::random_device{}());
+    CPULoadTest(Nes& nesInstance);
 
     void generateTestProgram();
 

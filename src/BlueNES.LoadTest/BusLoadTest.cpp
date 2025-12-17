@@ -24,11 +24,11 @@ inline void flushCacheLine(const void* ptr) {
 volatile uint8_t sink = 0;
 
 BusLoadTest::BusLoadTest(Nes& ness, size_t romSize) : nes(ness), rng(std::random_device{}()) {
-    // Initialize cartridge with random data
     nes.cart_->m_prgRomData.resize(romSize);
-	nes.cart_->m_prgRamData.resize(0x2000); // 8KB PRG RAM
-	nes.cart_->m_chrData.resize(0x2000);    // 8KB CHR ROM
-	nes.cart_->mapper = new NROM(nes.cart_); // Using NROM for simplicity
+	nes.cart_->m_prgRamData.resize(0x2000);
+	nes.cart_->m_chrData.resize(0x2000);
+	nes.cart_->mapper = new NROM(nes.cart_);
+    // Initialize cartridge with random data
     for (auto& byte : nes.cart_->m_prgRomData) {
         byte = static_cast<uint8_t>(rng() & 0xFF);
     }

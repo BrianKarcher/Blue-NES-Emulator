@@ -2,10 +2,14 @@
 #include "nes.h"
 #include "SharedContext.h"
 #include "BlueNES.LoadTest.h"
+#include "CPULoadTest.h"
+
+int bus();
+int cpu();
 
 int main()
 {
-    return bus();
+    return cpu();
 }
 
 int bus()

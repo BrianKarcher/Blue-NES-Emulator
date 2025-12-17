@@ -188,6 +188,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Bus Read LoadTestResults.md" />
+    <None Include="CPU Clock LoadTestResults.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
