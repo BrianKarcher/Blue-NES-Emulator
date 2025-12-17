@@ -145,6 +145,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="MemoryMapper.cpp" />
     <ClCompile Include="MMC1.cpp" />
     <ClCompile Include="MMC3.cpp" />
     <ClCompile Include="Nes.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Mapper.h" />
+    <ClInclude Include="MemoryMapper.h" />
     <ClInclude Include="MMC1.h" />
     <ClInclude Include="MMC3.h" />
     <ClInclude Include="Nes.h" />
@@ -184,6 +186,7 @@
     <ClInclude Include="NROM.h" />
     <ClInclude Include="PPUold.h" />
     <ClInclude Include="PPUViewer.h" />
+    <ClInclude Include="RAMMapper.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererLoopy.h" />
     <ClInclude Include="RendererSlow.h" />

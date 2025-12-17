@@ -28,6 +28,7 @@ PPU::~PPU()
 void PPU::initialize() {
 	renderer = new RendererLoopy(context);
 	renderer->initialize(this);
+	bus->registerAdd(0x2000, 0x3FFF, this);
 }
 
 void PPU::set_hwnd(HWND hwnd) {
@@ -63,7 +64,15 @@ void PPU::step()
 
 }
 
-void PPU::write_register(uint16_t addr, uint8_t value)
+inline uint8_t PPU::read(uint16_t address) {
+	return read_register(0x2000 + (address & 0x7));
+}
+
+inline void PPU::write(uint16_t address, uint8_t value) {
+	write_register(0x2000 + (address & 0x7), value);
+}
+
+inline void PPU::write_register(uint16_t addr, uint8_t value)
 {
 	// addr is in the range 0x2000 to 0x2007
 	// It is the CPU that writes to these registers
@@ -121,7 +130,7 @@ void PPU::SetVRAMAddress(uint16_t addr) {
 	//vramAddr = addr & 0x3FFF;
 }
 
-uint8_t PPU::read_register(uint16_t addr)
+inline uint8_t PPU::read_register(uint16_t addr)
 {
 	switch (addr)
 	{

@@ -4,6 +4,7 @@
 #include <array>
 #include <utility>
 #include "SharedContext.h"
+#include "MemoryMapper.h"
 
 #define NMI_ENABLE 0x80
 
@@ -46,7 +47,7 @@ class Core;
 class RendererLoopy;
 class A12Mapper;
 
-class PPU
+class PPU : public MemoryMapper
 {
 public:
 	PPU(SharedContext& ctx);
@@ -56,8 +57,10 @@ public:
 	RendererLoopy* renderer;
 	void reset();
 	void step();
-	void write_register(uint16_t addr, uint8_t value);
-	uint8_t read_register(uint16_t addr);
+	inline uint8_t read(uint16_t address);
+	inline void write(uint16_t address, uint8_t value);
+	inline void write_register(uint16_t addr, uint8_t value);
+	inline uint8_t read_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
 	uint8_t GetScrollX() const;
 	uint8_t GetScrollY() const;

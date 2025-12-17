@@ -87,6 +87,9 @@
     <ClCompile Include="SharedContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MemoryMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -177,6 +180,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioRingBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RAMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

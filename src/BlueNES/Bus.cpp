@@ -4,33 +4,39 @@
 #include "Input.h"
 #include "CPU.h"
 #include "APU.h"
+#include "MemoryMapper.h"
 
 Bus::Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart) {
-    
     // This may not be needed
-    cpuRAM.fill(0); // Clear CPU RAM
+    ramMapper.cpuRAM.fill(0);
+	memoryMap = new MemoryMapper*[0x10000]; // 64KB address space
+}
+
+Bus::~Bus() {
+	delete[] memoryMap;
 }
 
 void Bus::reset() {
 	// Probably not necessary
-    cpuRAM.fill(0);
+    ramMapper.cpuRAM.fill(0);
 }
 
-uint8_t Bus::read(uint16_t addr)
-{
-    uint8_t data = 0x00;
+void Bus::registerAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {
+    for (uint16_t addr = start; addr <= end; addr++) {
+        memoryMap[addr] = mapper;
+    }
+}
 
-    if (addr <= 0x1FFF)
-    {
-        // Internal RAM, mirrored every 2KB
-        data = cpuRAM[addr & 0x07FF];
-    }
-    else if (addr <= 0x3FFF)
-    {
-        // PPU registers, mirrored every 8 bytes
-        data = ppu.read_register(0x2000 + (addr & 0x7));
-    }
+void Bus::initialize() {
+	// Initialize CPU RAM mapping
+	registerAdd(0x0000, 0x1FFF, (MemoryMapper*)&ramMapper);
+}
+
+uint8_t Bus::read(uint16_t addr) {
+	return memoryMap[addr]->read(addr);
+
+    
     else if (addr >= 0x4000 && addr <= 0x4017)
     {
         // APU and I/O registers
@@ -71,27 +77,9 @@ uint8_t Bus::read(uint16_t addr)
 
 void Bus::write(uint16_t addr, uint8_t data)
 {
-    if (addr <= 0x1FFF)
-    {
-        // Check for blown stack
-        if (cpu.GetSP() == 0x05) {
-            //OutputDebugStringW(L"Stack blown!");
-            int i = 0;
-        }
-        if (addr >= 0x0200 && addr <= 0x02FF) {
-            int i = 0;
-		}
-        if (data != 0x00) {
-			//printf("Write to RAM at %04X: %02X\n", addr, data);
-            int i = 0;
-        }
-        cpuRAM[addr & 0x07FF] = data;
-    }
-    else if (addr >= 0x2000 && addr <= 0x3FFF)
-    {
-        // Write to PPU registers
-        ppu.write_register(0x2000 + (addr & 0x7), data);
-    }
+	memoryMap[addr]->write(addr, data);
+    return;
+
     else if (addr == 0x4014)
     {
         // === OAM DMA ===

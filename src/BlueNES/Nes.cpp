@@ -18,6 +18,7 @@ Nes::Nes(SharedContext& ctx) {
     cart_ = new Cartridge(*cpu_);
     ppu_ = new PPU(ctx);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_);
+    bus_->initialize();
 	cpu_->connectBus(bus_);
 	ppu_->connectBus(bus_);
 	cart_->connectBus(bus_);
