@@ -38,6 +38,7 @@ MMC1::MMC1(Cartridge* cartridge, Processor_6502& c, uint8_t prgRomSize, uint8_t 
 
 // ---------------- Debug helper ----------------
 void MMC1::dbg(const wchar_t* fmt, ...) const {
+#ifdef MMC1DEBUG
 	if (!debug) return;
 	wchar_t buf[512];
 	va_list args;
@@ -45,6 +46,7 @@ void MMC1::dbg(const wchar_t* fmt, ...) const {
 	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
 	va_end(args);
 	OutputDebugStringW(buf);
+#endif
 }
 
 void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {

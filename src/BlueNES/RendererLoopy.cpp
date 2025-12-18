@@ -176,6 +176,11 @@ uint8_t RendererLoopy::get_pixel() {
 void RendererLoopy::renderPixel(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
+
+    if (!(renderingEnabled())) {
+        buffer[y * 256 + x] = 0xFF000000;
+        return;
+    }
     
     uint8_t bgPaletteIndex = 0;
     uint32_t bgColor = 0;
@@ -299,7 +304,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
     }
 
     // Pixel rendering (visible)
-    if (rendering && visibleScanline && dot >= 1 && dot <= 256) {
+    if (visibleScanline && dot >= 1 && dot <= 256) {
         renderPixel(buffer);
         // Shift registers every cycle
         shift_registers();

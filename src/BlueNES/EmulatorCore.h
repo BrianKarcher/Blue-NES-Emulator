@@ -5,7 +5,7 @@
 #include "SharedContext.h"
 #include <thread>
 
-#define EMULATORCORE_DEBUG
+//#define EMULATORCORE_DEBUG
 #define FPS_CAP
 
 class EmulatorCore

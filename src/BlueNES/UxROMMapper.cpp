@@ -24,14 +24,15 @@ inline void UxROMMapper::dbg(const wchar_t* fmt, ...) {
 
 UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
 	prgBank16kCount = prgRomSize;
-
 	this->cart = &bus.cart;
-	uint32_t lastBankStart = (prgBank16kCount - 1) * BANK_SIZE_PRG;
-	prgMap[1] = &m_prgRomData[lastBankStart]; // Fixed last bank at $C000
 	// Start with bank 0 selected
 	prg_bank_select = 0;
-	//lastPrg = &cartridge->m_prgRomData[lastBankStart];
-	//secondLastPrg = &cartridge->m_prgRomData[lastBankStart - BANK_SIZE_PRG];
+}
+
+void UxROMMapper::initialize(ines_file_t& data) {
+	Mapper::initialize(data);
+	uint32_t lastBankStart = (prgBank16kCount - 1) * BANK_SIZE_PRG;
+	prgMap[1] = &m_prgRomData[lastBankStart]; // Fixed last bank at $C000
 }
 
 void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {

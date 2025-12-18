@@ -21,7 +21,6 @@ void Mapper::write(uint16_t address, uint8_t value) {
 }
 
 void Mapper::register_memory(Bus& bus) {
-	//bus.registerAdd(0x4016, 0x4016, this);
 	bus.registerAdd(0x4020, 0xFFFF, this);
 }
 
