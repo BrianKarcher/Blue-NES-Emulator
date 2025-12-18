@@ -25,7 +25,7 @@ volatile uint8_t sink = 0;
 
 BusLoadTest::BusLoadTest(Nes& ness, size_t romSize) : nes(ness), rng(std::random_device{}()) {
     nes.cart_->mapper->m_prgRomData.resize(romSize);
-	nes.cart_->mapper->m_prgRamData.resize(0x2000);
+	nes.cart_->mapper->m_prgRamData.resize(0x10000);
 	nes.cart_->mapper->m_chrData.resize(0x2000);
 	nes.cart_->mapper = new NROM(nes.cart_);
     // Initialize cartridge with random data

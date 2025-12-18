@@ -85,23 +85,8 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
 
     uint8_t mapperNum = inesFile.header.flags6 >> 4;
     SetMapper(mapperNum, inesFile);
+	mapper->initialize(inesFile);
 	mapper->register_memory(*m_bus);
-    mapper->m_prgRomData.clear();
-    for (int i = 0; i < inesFile.prg_rom->size; i++) {
-        mapper->m_prgRomData.push_back(inesFile.prg_rom->data[i]);
-	}
-    mapper->m_chrData.clear();
-    if (inesFile.chr_rom->size == 0) {
-        mapper->isCHRWritable = true;
-        // No CHR ROM present; allocate 8KB of CHR RAM
-        mapper->m_chrData.resize(0x2000, 0);
-	}
-    else {
-        mapper->isCHRWritable = false;
-        for (int i = 0; i < inesFile.chr_rom->size; i++) {
-            mapper->m_chrData.push_back(inesFile.chr_rom->data[i]);
-        }
-    }
 	m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
     loadSRAM();
     
@@ -120,13 +105,13 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         mapper = new NROM(this);
         break;
     case 1:
-        //mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 2:
-		//mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+		mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 4:
-        //mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     default:
         mapper = new NROM(this);
@@ -181,24 +166,6 @@ Cartridge::MirrorMode Cartridge::GetMirrorMode() {
 
 void Cartridge::SetMirrorMode(MirrorMode mirrorMode) {
     m_mirrorMode = mirrorMode;
-}
-
-void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
-    mapper->m_chrData.resize(size);
-	memcpy(mapper->m_chrData.data(), data, size);
-}
-
-void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
-    if (mapper->m_prgRomData.size() < size) {
-        mapper->m_prgRomData.resize(size);
-	}
-    // Pad PRG data to at least 32KB
-	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
-    // Even if they're zeroes.
-    if (mapper->m_prgRomData.size() < 0x8000) {
-        mapper->m_prgRomData.resize(0x8000);
-    }
-    memcpy(mapper->m_prgRomData.data(), data, size);
 }
 
 uint8_t Cartridge::ReadPRGRAM(uint16_t address) {
