@@ -19,9 +19,9 @@ public:
 
 	}
 
-	inline uint8_t read(uint16_t address);
+	uint8_t read(uint16_t address);
 
-	inline void write(uint16_t address, uint8_t value);
+	void write(uint16_t address, uint8_t value);
 
 	void register_memory(Bus& bus);
 };

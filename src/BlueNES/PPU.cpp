@@ -64,7 +64,7 @@ void PPU::step()
 
 }
 
-inline uint8_t PPU::read(uint16_t address) {
+uint8_t PPU::read(uint16_t address) {
 	return read_register(0x2000 + (address & 0x7));
 }
 
@@ -87,7 +87,7 @@ void PPU::performDMA(uint8_t page)
 	bus->cpu.AddCycles(513 + extraCycle);
 }
 
-inline void PPU::write(uint16_t address, uint8_t value) {
+void PPU::write(uint16_t address, uint8_t value) {
 	if (address == 0x4014) {
 		performDMA(value);
 	}

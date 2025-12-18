@@ -21,13 +21,25 @@
     <ClCompile Include="BusLoadTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPULoadTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\BlueNES\APU.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
     <ClCompile Include="..\BlueNES\AudioBackend.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\AudioMapper.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
     <ClCompile Include="..\BlueNES\Bus.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\CartMapper.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
     <ClCompile Include="..\BlueNES\Cartridge.cpp">
@@ -51,7 +63,16 @@
     <ClCompile Include="..\BlueNES\Input.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlueNES\InputMappers.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
     <ClCompile Include="..\BlueNES\MainWindow.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\Mapper.cpp">
+      <Filter>EmulatorCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\BlueNES\MemoryMapper.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
     <ClCompile Include="..\BlueNES\MMC1.cpp">
@@ -87,14 +108,14 @@
     <ClCompile Include="..\BlueNES\UxROMMapper.cpp">
       <Filter>EmulatorCore</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CPULoadTest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BlueNES.LoadTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CPULoadTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\BlueNES\A12Mapper.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
@@ -104,10 +125,16 @@
     <ClInclude Include="..\BlueNES\AudioBackend.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
+    <ClInclude Include="..\BlueNES\AudioMapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
     <ClInclude Include="..\BlueNES\AudioRingBuffer.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Bus.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\CartMapper.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Cartridge.h">
@@ -134,10 +161,16 @@
     <ClInclude Include="..\BlueNES\Input.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
+    <ClInclude Include="..\BlueNES\InputMappers.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
     <ClInclude Include="..\BlueNES\MainWindow.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\Mapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\BlueNES\MemoryMapper.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
     <ClInclude Include="..\BlueNES\MMC1.h">
@@ -158,6 +191,9 @@
     <ClInclude Include="..\BlueNES\PPUViewer.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
+    <ClInclude Include="..\BlueNES\RAMMapper.h">
+      <Filter>EmulatorCore</Filter>
+    </ClInclude>
     <ClInclude Include="..\BlueNES\Renderer.h">
       <Filter>EmulatorCore</Filter>
     </ClInclude>
@@ -175,12 +211,6 @@
     </ClInclude>
     <ClInclude Include="..\BlueNES\UxROMMapper.h">
       <Filter>EmulatorCore</Filter>
-    </ClInclude>
-    <ClInclude Include="BlueNES.LoadTest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CPULoadTest.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

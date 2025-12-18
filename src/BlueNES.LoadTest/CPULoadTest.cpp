@@ -29,6 +29,7 @@ CPULoadTest::CPULoadTest(Nes& nesInstance)
     cpu->Activate(true);
 	cart = nesInstance.cart_;
     cart->mapper = new NROM(nes.cart_);
+    cart->mapper->register_memory(*nes.bus_);
     generateTestProgram();
 }
 
@@ -59,14 +60,14 @@ void CPULoadTest::generateTestProgram() {
 
 void CPULoadTest::loadProgram(uint16_t startAddr) {
     // Load test program into CPU memory
-	cart->m_prgRomData.resize(0x8000); // Ensure enough space
+	cart->mapper->m_prgRomData.resize(0x8000); // Ensure enough space
     for (size_t i = 0; i < testProgram.size(); ++i) {
-		cart->m_prgRomData[i] = testProgram[i];
+		cart->mapper->m_prgRomData[i] = testProgram[i];
     }
 
     // Set reset vector
-    cart->m_prgRomData[0xFFFC - 0x8000] = startAddr & 0xFF;
-    cart->m_prgRomData[0xFFFD - 0x8000] = (startAddr >> 8) & 0xFF;
+    cart->mapper->m_prgRomData[0xFFFC - 0x8000] = startAddr & 0xFF;
+    cart->mapper->m_prgRomData[0xFFFD - 0x8000] = (startAddr >> 8) & 0xFF;
 }
 
 void CPULoadTest::runInstructionThroughputTest(size_t cycles) {
@@ -79,7 +80,7 @@ void CPULoadTest::runInstructionThroughputTest(size_t cycles) {
 
     size_t cyclesExecuted = 0;
     while (cyclesExecuted < cycles) {
-        flushCacheLine(&nes.cart_->m_prgRomData[0]);
+        flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
         cyclesExecuted += cpu->Clock();
         sink = cyclesExecuted; // Prevent optimization
     }
@@ -109,7 +110,7 @@ void CPULoadTest::runFrameBasedTest(size_t frames) {
     for (size_t frame = 0; frame < frames; ++frame) {
         size_t frameCycles = 0;
         while (frameCycles < CYCLES_PER_FRAME) {
-            flushCacheLine(&nes.cart_->m_prgRomData[0]);
+            flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
             frameCycles += cpu->Clock();
         }
         sink = frameCycles;
@@ -133,15 +134,15 @@ void CPULoadTest::runInterruptStressTest(size_t interrupts) {
     cpu->Reset();
 
     // Setup IRQ vector
-	cart->m_prgRomData[0xFFFE - 0x8000] = 0x00; // Low byte of IRQ handler address
-	cart->m_prgRomData[0xFFFF - 0x8000] = 0x80; // High byte of IRQ handler address
+	cart->mapper->m_prgRomData[0xFFFE - 0x8000] = 0x00; // Low byte of IRQ handler address
+	cart->mapper->m_prgRomData[0xFFFF - 0x8000] = 0x80; // High byte of IRQ handler address
 
     auto start = std::chrono::high_resolution_clock::now();
 
     for (size_t i = 0; i < interrupts; ++i) {
         // Execute some instructions
         for (int j = 0; j < 10; ++j) {
-            flushCacheLine(&nes.cart_->m_prgRomData[0]);
+            flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
             cpu->Clock();
         }
 
@@ -150,7 +151,7 @@ void CPULoadTest::runInterruptStressTest(size_t interrupts) {
 
         // Execute interrupt handler
         for (int j = 0; j < 5; ++j) {
-            flushCacheLine(&nes.cart_->m_prgRomData[0]);
+            flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
             cpu->Clock();
         }
 
@@ -177,19 +178,19 @@ void CPULoadTest::runMemoryIntensiveTest(size_t iterations) {
         0x4C, 0x00, 0x80, // JMP $8000
     };
 
-	cart->m_prgRomData.resize(0x8000); // Ensure enough space
+	cart->mapper->m_prgRomData.resize(0x8000); // Ensure enough space
     for (size_t i = 0; i < memProgram.size(); ++i) {
-		cart->m_prgRomData[i] = memProgram[i];
+		cart->mapper->m_prgRomData[i] = memProgram[i];
     }
 
-    cart->m_prgRomData[0xFFFC - 0x8000] = 0x00;
-    cart->m_prgRomData[0xFFFD - 0x8000] = 0x80;
+    cart->mapper->m_prgRomData[0xFFFC - 0x8000] = 0x00;
+    cart->mapper->m_prgRomData[0xFFFD - 0x8000] = 0x80;
     cpu->Reset();
 
     auto start = std::chrono::high_resolution_clock::now();
 
     for (size_t i = 0; i < iterations; ++i) {
-        flushCacheLine(&nes.cart_->m_prgRomData[0]);
+        flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
 		cpu->Clock();
         sink = i;
     }
@@ -221,7 +222,7 @@ void CPULoadTest::runBranchHeavyTest(size_t iterations) {
     };
 
     for (size_t i = 0; i < branchProgram.size(); ++i) {
-        cart->m_prgRomData[i] = branchProgram[i];
+        cart->mapper->m_prgRomData[i] = branchProgram[i];
     }
 
     branchProgram[0xFFFC] = 0x00;
@@ -231,7 +232,7 @@ void CPULoadTest::runBranchHeavyTest(size_t iterations) {
     auto start = std::chrono::high_resolution_clock::now();
 
     for (size_t i = 0; i < iterations; ++i) {
-        flushCacheLine(&nes.cart_->m_prgRomData[0]);
+        flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
 		cpu->Clock();
         sink = i;
     }
@@ -255,7 +256,7 @@ void CPULoadTest::runMultiInstanceTest(size_t iterations, size_t instanceCount) 
             // Each thread would need its own NES instance
             // This is a simplified version
             for (size_t i = 0; i < iterations; ++i) {
-                flushCacheLine(&nes.cart_->m_prgRomData[0]);
+                flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
                 cpu->Clock();
                 completedOps.fetch_add(1, std::memory_order_relaxed);
             }
@@ -284,7 +285,7 @@ void CPULoadTest::runSustainedLoadTest(size_t durationSeconds) {
 
     size_t cyclesExecuted = 0;
     while (std::chrono::high_resolution_clock::now() < endTime) {
-        flushCacheLine(&nes.cart_->m_prgRomData[0]);
+        flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
         cpu->Clock();
         cyclesExecuted++;
         sink = cyclesExecuted;

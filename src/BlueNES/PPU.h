@@ -58,8 +58,8 @@ public:
 	RendererLoopy* renderer;
 	void reset();
 	void step();
-	inline uint8_t read(uint16_t address);
-	inline void write(uint16_t address, uint8_t value);
+	uint8_t read(uint16_t address);
+	void write(uint16_t address, uint8_t value);
 	inline void write_register(uint16_t addr, uint8_t value);
 	inline uint8_t read_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);

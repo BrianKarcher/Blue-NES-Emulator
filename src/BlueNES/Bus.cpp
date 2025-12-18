@@ -23,7 +23,7 @@ void Bus::reset() {
 }
 
 void Bus::registerAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {
-    for (uint16_t addr = start; addr <= end; addr++) {
+    for (uint32_t addr = start; addr <= end; addr++) {
         memoryMap[addr] = mapper;
     }
 }
@@ -33,11 +33,11 @@ void Bus::initialize() {
 	registerAdd(0x0000, 0x1FFF, (MemoryMapper*)&ramMapper);
 }
 
-inline uint8_t Bus::read(uint16_t addr) {
+uint8_t Bus::read(uint16_t addr) {
 	return memoryMap[addr]->read(addr);
 }
 
-inline void Bus::write(uint16_t addr, uint8_t data) {
+void Bus::write(uint16_t addr, uint8_t data) {
 	memoryMap[addr]->write(addr, data);
 }
 

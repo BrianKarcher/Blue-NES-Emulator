@@ -24,12 +24,12 @@ inline void flushCacheLine(const void* ptr) {
 volatile uint8_t sink = 0;
 
 BusLoadTest::BusLoadTest(Nes& ness, size_t romSize) : nes(ness), rng(std::random_device{}()) {
-    nes.cart_->m_prgRomData.resize(romSize);
-	nes.cart_->m_prgRamData.resize(0x2000);
-	nes.cart_->m_chrData.resize(0x2000);
+    nes.cart_->mapper->m_prgRomData.resize(romSize);
+	nes.cart_->mapper->m_prgRamData.resize(0x2000);
+	nes.cart_->mapper->m_chrData.resize(0x2000);
 	nes.cart_->mapper = new NROM(nes.cart_);
     // Initialize cartridge with random data
-    for (auto& byte : nes.cart_->m_prgRomData) {
+    for (auto& byte : nes.cart_->mapper->m_prgRomData) {
         byte = static_cast<uint8_t>(rng() & 0xFF);
     }
 
@@ -61,7 +61,7 @@ void BusLoadTest::runSequentialTest(int iterations) {
     for (int i = 0; i < iterations; ++i) {
         for (uint32_t addr = 0x8000; addr < 0xFFFF; addr += 64) {
             // Flush the cache line containing the result
-            flushCacheLine(&nes.cart_->m_prgRomData[0]);
+            flushCacheLine(&nes.cart_->mapper->m_prgRomData[0]);
 
             //uint8_t result = mmc.readPRGROM(addr);
             uint8_t result = nes.bus_->read(addr);
@@ -88,7 +88,7 @@ void BusLoadTest::runRandomTest(int iterations) {
         for (const auto& addr : testAddresses) {
             // Flush cache periodically
             if ((i & 0x3F) == 0) {
-                flushCacheLine(&nes.cart_->m_prgRomData[addr & 0x3FFF]);
+                flushCacheLine(&nes.cart_->mapper->m_prgRomData[addr & 0x3FFF]);
             }
 
             uint8_t result = nes.bus_->read(addr);

@@ -1,16 +1,16 @@
 #include "Mapper.h"
 #include "Bus.h"
 
-inline uint8_t Mapper::read(uint16_t address) {
+uint8_t Mapper::read(uint16_t address) {
 	if (address < 0x8000) {
 		return m_prgRamData[address];
 	}
 	else {
-		return m_prgRomData[address];
+		return readPRGROM(address); //m_prgRomData[address];
 	}
 }
 
-inline void Mapper::write(uint16_t address, uint8_t value) {
+void Mapper::write(uint16_t address, uint8_t value) {
 	if (address < 0x8000) {
 		m_prgRamData[address] = value;
 	}

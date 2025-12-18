@@ -10,19 +10,19 @@ void NROM::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 }
 
 inline uint8_t NROM::readPRGROM(uint16_t address) const {
-	if (cartridge->m_prgRomData.size() == 0) {
+	if (m_prgRomData.size() == 0) {
 		return 0;
 	}
 	// If 16 KB PRG ROM, mirror it
-	if (cartridge->m_prgRomData.size() == 0x4000) {
+	if (m_prgRomData.size() == 0x4000) {
 		// For 16KB PRG-ROM, mask to 14 bits (16KB = 0x4000 bytes)
-		return cartridge->m_prgRomData[address & 0x3FFF];
+		return m_prgRomData[address & 0x3FFF];
 	}
 	if (address >= 0x8000) {
 		//      if (m_prgData.size() == 0) {
 		//          return 0; // No PRG data loaded
 			  //}
-		return cartridge->m_prgRomData[address - 0x8000];
+		return m_prgRomData[address - 0x8000];
 	}
 	return 0;
 }
@@ -34,17 +34,17 @@ void NROM::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle)
 
 inline uint8_t NROM::readCHR(uint16_t address) const {
 	if (address < 0x2000) {
-		return cartridge->m_chrData[address];
+		return m_chrData[address];
 	}
 	return 0;
 }
 
 // TODO: Support CHR-RAM vs CHR-ROM distinction
 void NROM::writeCHR(uint16_t address, uint8_t data) {
-	if (!cartridge->isCHRWritable) {
+	if (!isCHRWritable) {
 		return; // Ignore writes if CHR is ROM
 	}
 	if (address < 0x2000) {
-		cartridge->m_chrData[address] = data;
+		m_chrData[address] = data;
 	}
 }

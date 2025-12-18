@@ -131,7 +131,9 @@
   <ItemGroup>
     <ClCompile Include="..\BlueNES\APU.cpp" />
     <ClCompile Include="..\BlueNES\AudioBackend.cpp" />
+    <ClCompile Include="..\BlueNES\AudioMapper.cpp" />
     <ClCompile Include="..\BlueNES\Bus.cpp" />
+    <ClCompile Include="..\BlueNES\CartMapper.cpp" />
     <ClCompile Include="..\BlueNES\Cartridge.cpp" />
     <ClCompile Include="..\BlueNES\Core.cpp" />
     <ClCompile Include="..\BlueNES\CPU.cpp" />
@@ -139,7 +141,10 @@
     <ClCompile Include="..\BlueNES\HexViewer.cpp" />
     <ClCompile Include="..\BlueNES\INESLoader.cpp" />
     <ClCompile Include="..\BlueNES\Input.cpp" />
+    <ClCompile Include="..\BlueNES\InputMappers.cpp" />
     <ClCompile Include="..\BlueNES\MainWindow.cpp" />
+    <ClCompile Include="..\BlueNES\Mapper.cpp" />
+    <ClCompile Include="..\BlueNES\MemoryMapper.cpp" />
     <ClCompile Include="..\BlueNES\MMC1.cpp" />
     <ClCompile Include="..\BlueNES\MMC3.cpp" />
     <ClCompile Include="..\BlueNES\Nes.cpp" />
@@ -159,8 +164,10 @@
     <ClInclude Include="..\BlueNES\A12Mapper.h" />
     <ClInclude Include="..\BlueNES\APU.h" />
     <ClInclude Include="..\BlueNES\AudioBackend.h" />
+    <ClInclude Include="..\BlueNES\AudioMapper.h" />
     <ClInclude Include="..\BlueNES\AudioRingBuffer.h" />
     <ClInclude Include="..\BlueNES\Bus.h" />
+    <ClInclude Include="..\BlueNES\CartMapper.h" />
     <ClInclude Include="..\BlueNES\Cartridge.h" />
     <ClInclude Include="..\BlueNES\CommandQueue.h" />
     <ClInclude Include="..\BlueNES\Core.h" />
@@ -169,14 +176,17 @@
     <ClInclude Include="..\BlueNES\HexViewer.h" />
     <ClInclude Include="..\BlueNES\INESLoader.h" />
     <ClInclude Include="..\BlueNES\Input.h" />
+    <ClInclude Include="..\BlueNES\InputMappers.h" />
     <ClInclude Include="..\BlueNES\MainWindow.h" />
     <ClInclude Include="..\BlueNES\Mapper.h" />
+    <ClInclude Include="..\BlueNES\MemoryMapper.h" />
     <ClInclude Include="..\BlueNES\MMC1.h" />
     <ClInclude Include="..\BlueNES\MMC3.h" />
     <ClInclude Include="..\BlueNES\Nes.h" />
     <ClInclude Include="..\BlueNES\NROM.h" />
     <ClInclude Include="..\BlueNES\PPU.h" />
     <ClInclude Include="..\BlueNES\PPUViewer.h" />
+    <ClInclude Include="..\BlueNES\RAMMapper.h" />
     <ClInclude Include="..\BlueNES\Renderer.h" />
     <ClInclude Include="..\BlueNES\RendererLoopy.h" />
     <ClInclude Include="..\BlueNES\RendererSlow.h" />
