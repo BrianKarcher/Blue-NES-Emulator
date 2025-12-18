@@ -7,6 +7,8 @@
 #include "Input.h"
 #include "SharedContext.h"
 #include <vector>
+#include "AudioMapper.h"
+#include "InputMappers.h"
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
@@ -23,6 +25,13 @@ Nes::Nes(SharedContext& ctx) {
 	ppu_->connectBus(bus_);
 	cart_->connectBus(bus_);
     ppu_->initialize();
+	ppu_->register_memory(*bus_);
+	audioMapper_ = new AudioMapper(*apu_);
+    audioMapper_->register_memory(*bus_);
+    readController1Mapper_ = new ReadController1Mapper(*input_);
+    readController1Mapper_->register_memory(*bus_);
+    readController2Mapper_ = new ReadController2Mapper(*input_);
+    readController2Mapper_->register_memory(*bus_);
     audioBuffer.reserve(4096);
 }
 

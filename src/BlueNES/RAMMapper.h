@@ -5,7 +5,7 @@
 #include "MemoryMapper.h"
 
 // 2KB internal RAM (mirrored)
-class RAMMapper : MemoryMapper {
+class RAMMapper : public MemoryMapper {
 
 public:
 	std::array<uint8_t, 2048> cpuRAM{};

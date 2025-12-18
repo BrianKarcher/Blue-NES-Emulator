@@ -23,10 +23,6 @@ public:
 	};
 	Cartridge(Processor_6502& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
-	std::vector<uint8_t> m_prgRomData;
-	std::vector<uint8_t> m_prgRamData;
-	std::vector<uint8_t> m_chrData;
-	bool isCHRWritable;
 
 	void LoadROM(const std::wstring& filePath);
 	MirrorMode GetMirrorMode();

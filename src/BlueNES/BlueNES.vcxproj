@@ -136,15 +136,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AudioBackend.cpp" />
+    <ClCompile Include="AudioMapper.cpp" />
     <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="CartMapper.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="EmulatorCore.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="InputMappers.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="Mapper.cpp" />
     <ClCompile Include="MemoryMapper.cpp" />
     <ClCompile Include="MMC1.cpp" />
     <ClCompile Include="MMC3.cpp" />
@@ -164,8 +168,10 @@
   <ItemGroup>
     <ClInclude Include="A12Mapper.h" />
     <ClInclude Include="AudioBackend.h" />
+    <ClInclude Include="AudioMapper.h" />
     <ClInclude Include="AudioRingBuffer.h" />
     <ClInclude Include="Bus.h" />
+    <ClInclude Include="CartMapper.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
@@ -173,6 +179,7 @@
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="InputMappers.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Mapper.h" />

@@ -68,8 +68,32 @@ inline uint8_t PPU::read(uint16_t address) {
 	return read_register(0x2000 + (address & 0x7));
 }
 
+void PPU::register_memory(Bus& bus) {
+	bus.registerAdd(0x2000, 0x3FFF, this);
+	bus.registerAdd(0x4014, 0x4014, this);
+}
+
+void PPU::performDMA(uint8_t page)
+{
+	uint16_t baseAddr = page << 8; // high byte from $4014
+	for (int i = 0; i < 256; i++)
+	{
+		uint8_t data = bus->read(baseAddr + i);
+		oam[oamAddr++] = data;
+	}
+
+	// Timing penalty (513 or 514 CPU cycles)
+	int extraCycle = (bus->cpu.GetCycleCount() & 1) ? 1 : 0;
+	bus->cpu.AddCycles(513 + extraCycle);
+}
+
 inline void PPU::write(uint16_t address, uint8_t value) {
-	write_register(0x2000 + (address & 0x7), value);
+	if (address == 0x4014) {
+		performDMA(value);
+	}
+	else {
+		write_register(0x2000 + (address & 0x7), value);
+	}
 }
 
 inline void PPU::write_register(uint16_t addr, uint8_t value)

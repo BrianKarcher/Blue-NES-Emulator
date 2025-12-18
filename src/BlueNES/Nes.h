@@ -16,6 +16,9 @@ class Processor_6502;
 class APU;
 class Input;
 class SharedContext;
+class AudioMapper;
+class ReadController1Mapper;
+class ReadController2Mapper;
 
 class Nes
 {
@@ -27,6 +30,9 @@ public:
 	APU& apu() { return *apu_; }
 	Input& input() { return *input_; }
 	SharedContext& context() { return *context_; }
+	AudioMapper& audioMapper() {
+		return *audioMapper_;
+	}
 
 	Nes(SharedContext& ctx);
 	~Nes();
@@ -45,6 +51,9 @@ public:
 	APU* apu_;
 	Input* input_;
 	SharedContext* context_;
+	AudioMapper* audioMapper_;
+	ReadController1Mapper* readController1Mapper_;
+	ReadController2Mapper* readController2Mapper_;
 
 private:
 

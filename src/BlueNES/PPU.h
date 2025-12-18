@@ -52,6 +52,7 @@ class PPU : public MemoryMapper
 public:
 	PPU(SharedContext& ctx);
 	~PPU();
+	void register_memory(Bus& bus);
 	void initialize();
 	void connectBus(Bus* bus) { this->bus = bus; }
 	RendererLoopy* renderer;
@@ -125,6 +126,7 @@ private:
 	//int scrollY; // Fine Y scrolling (0-239)
 
 	void write_vram(uint16_t addr, uint8_t value);
+	void performDMA(uint8_t page);
 	
 	//void render_nametable();
 	inline void dbg(const wchar_t* fmt, ...);

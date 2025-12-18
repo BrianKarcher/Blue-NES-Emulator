@@ -32,45 +32,45 @@ std::filesystem::path Cartridge::getAndEnsureSavePath() {
 }
 
 void Cartridge::loadSRAM() {
-    m_prgRamData.resize(0x2000);
-    if (!isBatteryBacked) {
-        return; // No battery-backed SRAM to load
-    }
-    std::filesystem::path appFolder = getAndEnsureSavePath();
-    std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
-    std::ifstream in(sramFilePath, std::ios::binary | std::ios::ate);
-    if (!in)
-		return; // No SRAM file exists, nothing to load
+    mapper->m_prgRamData.resize(0x2000);
+  //  if (!isBatteryBacked) {
+  //      return; // No battery-backed SRAM to load
+  //  }
+  //  std::filesystem::path appFolder = getAndEnsureSavePath();
+  //  std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+  //  std::ifstream in(sramFilePath, std::ios::binary | std::ios::ate);
+  //  if (!in)
+		//return; // No SRAM file exists, nothing to load
 
-    std::streamsize size = in.tellg();
-    in.seekg(0, std::ios::beg);
+  //  std::streamsize size = in.tellg();
+  //  in.seekg(0, std::ios::beg);
 
-    if (!in.read(reinterpret_cast<char*>(m_prgRamData.data()), size))
-        throw std::runtime_error("Failed to read file");
+  //  if (!in.read(reinterpret_cast<char*>(m_prgRamData.data()), size))
+  //      throw std::runtime_error("Failed to read file");
 }
 
 void Cartridge::saveSRAM() {
     if (!isBatteryBacked)
 		return; // No battery-backed SRAM to save
-    std::filesystem::path appFolder = getAndEnsureSavePath();
-	std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
-    std::ofstream out(sramFilePath, std::ios::binary);
-    if (!out)
-        throw std::runtime_error("Failed to open output file");
+ //   std::filesystem::path appFolder = getAndEnsureSavePath();
+	//std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+ //   std::ofstream out(sramFilePath, std::ios::binary);
+ //   if (!out)
+ //       throw std::runtime_error("Failed to open output file");
 
-    out.write(reinterpret_cast<const char*>(m_prgRamData.data()), m_prgRamData.size());
+ //   out.write(reinterpret_cast<const char*>(m_prgRamData.data()), m_prgRamData.size());
 }
 
 void Cartridge::unload() {
     saveSRAM();
     if (mapper) {
+        mapper->m_prgRomData.clear();
+        mapper->m_chrData.clear();
+        mapper->m_prgRamData.clear();
 		mapper->shutdown();
         delete mapper;
         mapper = nullptr;
     }
-    m_prgRomData.clear();
-    m_chrData.clear();
-	m_prgRamData.clear();
     m_mirrorMode = MirrorMode::VERTICAL;
     m_isLoaded = false;
 }
@@ -83,27 +83,28 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
     ines.load_data_from_ines(filePath.c_str(), inesFile);
     isBatteryBacked = inesFile.header.flags6 & FLAG_6_BATTERY_BACKED;
 
-    m_prgRomData.clear();
+    uint8_t mapperNum = inesFile.header.flags6 >> 4;
+    SetMapper(mapperNum, inesFile);
+	mapper->register_memory(*m_bus);
+    mapper->m_prgRomData.clear();
     for (int i = 0; i < inesFile.prg_rom->size; i++) {
-        m_prgRomData.push_back(inesFile.prg_rom->data[i]);
+        mapper->m_prgRomData.push_back(inesFile.prg_rom->data[i]);
 	}
-    m_chrData.clear();
+    mapper->m_chrData.clear();
     if (inesFile.chr_rom->size == 0) {
-		isCHRWritable = true;
+        mapper->isCHRWritable = true;
         // No CHR ROM present; allocate 8KB of CHR RAM
-        m_chrData.resize(0x2000, 0);
+        mapper->m_chrData.resize(0x2000, 0);
 	}
     else {
-        isCHRWritable = false;
+        mapper->isCHRWritable = false;
         for (int i = 0; i < inesFile.chr_rom->size; i++) {
-            m_chrData.push_back(inesFile.chr_rom->data[i]);
+            mapper->m_chrData.push_back(inesFile.chr_rom->data[i]);
         }
     }
 	m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
-    uint8_t mapperNum = inesFile.header.flags6 >> 4;
     loadSRAM();
     
-    SetMapper(mapperNum, inesFile);
     m_isLoaded = true;
 }
 
@@ -183,29 +184,29 @@ void Cartridge::SetMirrorMode(MirrorMode mirrorMode) {
 }
 
 void Cartridge::SetCHRRom(uint8_t* data, size_t size) {
-	m_chrData.resize(size);
-	memcpy(m_chrData.data(), data, size);
+    mapper->m_chrData.resize(size);
+	memcpy(mapper->m_chrData.data(), data, size);
 }
 
 void Cartridge::SetPRGRom(uint8_t* data, size_t size) {
-    if (m_prgRomData.size() < size) {
-        m_prgRomData.resize(size);
+    if (mapper->m_prgRomData.size() < size) {
+        mapper->m_prgRomData.resize(size);
 	}
     // Pad PRG data to at least 32KB
 	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
     // Even if they're zeroes.
-    if (m_prgRomData.size() < 0x8000) {
-        m_prgRomData.resize(0x8000);
+    if (mapper->m_prgRomData.size() < 0x8000) {
+        mapper->m_prgRomData.resize(0x8000);
     }
-    memcpy(m_prgRomData.data(), data, size);
+    memcpy(mapper->m_prgRomData.data(), data, size);
 }
 
 uint8_t Cartridge::ReadPRGRAM(uint16_t address) {
-    return m_prgRamData[address - 0x6000];
+    return mapper->m_prgRamData[address - 0x6000];
 }
 
 void Cartridge::WritePRGRAM(uint16_t address, uint8_t data) {
-    m_prgRamData[address - 0x6000] = data;
+    mapper->m_prgRamData[address - 0x6000] = data;
 }
 
 // ---------------- Debug helper ----------------
