@@ -9,6 +9,7 @@
 #include <vector>
 #include "AudioMapper.h"
 #include "InputMappers.h"
+#include "OpenBusMapper.h"
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
@@ -16,10 +17,11 @@ Nes::Nes(SharedContext& ctx) {
     context_ = &ctx;
 	apu_ = new APU();
     input_ = new Input();
-    cpu_ = new Processor_6502();
+    openBus_ = new OpenBusMapper();
+    cpu_ = new Processor_6502(*openBus_);
     cart_ = new Cartridge(*cpu_);
     ppu_ = new PPU(ctx);
-    bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_);
+    bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
     bus_->initialize();
 	cpu_->connectBus(bus_);
 	ppu_->connectBus(bus_);

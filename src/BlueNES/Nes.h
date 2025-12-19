@@ -19,6 +19,7 @@ class SharedContext;
 class AudioMapper;
 class ReadController1Mapper;
 class ReadController2Mapper;
+class OpenBusMapper;
 
 class Nes
 {
@@ -54,6 +55,7 @@ public:
 	AudioMapper* audioMapper_;
 	ReadController1Mapper* readController1Mapper_;
 	ReadController2Mapper* readController2Mapper_;
+	OpenBusMapper* openBus_;
 
 private:
 

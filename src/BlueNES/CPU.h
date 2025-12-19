@@ -169,11 +169,12 @@ const uint8_t TXS_IMPLIED = 0x9A;
 const uint8_t TYA_IMPLIED = 0x98;
 
 class Bus;
+class OpenBusMapper;
 
 class Processor_6502
 {
 public:
-	Processor_6502();
+	Processor_6502(OpenBusMapper& openBus);
 	void connectBus(Bus* bus);
 	void setNMI(bool state);
 	void setIRQ(bool state);
@@ -206,6 +207,7 @@ public:
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
 private:
+	OpenBusMapper& openBus;
 	void push(uint8_t value);
 	uint8_t pull();
 

@@ -3,8 +3,9 @@
 #include <Windows.h>
 #include "PPU.h"
 #include "RendererLoopy.h"
+#include "OpenBusMapper.h"
 
-Processor_6502::Processor_6502() {
+Processor_6502::Processor_6502(OpenBusMapper& openBus) : openBus(openBus) {
 	buildMap();
 }
 

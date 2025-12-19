@@ -5,12 +5,16 @@
 #include "CPU.h"
 #include "APU.h"
 #include "MemoryMapper.h"
+#include "OpenBusMapper.h"
 
-Bus::Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart)
-    : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart) {
+Bus::Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
+    : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
     // This may not be needed
     ramMapper.cpuRAM.fill(0);
 	memoryMap = new MemoryMapper*[0x10000]; // 64KB address space
+	for (int i = 0; i < 0x10000; i++) {
+		memoryMap[i] = &openBus;
+	}
 }
 
 Bus::~Bus() {
@@ -34,10 +38,13 @@ void Bus::initialize() {
 }
 
 uint8_t Bus::read(uint16_t addr) {
-	return memoryMap[addr]->read(addr);
+	uint8_t val = memoryMap[addr]->read(addr);
+	openBus.setOpenBus(val);
+	return val;
 }
 
 void Bus::write(uint16_t addr, uint8_t data) {
+	openBus.setOpenBus(data);
 	memoryMap[addr]->write(addr, data);
 }
 

@@ -215,6 +215,9 @@
     <ClInclude Include="AxROMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OpenBusMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlueNES.rc">

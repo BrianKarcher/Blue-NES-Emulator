@@ -10,11 +10,12 @@
 class PPU;
 class APU;
 class Input;
+class OpenBusMapper;
 
 class Bus
 {
 public:
-	Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart);
+	Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
 	~Bus();
 
 	RAMMapper ramMapper;
@@ -38,6 +39,7 @@ public:
 	APU& apu;
 	Cartridge& cart;
 	Input& input;
+	OpenBusMapper& openBus;
 
 private:
 

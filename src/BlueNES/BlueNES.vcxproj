@@ -190,6 +190,7 @@
     <ClInclude Include="MMC3.h" />
     <ClInclude Include="Nes.h" />
     <ClInclude Include="APU.h" />
+    <ClInclude Include="OpenBusMapper.h" />
     <ClInclude Include="PPU.h" />
     <ClInclude Include="CPU.h" />
     <ClInclude Include="NROM.h" />
