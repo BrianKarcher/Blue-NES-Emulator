@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include "UxROMMapper.h"
+#include "AxROMMapper.h"
 
 Cartridge::Cartridge(Processor_6502& c) : cpu(c) {
 	m_isLoaded = false;
@@ -33,32 +34,32 @@ std::filesystem::path Cartridge::getAndEnsureSavePath() {
 
 void Cartridge::loadSRAM() {
     mapper->m_prgRamData.resize(0x2000);
-  //  if (!isBatteryBacked) {
-  //      return; // No battery-backed SRAM to load
-  //  }
-  //  std::filesystem::path appFolder = getAndEnsureSavePath();
-  //  std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
-  //  std::ifstream in(sramFilePath, std::ios::binary | std::ios::ate);
-  //  if (!in)
-		//return; // No SRAM file exists, nothing to load
+    if (!isBatteryBacked) {
+        return; // No battery-backed SRAM to load
+    }
+    std::filesystem::path appFolder = getAndEnsureSavePath();
+    std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+    std::ifstream in(sramFilePath, std::ios::binary | std::ios::ate);
+    if (!in)
+		return; // No SRAM file exists, nothing to load
 
-  //  std::streamsize size = in.tellg();
-  //  in.seekg(0, std::ios::beg);
+    std::streamsize size = in.tellg();
+    in.seekg(0, std::ios::beg);
 
-  //  if (!in.read(reinterpret_cast<char*>(m_prgRamData.data()), size))
-  //      throw std::runtime_error("Failed to read file");
+    if (!in.read(reinterpret_cast<char*>(mapper->m_prgRamData.data()), size))
+        throw std::runtime_error("Failed to read file");
 }
 
 void Cartridge::saveSRAM() {
     if (!isBatteryBacked)
 		return; // No battery-backed SRAM to save
- //   std::filesystem::path appFolder = getAndEnsureSavePath();
-	//std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
- //   std::ofstream out(sramFilePath, std::ios::binary);
- //   if (!out)
- //       throw std::runtime_error("Failed to open output file");
+    std::filesystem::path appFolder = getAndEnsureSavePath();
+	std::filesystem::path sramFilePath = appFolder / (fileName + L".sav");
+    std::ofstream out(sramFilePath, std::ios::binary);
+    if (!out)
+        throw std::runtime_error("Failed to open output file");
 
- //   out.write(reinterpret_cast<const char*>(m_prgRamData.data()), m_prgRamData.size());
+    out.write(reinterpret_cast<const char*>(mapper->m_prgRamData.data()), mapper->m_prgRamData.size());
 }
 
 void Cartridge::unload() {
@@ -112,6 +113,9 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         break;
     case 4:
         mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        break;
+    case 7:
+        mapper = new AxROMMapper(this, inesFile.header.prg_rom_size);
         break;
     default:
         mapper = new NROM(this);
@@ -190,23 +194,6 @@ void dbg2(const wchar_t* fmt, ...) {
 void Cartridge::SetPrgRamEnabled(bool enable) {
     dbg2(L"Setting PrgRamEnabled to %d\n", enable);
     isPrgRamEnabled = enable;
-}
-
-uint8_t Cartridge::ReadPRG(uint16_t address) {
-    return mapper->readPRGROM(address);
-}
-
-void Cartridge::WritePRG(uint16_t address, uint8_t data) {
-    mapper->writePRGROM(address, data, cpu.GetCycleCount());
-}
-
-uint8_t Cartridge::ReadCHR(uint16_t address) {
-    return mapper->readCHR(address);
-}
-
-// TODO: Support CHR-RAM vs CHR-ROM distinction
-void Cartridge::WriteCHR(uint16_t address, uint8_t data) {
-    mapper->writeCHR(address, data);
 }
 
 bool Cartridge::isLoaded() {

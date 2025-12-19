@@ -186,6 +186,9 @@ void MMC3::acknowledgeIRQ() {
 
 // Called by PPU when PPU address changes (A12 detection)
 void MMC3::ClockIRQCounter(uint16_t ppu_address) {
+	if (ppu_address > 0x2000) {
+		return;
+	}
 	bool current_a12 = (ppu_address & 0x1000) != 0;
 
 	// Track low-time duration
@@ -194,8 +197,8 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	}
 	else {
 		// Detect rising edge of A12 (0 -> 1 transition)
-		//if (!last_a12 && a12LowTime >= A12_LOW_THRESHOLD && current_a12) {
-		if (!last_a12 && current_a12) {
+		if (!last_a12 && a12LowTime >= A12_LOW_THRESHOLD && current_a12) {
+		//if (!last_a12 && current_a12) {
 			//dbg(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
 			//if (a12_filter == 0) {
 				// Clock the counter on rising edge
@@ -234,7 +237,8 @@ void MMC3::recomputeMappings() {
 inline uint8_t MMC3::readCHR(uint16_t addr) const {
 	return chrMap[(addr >> 10) & 7][addr & 0x3FF];
 	// addr >> 10 = divide by 1024 -> index 0–7
-	// addr & 0x3FF = offset within 1KB bank
+	// addr & 0x3FF = offset within 1KB bank d;fgkl jalgkj kl jlk
+	// Hello World!
 }
 
 void MMC3::writeCHR(uint16_t addr, uint8_t data) {

@@ -43,11 +43,13 @@ void Mapper::initialize(ines_file_t& inesFile) {
 	}
 }
 
+// For testing purposes
 void Mapper::SetCHRRom(uint8_t* data, size_t size) {
 	m_chrData.resize(size);
 	memcpy(m_chrData.data(), data, size);
 }
 
+// For testing purposes
 void Mapper::SetPRGRom(uint8_t* data, size_t size) {
 	if (m_prgRomData.size() < size) {
 		m_prgRomData.resize(size);

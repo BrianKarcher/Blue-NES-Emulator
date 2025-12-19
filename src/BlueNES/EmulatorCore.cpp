@@ -245,7 +245,12 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         //    m_frameBuffer.SwapBuffers();
         //}
         break;
-        // Handle other commands...
+    case CommandQueue::CommandType::ADD_CONTROLLER:
+        nes.input_->OpenFirstController();
+		break;
+    case CommandQueue::CommandType::REMOVE_CONTROLLER:
+        nes.input_->CloseController();
+		break;
     }
 }
 

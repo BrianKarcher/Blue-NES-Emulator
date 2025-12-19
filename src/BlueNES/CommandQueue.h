@@ -17,7 +17,9 @@ public:
         LOAD_STATE,
         PAUSE,
         RESUME,
-        STEP_FRAME
+        STEP_FRAME,
+        ADD_CONTROLLER,
+        REMOVE_CONTROLLER
     };
 
     struct Command {

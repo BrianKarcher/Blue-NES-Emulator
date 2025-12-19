@@ -974,11 +974,19 @@ void Core::RunMessageLoop()
                 running = false;
                 break;
             case SDL_CONTROLLERDEVICEADDED:
-                //emulator.nes.input.OpenFirstController();
+            {
+                CommandQueue::Command cmd;
+                cmd.type = CommandQueue::CommandType::ADD_CONTROLLER;
+                context.command_queue.Push(cmd);
+            }
                 break;
 
             case SDL_CONTROLLERDEVICEREMOVED:
-                //emulator.nes.input.CloseController();
+            {
+                CommandQueue::Command cmd;
+                cmd.type = CommandQueue::CommandType::REMOVE_CONTROLLER;
+                context.command_queue.Push(cmd);
+            }
                 break;
 
             default:

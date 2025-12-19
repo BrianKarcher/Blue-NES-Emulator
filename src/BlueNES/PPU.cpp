@@ -8,6 +8,7 @@
 #include "RendererSlow.h"
 #include "RendererLoopy.h"
 #include "A12Mapper.h"
+#include "Mapper.h"
 
 HWND m_hwnd;
 
@@ -262,13 +263,13 @@ uint8_t PPU::ReadVRAM(uint16_t addr)
 	uint8_t value = 0;
 	if (addr < 0x2000) {
 		// Reading from CHR-ROM/RAM
-		value = bus->cart.ReadCHR(addr);
-		//if (m_mapper) {
+		value = bus->cart.mapper->readCHR(addr);
+		if (m_mapper) {
 		//	if (addr >= 0x1000) {
 		//		int i = 0;
 		//	}
-		//	m_mapper->ClockIRQCounter(addr);
-		//}
+			m_mapper->ClockIRQCounter(addr);
+		}
 	}
 	else if (addr < 0x3F00) {
 		// Reading from nametables and attribute tables
@@ -293,10 +294,10 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	addr &= 0x3FFF; // Mask to 14 bits
 	if (addr < 0x2000) {
 		// Write to CHR-RAM (if enabled)
-		bus->cart.WriteCHR(addr, value);
-		//if (m_mapper) {
-		//	m_mapper->ClockIRQCounter(addr);
-		//}
+		bus->cart.mapper->writeCHR(addr, value);
+		if (m_mapper) {
+			m_mapper->ClockIRQCounter(addr);
+		}
 		// Else ignore write (CHR-ROM is typically read-only)
 		return;
 	}
@@ -355,8 +356,8 @@ uint8_t PPU::get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX,
 	
 	int tileBase = patternTableBase + (tileIndex * 16); // 16 bytes per tile
 
-	uint8_t byte1 = bus->cart.ReadCHR(tileBase + pixelInTileY);     // bitplane 0
-	uint8_t byte2 = bus->cart.ReadCHR(tileBase + pixelInTileY + 8); // bitplane 1
+	uint8_t byte1 = bus->cart.mapper->readCHR(tileBase + pixelInTileY);     // bitplane 0
+	uint8_t byte2 = bus->cart.mapper->readCHR(tileBase + pixelInTileY + 8); // bitplane 1
 
 	uint8_t bit0 = (byte1 >> (7 - pixelInTileX)) & 1;
 	uint8_t bit1 = (byte2 >> (7 - pixelInTileX)) & 1;

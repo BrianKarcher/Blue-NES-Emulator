@@ -392,14 +392,14 @@ void RendererLoopy::clock(uint32_t* buffer) {
     }
 
     // Clock IRQ counter once per scanline at dot 260
-    if (rendering && (visibleScanline || preRenderLine) && dot == 260) {
-        if (m_mapper) {
-            // Simplified: just clock the counter once per scanline
-            // This creates a rising edge from nametable (A12=0) to pattern (A12=1)
-            m_mapper->ClockIRQCounter(0x0000);  // Nametable access
-            m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
-        }
-    }
+    //if (rendering && (visibleScanline || preRenderLine) && dot == 260) {
+    //    if (m_mapper) {
+    //        // Simplified: just clock the counter once per scanline
+    //        // This creates a rising edge from nametable (A12=0) to pattern (A12=1)
+    //        m_mapper->ClockIRQCounter(0x0000);  // Nametable access
+    //        m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
+    //    }
+    //}
 
     // Advance cycle and scanline counters
     //m_cycle++;
