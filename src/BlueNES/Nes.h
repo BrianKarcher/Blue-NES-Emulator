@@ -42,6 +42,13 @@ public:
 	void reset();
 	void clock();
 	bool frameReady();
+
+	// OAM DMA
+	bool dmaActive;
+	uint8_t dmaPage;
+	uint8_t dmaAddr;
+	uint16_t dmaCycles;
+
 	// Audio buffer for queueing samples
 	std::vector<float> audioBuffer;
 

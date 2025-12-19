@@ -12,7 +12,7 @@
 
 HWND m_hwnd;
 
-PPU::PPU(SharedContext& ctx) : context(ctx) {
+PPU::PPU(SharedContext& ctx, Nes& nes) : context(ctx), nes(nes) {
 	oam.fill(0xFF);
 	m_ppuCtrl = 0;
 	oamAddr = 0;
@@ -74,18 +74,18 @@ void PPU::register_memory(Bus& bus) {
 	bus.registerAdd(0x4014, 0x4014, this);
 }
 
+void PPU::writeOAM(uint16_t addr, uint8_t val) {
+	oam[addr] = val;
+}
+
 void PPU::performDMA(uint8_t page)
 {
-	uint16_t baseAddr = page << 8; // high byte from $4014
-	for (int i = 0; i < 256; i++)
-	{
-		uint8_t data = bus->read(baseAddr + i);
-		oam[oamAddr++] = data;
-	}
-
+	nes.dmaActive = true;
+	nes.dmaPage = page;
+	nes.dmaAddr = 0;
 	// Timing penalty (513 or 514 CPU cycles)
 	int extraCycle = (bus->cpu.GetCycleCount() & 1) ? 1 : 0;
-	bus->cpu.AddCycles(513 + extraCycle);
+	nes.dmaCycles = 513 + extraCycle;
 }
 
 void PPU::write(uint16_t address, uint8_t value) {

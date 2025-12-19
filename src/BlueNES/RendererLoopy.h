@@ -126,6 +126,7 @@ private:
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
     uint8_t get_pixel();
     void renderPixel(uint32_t* buffer);
+    void renderPixelBlack(uint32_t* buffer);
 
     // Internal helpers
     inline bool renderingEnabled() const { return (ppumask & 0x18) != 0; } // bg or sprites

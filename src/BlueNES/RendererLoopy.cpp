@@ -173,14 +173,16 @@ uint8_t RendererLoopy::get_pixel() {
     return (palette << 2) | pixel;
 }
 
-void RendererLoopy::renderPixel(uint32_t* buffer) {
+void RendererLoopy::renderPixelBlack(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
 
-    if (!(renderingEnabled())) {
-        buffer[y * 256 + x] = 0xFF000000;
-        return;
-    }
+    buffer[y * 256 + x] = 0xFF000000;
+}
+
+void RendererLoopy::renderPixel(uint32_t* buffer) {
+    int x = dot - 1; // visible pixel x [0..255]
+    int y = m_scanline; // pixel y [0..239]
     
     uint8_t bgPaletteIndex = 0;
     uint32_t bgColor = 0;
@@ -305,9 +307,14 @@ void RendererLoopy::clock(uint32_t* buffer) {
 
     // Pixel rendering (visible)
     if (visibleScanline && dot >= 1 && dot <= 256) {
-        renderPixel(buffer);
-        // Shift registers every cycle
-        shift_registers();
+        if (rendering) {
+            renderPixel(buffer);
+            // Shift registers every cycle
+            shift_registers();
+        }
+        else {
+            renderPixelBlack(buffer);
+        }
     }
     else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336) {
         // While in 321..336 we still load shifters and such for the next scanline,
@@ -353,7 +360,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
     }
 
     // Pre-render only: dots 280..304 copy vertical bits from t to v
-    if (preRenderLine && dot >= 280 && dot <= 304 && rendering) {
+    if (rendering && preRenderLine && dot >= 280 && dot <= 304) {
         ppuCopyY();
     }
 
@@ -398,16 +405,6 @@ void RendererLoopy::clock(uint32_t* buffer) {
     //        // This creates a rising edge from nametable (A12=0) to pattern (A12=1)
     //        m_mapper->ClockIRQCounter(0x0000);  // Nametable access
     //        m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
-    //    }
-    //}
-
-    // Advance cycle and scanline counters
-    //m_cycle++;
-    //if (m_cycle > 340) {
-    //    m_cycle = 0;
-    //    m_scanline++;
-    //    if (m_scanline > 261) {
-    //        m_scanline = 0;
     //    }
     //}
 

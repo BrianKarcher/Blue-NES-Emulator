@@ -46,11 +46,12 @@ class Bus;
 class Core;
 class RendererLoopy;
 class A12Mapper;
+class Nes;
 
 class PPU : public MemoryMapper
 {
 public:
-	PPU(SharedContext& ctx);
+	PPU(SharedContext& ctx, Nes& nes);
 	~PPU();
 	void register_memory(Bus& bus);
 	void initialize();
@@ -61,6 +62,7 @@ public:
 	uint8_t read(uint16_t address);
 	void write(uint16_t address, uint8_t value);
 	inline void write_register(uint16_t addr, uint8_t value);
+	void writeOAM(uint16_t addr, uint8_t val);
 	inline uint8_t read_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
 	uint8_t GetScrollX() const;
@@ -82,6 +84,7 @@ public:
 	uint8_t oamAddr;
 	Bus* bus;
 	A12Mapper* m_mapper;
+	Nes& nes;
 
 	void Clock();
 	

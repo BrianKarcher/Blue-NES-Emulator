@@ -20,7 +20,7 @@ Nes::Nes(SharedContext& ctx) {
     openBus_ = new OpenBusMapper();
     cpu_ = new Processor_6502(*openBus_);
     cart_ = new Cartridge(*cpu_);
-    ppu_ = new PPU(ctx);
+    ppu_ = new PPU(ctx, *this);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
     bus_->initialize();
 	cpu_->connectBus(bus_);
@@ -35,6 +35,7 @@ Nes::Nes(SharedContext& ctx) {
     readController2Mapper_ = new ReadController2Mapper(*input_);
     readController2Mapper_->register_memory(*bus_);
     audioBuffer.reserve(4096);
+    dmaActive = false;
 }
 
 Nes::~Nes() {
@@ -57,18 +58,40 @@ Nes::~Nes() {
 }
 
 void Nes::clock() {
-    ppu_->Clock();
-    // CPU runs at 1/3 the speed of the PPU
-    static int cpuCycleDebt = 0;
-    cpuCycleDebt++;
+    if (dmaActive) {
+        // CPU stalled
+        dmaCycles--;
 
-    while (cpuCycleDebt >= PPU_CYCLES_PER_CPU_CYCLE) {
-        //cpuCycleDebt -= ppuCyclesPerCPUCycle;
+        // Perform one byte every 2 cycles
+        if ((dmaCycles & 1) == 0) {
+            uint8_t val = bus_->read((dmaPage << 8) | dmaAddr);
+            ppu_->writeOAM(dmaAddr, val);
+            dmaAddr++;
+        }
+        ppu_->Clock();
+        ppu_->Clock();
+        ppu_->Clock();
+        apu_->step();
+
+        // Generate audio sample based on cycle timing
+        audioFraction += 1.0;
+        while (audioFraction >= CYCLES_PER_SAMPLE) {
+            audioBuffer.push_back(apu_->get_output());
+            audioFraction -= CYCLES_PER_SAMPLE;
+        }
+
+        if (dmaCycles == 0) {
+            dmaActive = false;
+        }
+    }
+    else {
         uint64_t cyclesElapsed = cpu_->Clock();
-        cpuCycleDebt -= PPU_CYCLES_PER_CPU_CYCLE * cyclesElapsed;
 
         // Clock APU for each CPU cycle
         for (uint64_t i = 0; i < cyclesElapsed; ++i) {
+            ppu_->Clock();
+            ppu_->Clock();
+            ppu_->Clock();
             apu_->step();
 
             // Generate audio sample based on cycle timing
