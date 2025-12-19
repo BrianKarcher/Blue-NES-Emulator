@@ -1,5 +1,6 @@
 #include "AxROMMapper.h"
 #include "Cartridge.h"
+#include "PPU.h"
 
 AxROMMapper::AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize) : cartridge(cartridge) {
 	prgBank32kCount = prgRom16kSize / 2;
@@ -9,7 +10,9 @@ AxROMMapper::AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize) : cartridg
 
 void AxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	prgBankSelect = val & 0x07; // Select 32KB PRG bank (3 bits)
+	prgBankSelect &= (prgBank32kCount - 1);
 	nameTable = val & 0x10;
+	recomputeMappings();
 }
 
 void AxROMMapper::initialize(ines_file_t& data) {

@@ -82,13 +82,14 @@ void Cartridge::LoadROM(const std::wstring& filePath) {
     ines_file_t inesFile;
 	fileName = filepath.stem().wstring();
     ines.load_data_from_ines(filePath.c_str(), inesFile);
+    // Set the mirror mode now. The mapper may change it later.
+    m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
     isBatteryBacked = inesFile.header.flags6 & FLAG_6_BATTERY_BACKED;
 
     uint8_t mapperNum = inesFile.header.flags6 >> 4;
     SetMapper(mapperNum, inesFile);
 	mapper->initialize(inesFile);
 	mapper->register_memory(*m_bus);
-	m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
     loadSRAM();
     
     m_isLoaded = true;
