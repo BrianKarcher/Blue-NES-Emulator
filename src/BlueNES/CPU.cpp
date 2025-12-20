@@ -19,6 +19,34 @@ void Processor_6502::connectBus(Bus* bus) {
 int cnt = 0;
 int cnt2 = 0;
 
+CPUState& Processor_6502::Serialize() {
+	CPUState cpu;
+	cpu.m_a = m_a;
+	cpu.m_x = m_x;
+	cpu.m_y = m_y;
+	cpu.m_pc = m_pc;
+	cpu.m_sp = m_sp;
+	cpu.m_p = m_p;
+	cpu.nmi_line = nmi_line;
+	cpu.nmi_previous = nmi_previous;
+	cpu.nmi_pending = nmi_pending;
+	cpu.irq_line = irq_line;
+	return cpu;
+}
+
+void Processor_6502::Deserialize(CPUState& cpu) {
+	m_a = cpu.m_a;
+	m_x = cpu.m_x;
+	m_y = cpu.m_y;
+	m_pc = cpu.m_pc;
+	m_sp = cpu.m_sp;
+	m_p = cpu.m_p;
+	nmi_line = cpu.nmi_line;
+	nmi_previous = cpu.nmi_previous;
+	nmi_pending = cpu.nmi_pending;
+	irq_line = cpu.irq_line;
+}
+
 // ---------------- Debug helper ----------------
 inline void Processor_6502::dbg(const wchar_t* fmt, ...) {
 #ifdef CPUDEBUG
@@ -58,7 +86,6 @@ void Processor_6502::PowerOn()
 	m_sp = 0xFD;
 	m_cycle_count = 0;
 	isActive = true;
-	nmiRequested = false;
 	nmi_line = false;
 	nmi_previous = false;
 	irq_line = false;
@@ -81,7 +108,6 @@ void Processor_6502::Reset()
 	m_p = 0x24; // Set unused flag bit to 1, others to 0
 	m_sp = 0xFD;
 	m_cycle_count = 0;
-	nmiRequested = false;
 	nmi_line = false;
 	nmi_previous = false;
 	irq_line = false;

@@ -10,6 +10,7 @@
 
 class Processor_6502;
 class Bus;
+class SharedContext;
 
 class Cartridge
 {
@@ -21,7 +22,7 @@ public:
 		SINGLE_UPPER = 3,
 		FOUR_SCREEN = 4
 	};
-	Cartridge(Processor_6502& c);
+	Cartridge(SharedContext& ctx, Processor_6502& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::wstring& filePath);
@@ -37,6 +38,8 @@ public:
 	void unload();
 	bool isLoaded();
 	Mapper* mapper;
+	SharedContext& ctx;
+	std::wstring fileName;
 private:
 	Bus* m_bus;
 	MirrorMode m_mirrorMode;
@@ -44,7 +47,6 @@ private:
 	std::filesystem::path getAndEnsureSavePath();
 	void loadSRAM();
 	void saveSRAM();
-	std::wstring fileName;
 	bool isBatteryBacked = false;
 	bool m_isLoaded;
 };

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <array>
 #include "SharedContext.h"
+#include "SaveState.h"
 
 class PPU;
 class Bus;
@@ -32,6 +33,7 @@ public:
     // ||| ++-------------- nametable select
     // +++----------------- fine Y scroll
 
+	// TODO : Use bitfields for LoopyRegister based on the above layout
     typedef struct {
         uint16_t coarse_x : 5;  // Coarse X scroll (0-31)
         uint16_t coarse_y : 5;  // Coarse Y scroll (0-31)
@@ -95,6 +97,9 @@ public:
         m_mapper = mapper;
     }
 
+    RendererState Serialize();
+	void Deserialize(const RendererState& state);
+
 private:
     Bus* m_bus;
     PPU* m_ppu;
@@ -104,6 +109,7 @@ private:
     bool hasOverflowBeenSet = false;
     bool hasSprite0HitBeenSet = false;
     bool m_frameComplete = false;
+    uint64_t _frameCount = 0;
 
     struct SpriteRenderData {
         uint8_t x;           // X position on screen
@@ -113,7 +119,7 @@ private:
         bool    isZero;      // Is this sprite 0?
     };
 
-    std::array<SpriteRenderData, 256> spriteLineBuffer;  // One entry per X
+	std::array<SpriteRenderData, 256> spriteLineBuffer;  // Places all sprites for current scanline so we only calculate it once
     void prepareSpriteLine(int y);
     
     uint8_t ppumask = 0;

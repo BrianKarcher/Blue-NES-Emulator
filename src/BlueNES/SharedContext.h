@@ -27,6 +27,7 @@ public:
     std::atomic<uint8_t> atomic_input{ 0 };
     std::atomic<bool> is_running{ true };
     std::atomic<uint8_t> current_fps{ 0 };
+    std::atomic<uint8_t> mirrorMode;
 
     SharedContext() {
         buffer_1.resize(WIDTH * HEIGHT, 0xFF000000); // Fill Black

@@ -19,7 +19,7 @@ Nes::Nes(SharedContext& ctx) {
     input_ = new Input();
     openBus_ = new OpenBusMapper();
     cpu_ = new Processor_6502(*openBus_);
-    cart_ = new Cartridge(*cpu_);
+    cart_ = new Cartridge(ctx, *cpu_);
     ppu_ = new PPU(ctx, *this);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
     bus_->initialize();
@@ -106,4 +106,25 @@ void Nes::clock() {
 
 bool Nes::frameReady() {
 	return ppu_->isFrameComplete();
+}
+
+SaveState Nes::Serialize() {
+    SaveState data;
+    data.cpu = cpu_->Serialize();
+    // OAM DMA
+    data.dmaActive = dmaActive;
+    data.dmaPage = dmaPage;
+    data.dmaAddr = dmaAddr;
+    data.dmaCycles = dmaCycles;
+    return data;
+}
+
+void Nes::Deserialize(SaveState& save) {
+    cpu_->Deserialize(save.cpu);
+
+    // OAM DMA
+    dmaActive = save.dmaActive;
+    dmaPage = save.dmaPage;
+    dmaAddr = save.dmaAddr;
+    dmaCycles = save.dmaCycles;
 }

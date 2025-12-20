@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <array>
 #include <string>
+#include "SaveState.h"
 
 //#define CPUDEBUG
 //#define NMIDEBUG
@@ -193,7 +194,6 @@ public:
 	void AddCycles(int count);
 	uint64_t GetCycleCount();
 	Bus* bus;
-	bool nmiRequested = false;
 	void Activate(bool active);
 	void SetPC(uint16_t address);
 	uint16_t GetPC();
@@ -206,6 +206,9 @@ public:
 	std::array<std::string, 256> instructionMap;
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
+
+	CPUState& Serialize();
+	void Deserialize(CPUState& cpu);
 private:
 	OpenBusMapper& openBus;
 	void push(uint8_t value);

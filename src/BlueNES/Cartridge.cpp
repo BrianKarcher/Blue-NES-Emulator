@@ -12,8 +12,9 @@
 #include <fstream>
 #include "UxROMMapper.h"
 #include "AxROMMapper.h"
+#include "SharedContext.h"
 
-Cartridge::Cartridge(Processor_6502& c) : cpu(c) {
+Cartridge::Cartridge(SharedContext& ctx, Processor_6502& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
 }
 

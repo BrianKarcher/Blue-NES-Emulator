@@ -35,4 +35,11 @@ private:
 	long long ticksPerFrame;
 	long long freq;
 	void UpdateNextFrameTime();
+	void CreateSaveState();
+
+	template<typename T>
+	void Write(std::ostream& os, const T& data);
+
+	template<typename T>
+	void Read(std::istream& is, T& data);
 };

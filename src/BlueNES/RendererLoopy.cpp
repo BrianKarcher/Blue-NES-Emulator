@@ -9,6 +9,7 @@
 #include "Bus.h"
 #include "SharedContext.h"
 #include "RendererLoopy.h"
+#include "SaveState.h"
 
 RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
 
@@ -408,12 +409,18 @@ void RendererLoopy::clock(uint32_t* buffer) {
     //    }
     //}
 
+    if (preRenderLine && dot == 339 && _frameCount & 0x01) {
+        // We skip a dot every other frame on the pre-render scanline.
+        dot = 340;
+    }
+
     dot++;
     if (dot > DOTS_PER_SCANLINE) {
         dot = 0;
         m_scanline++;
         if (m_scanline > SCANLINES_PER_FRAME) {
             m_scanline = 0;
+            _frameCount++;
         }
     }
 }
@@ -517,5 +524,70 @@ void RendererLoopy::prepareSpriteLine(int y) {
                 }
             }
         }
+    }
+}
+
+RendererState RendererLoopy::Serialize() {
+    RendererState state;
+	state.m_scanline = m_scanline;
+	state.v.coarse_x = loopy.v.coarse_x;
+	state.v.coarse_y = loopy.v.coarse_y;
+	state.v.nametable_x = loopy.v.nametable_x;
+	state.v.nametable_y = loopy.v.nametable_y;
+	state.v.fine_y = loopy.v.fine_y;
+
+	state.t.coarse_x = loopy.t.coarse_x;
+	state.t.coarse_y = loopy.t.coarse_y;
+	state.t.nametable_x = loopy.t.nametable_x;
+	state.t.nametable_y = loopy.t.nametable_y;
+	state.t.fine_y = loopy.t.fine_y;
+
+	state.x = loopy.x;
+	state.w = loopy.w;
+	state.pattern_lo_shift = m_shifts.pattern_lo_shift;
+	state.pattern_hi_shift = m_shifts.pattern_hi_shift;
+	state.attr_lo_shift = m_shifts.attr_lo_shift;
+	state.attr_hi_shift = m_shifts.attr_hi_shift;
+	state._frameCount = _frameCount;
+	state.ppumask = ppumask;
+    state.dot = dot;
+    for (int i = 0; i < 8; ++i) {
+        state.secondaryOAM[i].x = secondaryOAM[i].x;
+        state.secondaryOAM[i].y = secondaryOAM[i].y;
+        state.secondaryOAM[i].tileIndex = secondaryOAM[i].tileIndex;
+        state.secondaryOAM[i].attributes = secondaryOAM[i].attributes;
+        state.secondaryOAM[i].isSprite0 = secondaryOAM[i].isSprite0;
+    }
+}
+
+void RendererLoopy::Deserialize(const RendererState& state) {
+	m_scanline = state.m_scanline;
+	loopy.v.coarse_x = state.v.coarse_x;
+	loopy.v.coarse_y = state.v.coarse_y;
+	loopy.v.nametable_x = state.v.nametable_x;
+	loopy.v.nametable_y = state.v.nametable_y;
+	loopy.v.fine_y = state.v.fine_y;
+
+	loopy.t.coarse_x = state.t.coarse_x;
+	loopy.t.coarse_y = state.t.coarse_y;
+	loopy.t.nametable_x = state.t.nametable_x;
+	loopy.t.nametable_y = state.t.nametable_y;
+	loopy.t.fine_y = state.t.fine_y;
+
+	loopy.x = state.x;
+	loopy.w = state.w;
+	m_shifts.pattern_lo_shift = state.pattern_lo_shift;
+	m_shifts.pattern_hi_shift = state.pattern_hi_shift;
+	m_shifts.attr_lo_shift = state.attr_lo_shift;
+	m_shifts.attr_hi_shift = state.attr_hi_shift;
+	_frameCount = state._frameCount;
+	ppumask = state.ppumask;
+	dot = state.dot;
+    for (int i = 0; i < 8; ++i) {
+        secondaryOAM[i].x = state.secondaryOAM[i].x;
+        secondaryOAM[i].y = state.secondaryOAM[i].y;
+        secondaryOAM[i].tileIndex = state.secondaryOAM[i].tileIndex;
+        secondaryOAM[i].attributes = state.secondaryOAM[i].attributes;
+        secondaryOAM[i].isSprite0 = state.secondaryOAM[i].isSprite0;
     }
 }

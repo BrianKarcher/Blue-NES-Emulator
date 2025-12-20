@@ -163,7 +163,7 @@
     <ClCompile Include="RendererLoopy.cpp" />
     <ClCompile Include="RendererSlow.cpp" />
     <ClCompile Include="RendererWithReg.cpp" />
-    <ClCompile Include="SharedContext.cpp" />
+    <ClCompile Include="SaveState.cpp" />
     <ClCompile Include="UxROMMapper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -202,6 +202,7 @@
     <ClInclude Include="RendererSlow.h" />
     <ClInclude Include="RendererWithReg.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SaveState.h" />
     <ClInclude Include="SharedContext.h" />
     <ClInclude Include="UxROMMapper.h" />
   </ItemGroup>

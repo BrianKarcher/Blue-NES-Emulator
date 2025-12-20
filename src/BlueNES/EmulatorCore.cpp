@@ -9,6 +9,7 @@
 #include "Bus.h"
 #include "Input.h"
 #include <vector>
+#include "SaveState.h"
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     // Initialize audio backend
@@ -169,7 +170,6 @@ int EmulatorCore::runFrame() {
 	}
     
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-    nes.cpu_->nmiRequested = false;
     nes.ppu_->setFrameComplete(false);
 
     // Submit the exact samples generated this frame
@@ -251,6 +251,12 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
     case CommandQueue::CommandType::REMOVE_CONTROLLER:
         nes.input_->CloseController();
 		break;
+    case CommandQueue::CommandType::SAVE_STATE:
+        CreateSaveState();
+        break;
+    case CommandQueue::CommandType::LOAD_STATE:
+
+        break;
     }
 }
 
@@ -258,4 +264,19 @@ void EmulatorCore::UpdateNextFrameTime() {
     LARGE_INTEGER frameEnd_li;
     QueryPerformanceCounter(&frameEnd_li);
     nextFrameUpdateTime = frameEnd_li.QuadPart + ticksPerFrame;
+}
+
+template<typename T>
+void EmulatorCore::Write(std::ostream& os, const T& data) {
+    os.write(reinterpret_cast<const char*>(&data), sizeof(T));
+}
+
+void EmulatorCore::CreateSaveState() {
+    auto state = nes.Serialize();
+
+}
+
+template<typename T>
+void EmulatorCore::Read(std::istream& is, T& data) {
+    is.read(reinterpret_cast<char*>(&data), sizeof(T));
 }
