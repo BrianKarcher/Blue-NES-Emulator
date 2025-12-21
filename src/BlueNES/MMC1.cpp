@@ -55,7 +55,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	//	dbg(L"MMC1: Ignoring consecutive-cycle write\n");
 	//	return;
 	//}
-	lastWriteCycle = currentCycle;
+	//lastWriteCycle = currentCycle;
 	// Debug print
 	//std::string bits = std::bitset<8>(shiftRegister).to_string();
 	//std::wstring wbits(bits.begin(), bits.end());
@@ -305,4 +305,26 @@ void MMC1::writeCHR(uint16_t address, uint8_t data) {
 		uint16_t addr = chr1Addr + (address - 0x1000);
 		m_chrData[addr] = data;
 	}
+}
+
+void MMC1::Serialize(Serializer& serializer) {
+	Mapper::Serialize(serializer);
+	serializer.Write(shiftRegister);
+	serializer.Write(controlReg);
+	serializer.Write(chrBank0Reg);
+	serializer.Write(chrBank1Reg);
+	serializer.Write(prgBankReg);
+	serializer.Write(suromPrgOuterBank);
+
+}
+
+void MMC1::Deserialize(Serializer& serializer) {
+	Mapper::Deserialize(serializer);
+	serializer.Read(shiftRegister);
+	serializer.Read(controlReg);
+	serializer.Read(chrBank0Reg);
+	serializer.Read(chrBank1Reg);
+	serializer.Read(prgBankReg);
+	serializer.Read(suromPrgOuterBank);
+	recomputeMappings();
 }

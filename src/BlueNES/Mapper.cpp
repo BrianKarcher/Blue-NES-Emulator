@@ -62,3 +62,17 @@ void Mapper::SetPRGRom(uint8_t* data, size_t size) {
 	}
 	memcpy(m_prgRomData.data(), data, size);
 }
+
+void Mapper::Serialize(Serializer& serializer) {
+	serializer.WriteVector(m_prgRamData);
+	if (isCHRWritable) {
+		serializer.WriteVector(m_chrData);
+	}
+}
+
+void Mapper::Deserialize(Serializer& serializer) {
+	serializer.ReadVector(m_prgRamData);
+	if (isCHRWritable) {
+		serializer.ReadVector(m_chrData);
+	}
+}

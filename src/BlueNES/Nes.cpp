@@ -110,7 +110,6 @@ bool Nes::frameReady() {
 }
 
 void Nes::Serialize(Serializer& serializer) {
-    
     cpu_->Serialize(serializer);
 	ppu_->Serialize(serializer);
 	bus_->Serialize(serializer);
@@ -120,6 +119,7 @@ void Nes::Serialize(Serializer& serializer) {
     data.dmaAddr = dmaAddr;
     data.dmaCycles = dmaCycles;
 	serializer.Write(data);
+	cart_->mapper->Serialize(serializer);
 }
 
 void Nes::Deserialize(Serializer& serializer) {
@@ -132,4 +132,5 @@ void Nes::Deserialize(Serializer& serializer) {
     dmaPage = data.dmaPage;
     dmaAddr = data.dmaAddr;
     dmaCycles = data.dmaCycles;
+	cart_->mapper->Deserialize(serializer);
 }

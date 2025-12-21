@@ -3,6 +3,7 @@
 #include <vector>
 #include "MemoryMapper.h"
 #include "INESLoader.h"
+#include "Serializer.h"
 
 class Cartridge;
 class Bus;
@@ -25,6 +26,9 @@ public:
 	uint8_t read(uint16_t address);
 	void write(uint16_t address, uint8_t value);
 	void register_memory(Bus& bus);
+
+	virtual void Serialize(Serializer& serializer) = 0;
+	virtual void Deserialize(Serializer& serializer) = 0;
 
 private:
 	void SetCHRRom(uint8_t* data, size_t size);

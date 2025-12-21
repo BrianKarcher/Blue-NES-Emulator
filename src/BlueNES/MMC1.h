@@ -29,6 +29,9 @@ public:
 	void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;
 	void shutdown() { }
+	void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
+
 private:
 	//uint8_t nametableMode;
 	//uint8_t prgROMMode;
@@ -55,6 +58,6 @@ private:
 	Cartridge* cartridge;
 	Processor_6502& cpu;
 	//ines_file_t* inesFile;
-	uint64_t lastWriteCycle = 0;
+	//uint64_t lastWriteCycle = 0;
 	bool debug = false;
 };
