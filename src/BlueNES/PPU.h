@@ -5,6 +5,7 @@
 #include <utility>
 #include "SharedContext.h"
 #include "MemoryMapper.h"
+#include "SaveState.h"
 
 #define NMI_ENABLE 0x80
 
@@ -115,6 +116,9 @@ public:
 		}
 	}
 	void setBuffer(uint32_t* buf) { buffer = buf; }
+
+	PPUState Serialize();
+	void Deserialize(const PPUState& state);
 
 private:
 	SharedContext& context;

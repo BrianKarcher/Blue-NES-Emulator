@@ -111,6 +111,8 @@ bool Nes::frameReady() {
 SaveState Nes::Serialize() {
     SaveState data;
     data.cpu = cpu_->Serialize();
+	data.ppu = ppu_->Serialize();
+	data.memory = bus_->Serialize();
     // OAM DMA
     data.dmaActive = dmaActive;
     data.dmaPage = dmaPage;
@@ -121,7 +123,8 @@ SaveState Nes::Serialize() {
 
 void Nes::Deserialize(SaveState& save) {
     cpu_->Deserialize(save.cpu);
-
+	ppu_->Deserialize(save.ppu);
+	bus_->Deserialize(save.memory);
     // OAM DMA
     dmaActive = save.dmaActive;
     dmaPage = save.dmaPage;

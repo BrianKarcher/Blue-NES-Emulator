@@ -10,6 +10,7 @@
 #include "Input.h"
 #include <vector>
 #include "SaveState.h"
+#include <fstream>
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     // Initialize audio backend
@@ -255,7 +256,7 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         CreateSaveState();
         break;
     case CommandQueue::CommandType::LOAD_STATE:
-
+        LoadState();
         break;
     }
 }
@@ -272,11 +273,33 @@ void EmulatorCore::Write(std::ostream& os, const T& data) {
 }
 
 void EmulatorCore::CreateSaveState() {
-    auto state = nes.Serialize();
-
+    SaveState state = nes.Serialize();
+    std::filesystem::path appFolder = nes.cart_->getAndEnsureSavePath();
+    std::filesystem::path stateFilePath = appFolder / (nes.cart_->fileName + L".000");
+    std::ofstream os(stateFilePath, std::ios::binary);
+    if (!os) {
+        dbg(L"Failed to open save state file for writing: %s\n", stateFilePath.c_str());
+        return;
+	}
+    Write(os, state);
+    dbg(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
 }
 
 template<typename T>
 void EmulatorCore::Read(std::istream& is, T& data) {
     is.read(reinterpret_cast<char*>(&data), sizeof(T));
+}
+
+void EmulatorCore::LoadState() {
+    std::filesystem::path appFolder = nes.cart_->getAndEnsureSavePath();
+    std::filesystem::path stateFilePath = appFolder / (nes.cart_->fileName + L".000");
+    std::ifstream is(stateFilePath, std::ios::binary);
+    if (!is) {
+        dbg(L"Failed to open save state file for reading: %s\n", stateFilePath.c_str());
+        return;
+    }
+    SaveState state;
+    Read(is, state);
+    nes.Deserialize(state);
+	dbg(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
 }

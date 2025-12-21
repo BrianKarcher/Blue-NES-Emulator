@@ -558,6 +558,7 @@ RendererState RendererLoopy::Serialize() {
         state.secondaryOAM[i].attributes = secondaryOAM[i].attributes;
         state.secondaryOAM[i].isSprite0 = secondaryOAM[i].isSprite0;
     }
+    return state;
 }
 
 void RendererLoopy::Deserialize(const RendererState& state) {

@@ -36,6 +36,7 @@ private:
 	long long freq;
 	void UpdateNextFrameTime();
 	void CreateSaveState();
+	void LoadState();
 
 	template<typename T>
 	void Write(std::ostream& os, const T& data);

@@ -6,6 +6,7 @@
 #include "APU.h"
 #include "MemoryMapper.h"
 #include "OpenBusMapper.h"
+#include "SaveState.h"
 
 Bus::Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
@@ -46,6 +47,20 @@ uint8_t Bus::read(uint16_t addr) {
 void Bus::write(uint16_t addr, uint8_t data) {
 	openBus.setOpenBus(data);
 	memoryMap[addr]->write(addr, data);
+}
+
+InternalMemoryState Bus::Serialize() {
+	InternalMemoryState state;
+	for (size_t i = 0; i < 2048; i++) {
+		state.internalMemory[i] = ramMapper.cpuRAM[i];
+	}
+	return state;
+}
+
+void Bus::Deserialize(const InternalMemoryState& state) {
+	for (size_t i = 0; i < 2048; i++) {
+		ramMapper.cpuRAM[i] = state.internalMemory[i];
+	}
 }
 
 // Holding onto these for more load testing/confirmation of various mappers

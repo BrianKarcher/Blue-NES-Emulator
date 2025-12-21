@@ -400,3 +400,41 @@ inline void PPU::dbg(const wchar_t* fmt, ...) {
 	OutputDebugStringW(buf);
 #endif
 }
+
+PPUState PPU::Serialize() {
+	PPUState state = {};
+	state.renderer = renderer->Serialize();
+	for (int i = 0; i < 0x100; i++) {
+		state.oam[i] = oam[i];
+	}
+	state.oamAddr = oamAddr;
+	for (int i = 0; i < 32; i++) {
+		state.paletteTable[i] = paletteTable[i];
+	}
+	state.ppuMask = m_ppuMask;
+	state.ppuStatus = m_ppuStatus;
+	state.ppuCtrl = m_ppuCtrl;
+	for (int i = 0; i < 0x800; i++) {
+		state.vram[i] = m_vram[i];
+	}
+	state.ppuDataBuffer = ppuDataBuffer;
+	return state;
+}
+
+void PPU::Deserialize(const PPUState& state) {
+	renderer->Deserialize(state.renderer);
+	for (int i = 0; i < 0x100; i++) {
+		oam[i] = state.oam[i];
+	}
+	oamAddr = state.oamAddr;
+	for (int i = 0; i < 32; i++) {
+		paletteTable[i] = state.paletteTable[i];
+	}
+	m_ppuMask = state.ppuMask;
+	m_ppuStatus = state.ppuStatus;
+	m_ppuCtrl = state.ppuCtrl;
+	for (int i = 0; i < 0x800; i++) {
+		m_vram[i] = state.vram[i];
+	}
+	ppuDataBuffer = state.ppuDataBuffer;
+}

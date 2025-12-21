@@ -40,11 +40,11 @@ public:
 	Mapper* mapper;
 	SharedContext& ctx;
 	std::wstring fileName;
+	std::filesystem::path getAndEnsureSavePath();
 private:
 	Bus* m_bus;
 	MirrorMode m_mirrorMode;
 	Processor_6502& cpu;
-	std::filesystem::path getAndEnsureSavePath();
 	void loadSRAM();
 	void saveSRAM();
 	bool isBatteryBacked = false;

@@ -2,12 +2,12 @@
 #include <cstdint>
 #include <iostream>
 
-typedef struct {
+struct HeaderState {
 
 
-} HeaderState;
+};
 
-typedef struct {
+struct CPUState {
 	uint8_t m_a;
 	uint8_t m_x;
 	uint8_t m_y;
@@ -19,35 +19,35 @@ typedef struct {
 	bool nmi_previous;
 	bool nmi_pending;
 	bool irq_line;
-} CPUState;
+};
 
-typedef struct {
+struct InternalMemoryState {
 	uint8_t internalMemory[2048];
-} InternalMemoryState;
+};
 
-typedef struct {
+struct MapperState {
 
-} MapperState;
+};
 
-typedef struct {
-	uint16_t coarse_x : 5;  // Coarse X scroll (0-31)
-	uint16_t coarse_y : 5;  // Coarse Y scroll (0-31)
-	uint16_t nametable_x : 1;  // Nametable X bit
-	uint16_t nametable_y : 1;  // Nametable Y bit
-	uint16_t fine_y : 3;    // Fine Y scroll (0-7)
-	uint16_t unused : 1;    // Always 0
-} LoopyState;
+struct LoopyState {
+	uint16_t coarse_x;  // Coarse X scroll (0-31)
+	uint16_t coarse_y;  // Coarse Y scroll (0-31)
+	uint16_t nametable_x;  // Nametable X bit
+	uint16_t nametable_y;  // Nametable Y bit
+	uint16_t fine_y;    // Fine Y scroll (0-7)
+	uint16_t unused;    // Always 0
+};
 
-typedef struct Sprite {
+struct SpriteState {
 	uint8_t x;
 	uint8_t y;
 	uint8_t tileIndex;
 	uint8_t attributes;
 	bool isSprite0;
-} SpriteState;
+};
 
-typedef struct {
-	int m_scanline = 0;
+struct RendererState {
+	int m_scanline;
 	LoopyState v;
 	LoopyState t;
 	uint8_t x;
@@ -60,11 +60,24 @@ typedef struct {
 	uint8_t ppumask = 0;
 	int dot = 0;
 	SpriteState secondaryOAM[8];
-} RendererState;
+};
 
-typedef struct {
+struct PPUState {
+	RendererState renderer;
+	uint8_t oam[0x100];
+	uint8_t oamAddr;
+	uint8_t paletteTable[32];
+	uint8_t ppuMask;
+	uint8_t ppuStatus;
+	uint8_t ppuCtrl;
+	uint8_t vram[0x800];
+	uint8_t ppuDataBuffer;
+};
+
+struct SaveState {
 	HeaderState header;
 	CPUState cpu;
+	PPUState ppu;
 	InternalMemoryState memory;
 	MapperState mapper;
 	// OAM DMA
@@ -72,4 +85,4 @@ typedef struct {
 	uint8_t dmaPage;
 	uint8_t dmaAddr;
 	uint16_t dmaCycles;
-} SaveState;
+};

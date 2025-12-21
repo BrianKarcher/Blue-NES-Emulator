@@ -692,6 +692,20 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     }
                     break;
                 }
+                case ID_FILE_SAVESTATE:
+                {
+                    CommandQueue::Command cmd;
+                    cmd.type = CommandQueue::CommandType::SAVE_STATE;
+                    pMain->context.command_queue.Push(cmd);
+                    break;
+                }
+                case ID_FILE_LOADSTATE:
+                {
+                    CommandQueue::Command cmd;
+                    cmd.type = CommandQueue::CommandType::LOAD_STATE;
+                    pMain->context.command_queue.Push(cmd);
+                    break;
+                }
                 case ID_FILE_EXIT:
                     PostQuitMessage(0);
 					break;

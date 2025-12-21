@@ -28,6 +28,9 @@ public:
 
 	void initialize();
 
+	InternalMemoryState Serialize();
+	void Deserialize(const InternalMemoryState& state);
+
 	// DMA helper
 	void performDMA(uint8_t page);
 
