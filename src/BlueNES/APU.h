@@ -1,10 +1,9 @@
 #pragma once
-// NES APU (Audio Processing Unit) Emulator Outline
-// This outlines the structure for a complete NES APU implementation
 
 #include <cstdint>
 #include <array>
 #include <functional>
+#include "Serializer.h"
 
 class APU {
 public:
@@ -234,6 +233,203 @@ public:
     // Check if IRQ should be triggered
     bool get_irq_flag() const {
         return frame_counter_irq_flag || dmc.get_irq_flag();
+    }
+
+    void Serialize(Serializer& serializer) {
+        PulseChannelState pulse1_state = {
+            pulse1.envelope_start_flag,
+            pulse1.envelope_divider,
+            pulse1.envelope_decay_level,
+            pulse1.envelope_loop,
+            pulse1.envelope_period,
+            pulse1.constant_volume,
+            pulse1.constant_volume_period,
+            pulse1.sweep_enabled,
+            pulse1.sweep_divider,
+            pulse1.sweep_period,
+            pulse1.sweep_negate,
+            pulse1.sweep_shift,
+            pulse1.sweep_reload,
+            pulse1.timer_period,
+            pulse1.timer_counter,
+            pulse1.duty_cycle,
+            pulse1.sequence_position,
+            pulse1.length_counter,
+            pulse1.enabled
+		};
+        serializer.Write(pulse1_state);
+        PulseChannelState pulse2_state = {
+            pulse2.envelope_start_flag,
+            pulse2.envelope_divider,
+            pulse2.envelope_decay_level,
+            pulse2.envelope_loop,
+            pulse2.envelope_period,
+            pulse2.constant_volume,
+            pulse2.constant_volume_period,
+            pulse2.sweep_enabled,
+            pulse2.sweep_divider,
+            pulse2.sweep_period,
+            pulse2.sweep_negate,
+            pulse2.sweep_shift,
+            pulse2.sweep_reload,
+            pulse2.timer_period,
+            pulse2.timer_counter,
+            pulse2.duty_cycle,
+            pulse2.sequence_position,
+            pulse2.length_counter,
+            pulse2.enabled
+        };
+        serializer.Write(pulse2_state);
+        TriangleChannelState triangle_state = {
+            triangle.linear_counter,
+            triangle.linear_counter_reload,
+            triangle.linear_counter_reload_flag,
+            triangle.linear_counter_control,
+            triangle.timer_period,
+            triangle.timer_counter,
+            triangle.sequence_position,
+			triangle.length_counter,
+            triangle.enabled
+        };
+        serializer.Write(triangle_state);
+        NoiseChannelState noise_state = {
+            noise.envelope_loop,
+            noise.constant_volume,
+            noise.volume_envelope,
+            noise.length_counter_halt,
+            noise.mode_flag,
+            noise.timer_period_index,
+            noise.timer_period,
+            noise.timer_counter,
+            noise.shift_register,
+            noise.envelope_counter,
+            noise.envelope_decay,
+            noise.envelope_start_flag,
+            noise.length_counter,
+            noise.enabled
+        };
+        serializer.Write(noise_state);
+        DMCChannelState dmc_state = {
+            dmc.irq_enabled,
+            dmc.irq_flag,
+            dmc.loop,
+            dmc.timer_period,
+            dmc.timer_counter,
+            dmc.sample_address,
+            dmc.sample_length,
+            dmc.current_address,
+            dmc.bytes_remaining,
+            dmc.output_level,
+            dmc.sample_buffer,
+            dmc.sample_buffer_empty,
+            dmc.shift_register,
+            dmc.bits_remaining,
+            dmc.silence_flag,
+            dmc.enabled
+        };
+        serializer.Write(dmc_state);
+        serializer.Write(cycle_counter);
+        serializer.Write(frame_counter_mode);
+        serializer.Write(frame_counter_irq_inhibit);
+        serializer.Write(frame_counter_irq_flag);
+        serializer.Write(frame_counter_step);
+		serializer.Write(frame_counter_reset_delay);
+    }
+
+    void Deserialize(Serializer& serializer) {
+        PulseChannelState pulse1_state;
+        serializer.Read(pulse1_state);
+        pulse1.envelope_start_flag = pulse1_state.envelope_start_flag;
+        pulse1.envelope_divider = pulse1_state.envelope_divider;
+        pulse1.envelope_decay_level = pulse1_state.envelope_decay_level;
+        pulse1.envelope_loop = pulse1_state.envelope_loop;
+        pulse1.envelope_period = pulse1_state.envelope_period;
+        pulse1.constant_volume = pulse1_state.constant_volume;
+        pulse1.constant_volume_period = pulse1_state.constant_volume_period;
+        pulse1.sweep_enabled = pulse1_state.sweep_enabled;
+        pulse1.sweep_divider = pulse1_state.sweep_divider;
+        pulse1.sweep_period = pulse1_state.sweep_period;
+        pulse1.sweep_negate = pulse1_state.sweep_negate;
+        pulse1.sweep_shift = pulse1_state.sweep_shift;
+        pulse1.sweep_reload = pulse1_state.sweep_reload;
+        pulse1.timer_period = pulse1_state.timer_period;
+        pulse1.timer_counter = pulse1_state.timer_counter;
+        pulse1.duty_cycle = pulse1_state.duty_cycle;
+        pulse1.sequence_position = pulse1_state.sequence_position;
+        pulse1.length_counter = pulse1_state.length_counter;
+        pulse1.enabled = pulse1_state.enabled;
+        PulseChannelState pulse2_state;
+        serializer.Read(pulse2_state);
+        pulse2.envelope_start_flag = pulse2_state.envelope_start_flag;
+        pulse2.envelope_divider = pulse2_state.envelope_divider;
+        pulse2.envelope_decay_level = pulse2_state.envelope_decay_level;
+        pulse2.envelope_loop = pulse2_state.envelope_loop;
+        pulse2.envelope_period = pulse2_state.envelope_period;
+        pulse2.constant_volume = pulse2_state.constant_volume;
+        pulse2.constant_volume_period = pulse2_state.constant_volume_period;
+        pulse2.sweep_enabled = pulse2_state.sweep_enabled;
+        pulse2.sweep_divider = pulse2_state.sweep_divider;
+        pulse2.sweep_period = pulse2_state.sweep_period;
+        pulse2.sweep_negate = pulse2_state.sweep_negate;
+        pulse2.sweep_shift = pulse2_state.sweep_shift;
+        pulse2.sweep_reload = pulse2_state.sweep_reload;
+        pulse2.timer_period = pulse2_state.timer_period;
+		pulse2.timer_counter = pulse2_state.timer_counter;
+        pulse2.duty_cycle = pulse2_state.duty_cycle;
+        pulse2.sequence_position = pulse2_state.sequence_position;
+        pulse2.length_counter = pulse2_state.length_counter;
+        pulse2.enabled = pulse2_state.enabled;
+        TriangleChannelState triangle_state;
+        serializer.Read(triangle_state);
+        triangle.linear_counter = triangle_state.linear_counter;
+        triangle.linear_counter_reload = triangle_state.linear_counter_reload;
+        triangle.linear_counter_reload_flag = triangle_state.linear_counter_reload_flag;
+        triangle.linear_counter_control = triangle_state.linear_counter_control;
+        triangle.timer_period = triangle_state.timer_period;
+        triangle.timer_counter = triangle_state.timer_counter;
+        triangle.sequence_position = triangle_state.sequence_position;
+        triangle.length_counter = triangle_state.length_counter;
+        triangle.enabled = triangle_state.enabled;
+        NoiseChannelState noise_state;
+        serializer.Read(noise_state);
+        noise.envelope_loop = noise_state.envelope_loop;
+        noise.constant_volume = noise_state.constant_volume;
+        noise.volume_envelope = noise_state.volume_envelope;
+        noise.length_counter_halt = noise_state.length_counter_halt;
+        noise.mode_flag = noise_state.mode_flag;
+        noise.timer_period_index = noise_state.timer_period_index;
+        noise.timer_period = noise_state.timer_period;
+        noise.timer_counter = noise_state.timer_counter;
+        noise.shift_register = noise_state.shift_register;
+        noise.envelope_counter = noise_state.envelope_counter;
+        noise.envelope_decay = noise_state.envelope_decay;
+        noise.envelope_start_flag = noise_state.envelope_start_flag;
+        noise.length_counter = noise_state.length_counter;
+        noise.enabled = noise_state.enabled;
+        DMCChannelState dmc_state;
+        serializer.Read(dmc_state);
+        dmc.irq_enabled = dmc_state.irq_enabled;
+        dmc.irq_flag = dmc_state.irq_flag;
+        dmc.loop = dmc_state.loop;
+        dmc.timer_period = dmc_state.timer_period;
+        dmc.timer_counter = dmc_state.timer_counter;
+        dmc.sample_address = dmc_state.sample_address;
+        dmc.sample_length = dmc_state.sample_length;
+        dmc.current_address = dmc_state.current_address;
+        dmc.bytes_remaining = dmc_state.bytes_remaining;
+        dmc.output_level = dmc_state.output_level;
+        dmc.sample_buffer = dmc_state.sample_buffer;
+        dmc.sample_buffer_empty = dmc_state.sample_buffer_empty;
+		dmc.shift_register = dmc_state.shift_register;
+        dmc.bits_remaining = dmc_state.bits_remaining;
+        dmc.silence_flag = dmc_state.silence_flag;
+        dmc.enabled = dmc_state.enabled;
+        serializer.Read(cycle_counter);
+        serializer.Read(frame_counter_mode);
+        serializer.Read(frame_counter_irq_inhibit);
+        serializer.Read(frame_counter_irq_flag);
+        serializer.Read(frame_counter_step);
+		serializer.Read(frame_counter_reset_delay);
     }
 
 private:
@@ -963,6 +1159,113 @@ private:
 
         return output * 1.3f; // The scaling factor 1.3f is for final volume adjustment
     }
+
+    struct PulseChannelState {
+        // Envelope
+        bool envelope_start_flag;
+        uint8_t envelope_divider;
+        uint8_t envelope_decay_level;
+        bool envelope_loop;  // Also doubles as length counter halt
+        uint8_t envelope_period;
+        bool constant_volume;
+        uint8_t constant_volume_period;
+
+        // Sweep unit
+        bool sweep_enabled;
+        uint8_t sweep_divider;
+        uint8_t sweep_period;
+        bool sweep_negate;
+        uint8_t sweep_shift;
+        bool sweep_reload;
+
+        // Timer
+        uint16_t timer_period;
+        uint16_t timer_counter;
+
+        // Sequencer
+        uint8_t duty_cycle;  // 0-3
+        uint8_t sequence_position;  // 0-7
+
+        // Length counter
+        uint8_t length_counter;
+
+        // Control
+        bool enabled;
+    };
+
+    struct TriangleChannelState {
+        // Linear counter
+        uint8_t linear_counter;
+        uint8_t linear_counter_reload;
+        bool linear_counter_reload_flag;
+        bool linear_counter_control;  // Also length counter halt
+        // Timer
+        uint16_t timer_period;
+        uint16_t timer_counter;
+        // Sequencer
+        uint8_t sequence_position;  // 0-31
+        // Length counter
+        uint8_t length_counter;
+        // Control
+        bool enabled;
+	};
+
+    struct NoiseChannelState {
+        // Registers
+        bool envelope_loop;           
+        bool constant_volume;         
+        uint8_t volume_envelope;      
+        uint8_t length_counter_halt;  
+        bool mode_flag;               
+        uint8_t timer_period_index;   
+        // Internal state
+        uint16_t timer_period;
+        uint16_t timer_counter;
+        uint16_t shift_register;
+        uint8_t envelope_counter;
+        uint8_t envelope_decay;
+        bool envelope_start_flag;
+        uint8_t length_counter;
+		bool enabled;
+    };
+
+    struct DMCChannelState {
+        // IRQ
+        bool irq_enabled;
+        bool irq_flag;
+        // Loop flag
+        bool loop;
+        // Timer
+        uint16_t timer_period;
+        uint16_t timer_counter;
+        // Sample
+        uint16_t sample_address;
+        uint16_t sample_length;
+        uint16_t current_address;
+        uint16_t bytes_remaining;
+        // Output
+        uint8_t output_level;  // 7-bit (0-127)
+        uint8_t sample_buffer;
+        bool sample_buffer_empty;
+        // Shift register
+        uint8_t shift_register;
+        uint8_t bits_remaining;
+        bool silence_flag;
+        // Control
+		bool enabled;
+    };
+
+    struct APUState {
+        // Frame counter state
+        uint8_t frame_counter_mode;  
+        bool frame_counter_irq_inhibit;
+        bool frame_counter_irq_flag;
+        uint8_t frame_counter_step;
+        uint8_t frame_counter_reset_delay;
+		uint32_t cycle_counter;
+    };
+
+
 };
 
 // ===== REGISTER MAP =====

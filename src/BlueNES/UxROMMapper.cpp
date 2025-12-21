@@ -31,8 +31,6 @@ UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b
 
 void UxROMMapper::initialize(ines_file_t& data) {
 	Mapper::initialize(data);
-	uint32_t lastBankStart = (prgBank16kCount - 1) * BANK_SIZE_PRG;
-	prgMap[1] = &m_prgRomData[lastBankStart]; // Fixed last bank at $C000
 }
 
 void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
@@ -95,4 +93,14 @@ void UxROMMapper::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCy
 	if (address >= 0x8000) {
 		writeRegister(address, data, currentCycle);
 	}
+}
+
+void UxROMMapper::Serialize(Serializer& serializer) {
+	Mapper::Serialize(serializer);
+	serializer.Write(prg_bank_select);
+}
+
+void UxROMMapper::Deserialize(Serializer& serializer) {
+	Mapper::Deserialize(serializer);
+	serializer.Read(prg_bank_select);
 }

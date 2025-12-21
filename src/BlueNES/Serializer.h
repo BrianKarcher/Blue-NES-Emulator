@@ -85,6 +85,13 @@ public:
 	}
 
 	template<typename T>
+	void Write(const T* data, size_t size) {
+		for (int i = 0; i < size; i++) {
+			os->write(reinterpret_cast<const char*>(&data[i]), sizeof(T));
+		}
+	}
+
+	template<typename T>
 	void WriteVector(const std::vector<T>& v) {
 		static_assert(std::is_trivially_copyable_v<T>,
 			"Vector element type must be trivially copyable");
@@ -101,6 +108,13 @@ public:
 	template<typename T>
 	void Read(T& data) {
 		is->read(reinterpret_cast<char*>(&data), sizeof(T));
+	}
+
+	template<typename T>
+	void Read(T* data, size_t size) {
+		for (int i = 0; i < size; i++) {
+			is->read(reinterpret_cast<char*>(&data[i]), sizeof(T));
+		}
 	}
 
 	template<typename T>

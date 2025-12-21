@@ -25,12 +25,13 @@ public:
 	void ClockIRQCounter(uint16_t ppu_address);
 	void shutdown() {}
 	void initialize(ines_file_t& data);
+	void Serialize(Serializer& serializer) override;
+	void Deserialize(Serializer& serializer) override;
 
 private:
 	inline void dbg(const wchar_t* fmt, ...);
 	// Mapper state
 	uint8_t prg_bank_select;  // Selected 16KB bank for $8000-$BFFF
-	std::array<uint8_t*, 2> prgMap;
 	uint8_t prgBank16kCount;
 
 	Cartridge* cart;

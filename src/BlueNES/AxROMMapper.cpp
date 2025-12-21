@@ -44,3 +44,16 @@ void AxROMMapper::writeCHR(uint16_t address, uint8_t data) {
 	}
 	m_chrData[address & 0x1FFF] = data;
 }
+
+void AxROMMapper::Serialize(Serializer& serializer) {
+	Mapper::Serialize(serializer);
+	serializer.Write(nameTable);
+	serializer.Write(prgBankSelect);
+}
+
+void AxROMMapper::Deserialize(Serializer& serializer) {
+	Mapper::Deserialize(serializer);
+	serializer.Read(nameTable);
+	serializer.Read(prgBankSelect);
+	recomputeMappings();
+}

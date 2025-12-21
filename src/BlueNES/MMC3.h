@@ -28,6 +28,8 @@ public:
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
 	void initialize(ines_file_t& data) override;
+	void Serialize(Serializer& serializer) override;
+	void Deserialize(Serializer& serializer) override;
 
 private:
 	inline void dbg(const wchar_t* fmt, ...);

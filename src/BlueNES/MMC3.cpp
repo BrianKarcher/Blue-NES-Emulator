@@ -258,3 +258,37 @@ void MMC3::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
 		writeRegister(address, data, currentCycle);
 	}
 }
+
+void MMC3::Serialize(Serializer& serializer) {
+	Mapper::Serialize(serializer);
+	serializer.Write(prgMode);
+	serializer.Write(chrMode);
+	serializer.Write(banks, 8);
+	serializer.Write(m_regSelect);
+	// IRQ state
+	serializer.Write(irq_latch);
+	serializer.Write(irq_counter);
+	serializer.Write(irq_reload);
+	serializer.Write(irq_enabled);
+	// A12 tracking
+	serializer.Write(last_a12);
+	serializer.Write(a12LowTime);
+}
+
+void MMC3::Deserialize(Serializer& serializer) {
+	Mapper::Deserialize(serializer);
+	serializer.Read(prgMode);
+	serializer.Read(chrMode);
+	serializer.Read(banks, 8);
+	serializer.Read(m_regSelect);
+	// IRQ state
+	serializer.Read(irq_latch);
+	serializer.Read(irq_counter);
+	serializer.Read(irq_reload);
+	serializer.Read(irq_enabled);
+	// A12 tracking
+	serializer.Read(last_a12);
+	serializer.Read(a12LowTime);
+	updateChrMapping();
+	updatePrgMapping();
+}

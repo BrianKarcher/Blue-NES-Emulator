@@ -120,6 +120,7 @@ void Nes::Serialize(Serializer& serializer) {
     data.dmaCycles = dmaCycles;
 	serializer.Write(data);
 	cart_->mapper->Serialize(serializer);
+	apu_->Serialize(serializer);
 }
 
 void Nes::Deserialize(Serializer& serializer) {
@@ -133,4 +134,5 @@ void Nes::Deserialize(Serializer& serializer) {
     dmaAddr = data.dmaAddr;
     dmaCycles = data.dmaCycles;
 	cart_->mapper->Deserialize(serializer);
+	apu_->Deserialize(serializer);
 }

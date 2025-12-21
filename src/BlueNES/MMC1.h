@@ -29,8 +29,8 @@ public:
 	void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;
 	void shutdown() { }
-	void Serialize(Serializer& serializer);
-	void Deserialize(Serializer& serializer);
+	void Serialize(Serializer& serializer) override;
+	void Deserialize(Serializer& serializer) override;
 
 private:
 	//uint8_t nametableMode;

@@ -13,6 +13,12 @@ public:
 	inline uint8_t readCHR(uint16_t addr) const;
 	void writeCHR(uint16_t addr, uint8_t data);
 	void shutdown() { }
+	void Serialize(Serializer& serializer) override {
+		Mapper::Serialize(serializer);
+	}
+	void Deserialize(Serializer& serializer) override {
+		Mapper::Deserialize(serializer);
+	}
 
 private:
 	Cartridge* cartridge;
