@@ -5,7 +5,6 @@
 #include <utility>
 #include "SharedContext.h"
 #include "MemoryMapper.h"
-#include "SaveState.h"
 
 #define NMI_ENABLE 0x80
 
@@ -48,6 +47,7 @@ class Core;
 class RendererLoopy;
 class A12Mapper;
 class Nes;
+class Serializer;
 
 class PPU : public MemoryMapper
 {
@@ -117,8 +117,8 @@ public:
 	}
 	void setBuffer(uint32_t* buf) { buffer = buf; }
 
-	PPUState Serialize();
-	void Deserialize(const PPUState& state);
+	void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
 
 private:
 	SharedContext& context;

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <iostream>
+#include <vector>
 
 struct HeaderState {
 
@@ -23,10 +24,6 @@ struct CPUState {
 
 struct InternalMemoryState {
 	uint8_t internalMemory[2048];
-};
-
-struct MapperState {
-
 };
 
 struct LoopyState {
@@ -63,7 +60,6 @@ struct RendererState {
 };
 
 struct PPUState {
-	RendererState renderer;
 	uint8_t oam[0x100];
 	uint8_t oamAddr;
 	uint8_t paletteTable[32];
@@ -75,14 +71,58 @@ struct PPUState {
 };
 
 struct SaveState {
-	HeaderState header;
-	CPUState cpu;
-	PPUState ppu;
-	InternalMemoryState memory;
-	MapperState mapper;
-	// OAM DMA
 	bool dmaActive;
 	uint8_t dmaPage;
 	uint8_t dmaAddr;
 	uint16_t dmaCycles;
+};
+
+class Serializer {
+public:
+	template<typename T>
+	void Write(const T& data) {
+		os->write(reinterpret_cast<const char*>(&data), sizeof(T));
+	}
+
+	template<typename T>
+	void WriteVector(const std::vector<T>& v) {
+		static_assert(std::is_trivially_copyable_v<T>,
+			"Vector element type must be trivially copyable");
+
+		uint32_t size = static_cast<uint32_t>(v.size());
+		os->write(reinterpret_cast<const char*>(&size), sizeof(size));
+
+		if (size > 0) {
+			os->write(reinterpret_cast<const char*>(v.data()),
+				size * sizeof(T));
+		}
+	}
+
+	template<typename T>
+	void Read(T& data) {
+		is->read(reinterpret_cast<char*>(&data), sizeof(T));
+	}
+
+	template<typename T>
+	void ReadVector(std::vector<T>& v) {
+		static_assert(std::is_trivially_copyable_v<T>,
+			"Vector element type must be trivially copyable");
+
+		uint32_t size;
+		is->read(reinterpret_cast<char*>(&size), sizeof(size));
+
+		v.resize(size);
+
+		if (size > 0) {
+			is->read(reinterpret_cast<char*>(v.data()),
+				size * sizeof(T));
+		}
+	}
+
+	void StartSerialization(std::ostream& os);
+	void StartDeserialization(std::istream& is);
+
+private:
+	std::istream* is;
+	std::ostream* os;
 };

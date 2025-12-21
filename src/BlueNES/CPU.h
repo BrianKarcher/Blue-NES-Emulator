@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <array>
 #include <string>
-#include "SaveState.h"
 
 //#define CPUDEBUG
 //#define NMIDEBUG
@@ -171,6 +170,7 @@ const uint8_t TYA_IMPLIED = 0x98;
 
 class Bus;
 class OpenBusMapper;
+class Serializer;
 
 class Processor_6502
 {
@@ -207,8 +207,8 @@ public:
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
 
-	CPUState& Serialize();
-	void Deserialize(CPUState& cpu);
+	void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
 private:
 	OpenBusMapper& openBus;
 	void push(uint8_t value);

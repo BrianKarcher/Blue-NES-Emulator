@@ -9,7 +9,7 @@
 #include "Bus.h"
 #include "Input.h"
 #include <vector>
-#include "SaveState.h"
+#include "Serializer.h"
 #include <fstream>
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
@@ -267,27 +267,18 @@ void EmulatorCore::UpdateNextFrameTime() {
     nextFrameUpdateTime = frameEnd_li.QuadPart + ticksPerFrame;
 }
 
-template<typename T>
-void EmulatorCore::Write(std::ostream& os, const T& data) {
-    os.write(reinterpret_cast<const char*>(&data), sizeof(T));
-}
-
 void EmulatorCore::CreateSaveState() {
-    SaveState state = nes.Serialize();
     std::filesystem::path appFolder = nes.cart_->getAndEnsureSavePath();
     std::filesystem::path stateFilePath = appFolder / (nes.cart_->fileName + L".000");
     std::ofstream os(stateFilePath, std::ios::binary);
+    Serializer serializer;
+	serializer.StartSerialization(os);
+    nes.Serialize(serializer);
     if (!os) {
         dbg(L"Failed to open save state file for writing: %s\n", stateFilePath.c_str());
         return;
 	}
-    Write(os, state);
-    dbg(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
-}
-
-template<typename T>
-void EmulatorCore::Read(std::istream& is, T& data) {
-    is.read(reinterpret_cast<char*>(&data), sizeof(T));
+    //dbg(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
 }
 
 void EmulatorCore::LoadState() {
@@ -298,8 +289,8 @@ void EmulatorCore::LoadState() {
         dbg(L"Failed to open save state file for reading: %s\n", stateFilePath.c_str());
         return;
     }
-    SaveState state;
-    Read(is, state);
-    nes.Deserialize(state);
-	dbg(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
+    Serializer serializer;
+    serializer.StartDeserialization(is);
+    nes.Deserialize(serializer);
+	//dbg(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
 }

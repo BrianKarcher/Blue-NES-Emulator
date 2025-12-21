@@ -9,6 +9,7 @@
 #include "RendererLoopy.h"
 #include "A12Mapper.h"
 #include "Mapper.h"
+#include "Serializer.h"
 
 HWND m_hwnd;
 
@@ -401,9 +402,9 @@ inline void PPU::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-PPUState PPU::Serialize() {
+void PPU::Serialize(Serializer& serializer) {
+	renderer->Serialize(serializer);
 	PPUState state = {};
-	state.renderer = renderer->Serialize();
 	for (int i = 0; i < 0x100; i++) {
 		state.oam[i] = oam[i];
 	}
@@ -418,11 +419,13 @@ PPUState PPU::Serialize() {
 		state.vram[i] = m_vram[i];
 	}
 	state.ppuDataBuffer = ppuDataBuffer;
-	return state;
+	serializer.Write(state);
 }
 
-void PPU::Deserialize(const PPUState& state) {
-	renderer->Deserialize(state.renderer);
+void PPU::Deserialize(Serializer& serializer) {
+	renderer->Deserialize(serializer);
+	PPUState state = {};
+	serializer.Read(state);
 	for (int i = 0; i < 0x100; i++) {
 		oam[i] = state.oam[i];
 	}

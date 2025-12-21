@@ -9,7 +9,7 @@
 #include "Bus.h"
 #include "SharedContext.h"
 #include "RendererLoopy.h"
-#include "SaveState.h"
+#include "Serializer.h"
 
 RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
 
@@ -527,7 +527,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
     }
 }
 
-RendererState RendererLoopy::Serialize() {
+void RendererLoopy::Serialize(Serializer& serializer) {
     RendererState state;
 	state.m_scanline = m_scanline;
 	state.v.coarse_x = loopy.v.coarse_x;
@@ -558,10 +558,12 @@ RendererState RendererLoopy::Serialize() {
         state.secondaryOAM[i].attributes = secondaryOAM[i].attributes;
         state.secondaryOAM[i].isSprite0 = secondaryOAM[i].isSprite0;
     }
-    return state;
+	serializer.Write(state);
 }
 
-void RendererLoopy::Deserialize(const RendererState& state) {
+void RendererLoopy::Deserialize(Serializer& serializer) {
+	RendererState state;
+	serializer.Read(state);
 	m_scanline = state.m_scanline;
 	loopy.v.coarse_x = state.v.coarse_x;
 	loopy.v.coarse_y = state.v.coarse_y;

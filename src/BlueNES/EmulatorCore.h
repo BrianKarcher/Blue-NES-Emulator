@@ -37,10 +37,4 @@ private:
 	void UpdateNextFrameTime();
 	void CreateSaveState();
 	void LoadState();
-
-	template<typename T>
-	void Write(std::ostream& os, const T& data);
-
-	template<typename T>
-	void Read(std::istream& is, T& data);
 };

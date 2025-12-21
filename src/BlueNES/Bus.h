@@ -11,6 +11,7 @@ class PPU;
 class APU;
 class Input;
 class OpenBusMapper;
+class Serializer;
 
 class Bus
 {
@@ -28,8 +29,8 @@ public:
 
 	void initialize();
 
-	InternalMemoryState Serialize();
-	void Deserialize(const InternalMemoryState& state);
+	void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
 
 	// DMA helper
 	void performDMA(uint8_t page);

@@ -102,7 +102,7 @@
     <ClCompile Include="AxROMMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SaveState.cpp">
+    <ClCompile Include="Serializer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -218,7 +218,7 @@
     <ClInclude Include="OpenBusMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SaveState.h">
+    <ClInclude Include="Serializer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

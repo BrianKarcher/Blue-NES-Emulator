@@ -4,6 +4,7 @@
 #include "PPU.h"
 #include "RendererLoopy.h"
 #include "OpenBusMapper.h"
+#include "Serializer.h"
 
 Processor_6502::Processor_6502(OpenBusMapper& openBus) : openBus(openBus) {
 	buildMap();
@@ -19,7 +20,7 @@ void Processor_6502::connectBus(Bus* bus) {
 int cnt = 0;
 int cnt2 = 0;
 
-CPUState& Processor_6502::Serialize() {
+void Processor_6502::Serialize(Serializer& serializer) {
 	CPUState cpu;
 	cpu.m_a = m_a;
 	cpu.m_x = m_x;
@@ -31,10 +32,12 @@ CPUState& Processor_6502::Serialize() {
 	cpu.nmi_previous = nmi_previous;
 	cpu.nmi_pending = nmi_pending;
 	cpu.irq_line = irq_line;
-	return cpu;
+	serializer.Write(cpu);
 }
 
-void Processor_6502::Deserialize(CPUState& cpu) {
+void Processor_6502::Deserialize(Serializer& serializer) {
+	CPUState cpu;
+	serializer.Read(cpu);
 	m_a = cpu.m_a;
 	m_x = cpu.m_x;
 	m_y = cpu.m_y;

@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include "SaveState.h"
 
 const double CPU_FREQ = 1789773.0;
 const double CYCLES_PER_SAMPLE = CPU_FREQ / 44100.0;  // 40.58 exact
@@ -21,6 +20,7 @@ class AudioMapper;
 class ReadController1Mapper;
 class ReadController2Mapper;
 class OpenBusMapper;
+class Serializer;
 
 class Nes
 {
@@ -65,8 +65,8 @@ public:
 	ReadController2Mapper* readController2Mapper_;
 	OpenBusMapper* openBus_;
 
-	SaveState Serialize();
-	void Deserialize(SaveState& save);
+	void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
 
 private:
 

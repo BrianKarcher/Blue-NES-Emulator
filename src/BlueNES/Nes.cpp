@@ -10,6 +10,7 @@
 #include "AudioMapper.h"
 #include "InputMappers.h"
 #include "OpenBusMapper.h"
+#include "Serializer.h"
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
@@ -108,26 +109,27 @@ bool Nes::frameReady() {
 	return ppu_->isFrameComplete();
 }
 
-SaveState Nes::Serialize() {
+void Nes::Serialize(Serializer& serializer) {
+    
+    cpu_->Serialize(serializer);
+	ppu_->Serialize(serializer);
+	bus_->Serialize(serializer);
     SaveState data;
-    data.cpu = cpu_->Serialize();
-	data.ppu = ppu_->Serialize();
-	data.memory = bus_->Serialize();
-    // OAM DMA
     data.dmaActive = dmaActive;
     data.dmaPage = dmaPage;
     data.dmaAddr = dmaAddr;
     data.dmaCycles = dmaCycles;
-    return data;
+	serializer.Write(data);
 }
 
-void Nes::Deserialize(SaveState& save) {
-    cpu_->Deserialize(save.cpu);
-	ppu_->Deserialize(save.ppu);
-	bus_->Deserialize(save.memory);
-    // OAM DMA
-    dmaActive = save.dmaActive;
-    dmaPage = save.dmaPage;
-    dmaAddr = save.dmaAddr;
-    dmaCycles = save.dmaCycles;
+void Nes::Deserialize(Serializer& serializer) {
+    cpu_->Deserialize(serializer);
+	ppu_->Deserialize(serializer);
+	bus_->Deserialize(serializer);
+    SaveState data;
+	serializer.Read(data);
+    dmaActive = data.dmaActive;
+    dmaPage = data.dmaPage;
+    dmaAddr = data.dmaAddr;
+    dmaCycles = data.dmaCycles;
 }

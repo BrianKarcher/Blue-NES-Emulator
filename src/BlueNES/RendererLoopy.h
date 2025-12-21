@@ -2,11 +2,11 @@
 #include <stdint.h>
 #include <array>
 #include "SharedContext.h"
-#include "SaveState.h"
 
 class PPU;
 class Bus;
 class A12Mapper;
+class Serializer;
 
 #define DOTS_PER_SCANLINE 340
 #define SCANLINES_PER_FRAME 261
@@ -97,8 +97,8 @@ public:
         m_mapper = mapper;
     }
 
-    RendererState Serialize();
-	void Deserialize(const RendererState& state);
+    void Serialize(Serializer& serializer);
+	void Deserialize(Serializer& serializer);
 
 private:
     Bus* m_bus;
