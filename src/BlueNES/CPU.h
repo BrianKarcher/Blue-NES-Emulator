@@ -219,6 +219,7 @@ private:
 	bool nmi_previous;
 	bool nmi_pending;
 
+	bool prev_irq_line;
 	bool irq_line;
 
 	int checkInterrupts();

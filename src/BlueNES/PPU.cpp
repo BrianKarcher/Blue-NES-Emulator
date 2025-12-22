@@ -266,9 +266,6 @@ uint8_t PPU::ReadVRAM(uint16_t addr)
 		// Reading from CHR-ROM/RAM
 		value = bus->cart.mapper->readCHR(addr);
 		if (m_mapper) {
-		//	if (addr >= 0x1000) {
-		//		int i = 0;
-		//	}
 			m_mapper->ClockIRQCounter(addr);
 		}
 	}
@@ -299,7 +296,6 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 		if (m_mapper) {
 			m_mapper->ClockIRQCounter(addr);
 		}
-		// Else ignore write (CHR-ROM is typically read-only)
 		return;
 	}
 	else if (addr < 0x3F00) {

@@ -41,6 +41,7 @@ MMC3::MMC3(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) 
 	irq_reload = false;
 	irq_enabled = false;
 	last_a12 = false;
+	_irqPending = false;
 	renderLoopy->setMapper(this);
 	this->bus.ppu.setMapper(this);
 
@@ -177,16 +178,20 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 }
 
 void MMC3::triggerIRQ() {
-	cpu.setIRQ(true);
+	_irqPending = true;
 }
 
 void MMC3::acknowledgeIRQ() {
-	cpu.setIRQ(false);
+	_irqPending = false;
+}
+
+bool MMC3::IrqPending() {
+	return _irqPending;
 }
 
 // Called by PPU when PPU address changes (A12 detection)
 void MMC3::ClockIRQCounter(uint16_t ppu_address) {
-	if (ppu_address > 0x2000) {
+	if (ppu_address >= 0x2000) {
 		return;
 	}
 	bool current_a12 = (ppu_address & 0x1000) != 0;
@@ -212,8 +217,8 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 
 			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
-				dbg(L"IRQ Triggered at line %d\n", bus.ppu.renderer->m_scanline);
-				cpu.setIRQ(true);
+				dbg(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
+				triggerIRQ();
 			}
 
 			//a12_filter = 6;  // Typical filter delay
@@ -273,6 +278,7 @@ void MMC3::Serialize(Serializer& serializer) {
 	// A12 tracking
 	serializer.Write(last_a12);
 	serializer.Write(a12LowTime);
+	serializer.Write(_irqPending);
 }
 
 void MMC3::Deserialize(Serializer& serializer) {
@@ -289,6 +295,7 @@ void MMC3::Deserialize(Serializer& serializer) {
 	// A12 tracking
 	serializer.Read(last_a12);
 	serializer.Read(a12LowTime);
+	serializer.Read(_irqPending);
 	updateChrMapping();
 	updatePrgMapping();
 }

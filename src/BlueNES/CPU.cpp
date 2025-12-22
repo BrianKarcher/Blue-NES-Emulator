@@ -223,12 +223,16 @@ int Processor_6502::checkInterrupts() {
 
 	// IRQ - Level-triggered, maskable by I flag
 	// Check if IRQ line is active AND hardware interrupts are enabled
-	if (irq_line && !(m_p & FLAG_INTERRUPT)) {
+	if (prev_irq_line && !(m_p & FLAG_INTERRUPT)) {
 	//if (irq_line) {
 		handleIRQ();
 		irq_line = false; // Clear IRQ line after handling
 		return 7;
 	}
+	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
+	irq_line = bus->IrqPending();
+	prev_irq_line = irq_line;
+
 	return 0;
 }
 
@@ -238,6 +242,7 @@ int Processor_6502::checkInterrupts() {
 uint8_t Processor_6502::Clock()
 {
 	if (!isActive) return 0;
+
 	uint16_t current_pc = m_pc;
 	uint8_t op = ReadNextByte();
 	uint64_t cyclesBefore = m_cycle_count;
@@ -1047,6 +1052,9 @@ uint8_t Processor_6502::Clock()
 		case LDX_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
+			if (operand == 9) {
+				int i = 0;
+			}
 			m_x = operand;
 			SetZero(m_x);
 			SetNegative(m_x);
@@ -1635,7 +1643,8 @@ uint8_t Processor_6502::Clock()
 	// NOTE TO NES developers: When interrupts are enabled, you should avoid reading $2002 in a tight loop like that.
 	// You might miss the NMI entirely if it happens between your read and the interrupt check!
 	// Have NMI set a variable that your loop waits for. Thank you!
-	checkInterrupts();
+	int cycles = checkInterrupts();
+	cyclesThisFrame += cycles;
 	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
 	cyclesThisFrame += cyclesPassed;
 	return cyclesPassed;

@@ -49,6 +49,10 @@ void Bus::write(uint16_t addr, uint8_t data) {
 	memoryMap[addr]->write(addr, data);
 }
 
+bool Bus::IrqPending() {
+	return apu.get_irq_flag() || cart.mapper->IrqPending();
+}
+
 void Bus::Serialize(Serializer& serializer) {
 	InternalMemoryState state;
 	for (size_t i = 0; i < 2048; i++) {

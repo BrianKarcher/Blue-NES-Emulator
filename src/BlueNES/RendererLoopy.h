@@ -25,6 +25,7 @@ public:
     } Sprite;
 
     int m_scanline = 0; // Current PPU scanline (0-261)
+    int dot = 0;
 
     // Loopy register structure (15-bit VRAM address)
     // yyy NN YYYYY XXXXX
@@ -123,7 +124,6 @@ private:
     void prepareSpriteLine(int y);
     
     uint8_t ppumask = 0;
-    int dot = 0;
     std::array<Sprite, 8> secondaryOAM{};
 
     // Tile info

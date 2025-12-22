@@ -82,6 +82,11 @@ void RendererLoopy::ppuWriteAddr(uint8_t value) {
         *t_ptr = (*t_ptr & 0xFF00) | value;
         *(uint16_t*)&loopy.v = *(uint16_t*)&loopy.t;
         loopy.w = false;
+		// MMC3 IRQ handling: clock IRQ counter on PPUADDR write
+        // "Should decrement when A12 is toggled via PPUADDR"
+        if (m_ppu->m_mapper) {
+            m_ppu->m_mapper->ClockIRQCounter(*t_ptr);
+        }
     }
 }
 

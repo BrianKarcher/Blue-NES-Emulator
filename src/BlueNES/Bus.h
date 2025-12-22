@@ -36,6 +36,7 @@ public:
 	void performDMA(uint8_t page);
 
 	void reset();
+	bool IrqPending();
 
 	// Devices connected to the bus
 	Processor_6502& cpu;
