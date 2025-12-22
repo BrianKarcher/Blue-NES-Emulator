@@ -10,6 +10,7 @@
 #include "SharedContext.h"
 #include "RendererLoopy.h"
 #include "Serializer.h"
+#include "PPU.h"
 
 RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
 
@@ -414,6 +415,13 @@ void RendererLoopy::clock(uint32_t* buffer) {
     //    }
     //}
 
+    //if (rendering && (visibleScanline || preRenderLine) && dot == 261) {
+    //    if (m_mapper) {
+    //        // Clock the IRQ counter on A12 rising edge
+    //        m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
+    //    }
+    //}
+
     if (preRenderLine && dot == 339 && _frameCount & 0x01) {
         // We skip a dot every other frame on the pre-render scanline.
         dot = 340;
@@ -471,7 +479,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
     // Mario 3 uses 8x16 sprites.
     // And the game doesn't load any sprites at start.
     // TODO Figure out how to get MMC 3 to work.
-    uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
+    //uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
 
     spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
     int spriteHeight = 8;

@@ -9,7 +9,7 @@ class Cartridge;
 class Processor_6502;
 class RendererLoopy;
 
-//#define MMC3DEBUG
+#define MMC3DEBUG
 
 class MMC3 : public Mapper, public A12Mapper
 {
@@ -28,6 +28,7 @@ public:
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
 	void initialize(ines_file_t& data) override;
+	bool IrqPending();
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
 
@@ -57,6 +58,7 @@ private:
 	uint8_t irq_counter;
 	bool irq_reload;
 	bool irq_enabled;
+	bool _irqPending;
 
 	// A12 tracking
 	bool last_a12;

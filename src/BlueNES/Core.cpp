@@ -8,8 +8,9 @@
 #include "AudioBackend.h"
 #include <SDL.h>
 #include "SharedContext.h"
+#include "DebuggerUI.h"
 
-Core::Core() : emulator(context) {
+Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this) {
 }
 
 SDL_Window* window = nullptr;

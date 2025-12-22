@@ -14,6 +14,7 @@
 #include "PPUViewer.h"
 #include "EmulatorCore.h"
 #include "SharedContext.h"
+#include "DebuggerUI.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -83,6 +84,7 @@ public:
 	HWND hHexCombo = NULL;
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
+	DebuggerUI debuggerUI;
 	//PPUViewer ppuViewer;
 private:
 	HMENU hMenu;
