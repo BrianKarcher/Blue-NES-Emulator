@@ -108,6 +108,9 @@
     <ClCompile Include="DebuggerUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DebuggerContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -225,6 +228,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DebuggerUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DebuggerContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

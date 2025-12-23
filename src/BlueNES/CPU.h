@@ -172,10 +172,10 @@ class Bus;
 class OpenBusMapper;
 class Serializer;
 
-class Processor_6502
+class CPU
 {
 public:
-	Processor_6502(OpenBusMapper& openBus);
+	CPU(OpenBusMapper& openBus);
 	void connectBus(Bus* bus);
 	void setNMI(bool state);
 	void setIRQ(bool state);
@@ -206,10 +206,16 @@ public:
 	std::array<std::string, 256> instructionMap;
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
+	void ConsumeCycle();
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 private:
+	typedef void (CPU::* OpFunc)(void);
+	OpFunc _opcodeTable[256] = {
+		//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
+		&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
+	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
 	uint8_t pull();
@@ -239,19 +245,23 @@ private:
 	uint8_t m_a;
 	uint8_t m_x;
 	uint8_t m_y;
+	uint8_t _operand;
 
 	void buildMap();
 
 	// flags
 	uint8_t m_p;
 	void _and(uint8_t operand);
-	void ASL(uint8_t& byte);
+	void ASL();
+	void BRK();
 	bool NearBranch(uint8_t value);
 	void BIT(uint8_t data);
 	void cp(uint8_t value, uint8_t operand);
+	void DMP();
 	void EOR(uint8_t operand);
 	void LSR(uint8_t& byte);
-	void ORA(uint8_t operand);
+	void ORA();
+	void PHP();
 	void ROL(uint8_t& byte);
 	void ROR(uint8_t& byte);
 	void SBC(uint8_t operand);

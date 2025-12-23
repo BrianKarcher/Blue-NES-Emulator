@@ -479,7 +479,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
     // Mario 3 uses 8x16 sprites.
     // And the game doesn't load any sprites at start.
     // TODO Figure out how to get MMC 3 to work.
-    //uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
+    uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
 
     spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
     int spriteHeight = 8;

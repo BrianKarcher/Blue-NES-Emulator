@@ -6,12 +6,28 @@
 #include "OpenBusMapper.h"
 #include "Serializer.h"
 
-Processor_6502::Processor_6502(OpenBusMapper& openBus) : openBus(openBus) {
+CPU::CPU(OpenBusMapper& openBus) : openBus(openBus) {
 	buildMap();
 }
 
-void Processor_6502::connectBus(Bus* bus) {
+void CPU::connectBus(Bus* bus) {
 	this->bus = bus;
+}
+
+void CPU::BRK() {
+	//m_p |= FLAG_BREAK; // Set break flag
+	uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
+	uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
+	//m_pc += 1; 
+	// Push PC and P to stack
+	bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
+	bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
+	bus->write(0x0100 + m_sp--, flags);                // Push processor status
+	// Set PC to NMI vector
+	m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
+	// Set Interrupt Disable flag in real status so IRQs are masked
+	m_p |= FLAG_INTERRUPT;
+	m_cycle_count += 7;
 }
 
 /* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
@@ -20,7 +36,7 @@ void Processor_6502::connectBus(Bus* bus) {
 int cnt = 0;
 int cnt2 = 0;
 
-void Processor_6502::Serialize(Serializer& serializer) {
+void CPU::Serialize(Serializer& serializer) {
 	CPUState cpu;
 	cpu.m_a = m_a;
 	cpu.m_x = m_x;
@@ -35,7 +51,7 @@ void Processor_6502::Serialize(Serializer& serializer) {
 	serializer.Write(cpu);
 }
 
-void Processor_6502::Deserialize(Serializer& serializer) {
+void CPU::Deserialize(Serializer& serializer) {
 	CPUState cpu;
 	serializer.Read(cpu);
 	m_a = cpu.m_a;
@@ -51,7 +67,7 @@ void Processor_6502::Deserialize(Serializer& serializer) {
 }
 
 // ---------------- Debug helper ----------------
-inline void Processor_6502::dbg(const wchar_t* fmt, ...) {
+inline void CPU::dbg(const wchar_t* fmt, ...) {
 #ifdef CPUDEBUG
 	//if (!debug) return;
 	wchar_t buf[512];
@@ -63,7 +79,7 @@ inline void Processor_6502::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-inline void Processor_6502::dbgNmi(const wchar_t* fmt, ...) {
+inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
 #ifdef NMIDEBUG
 	//if (!debug) return;
 	wchar_t buf[512];
@@ -75,7 +91,7 @@ inline void Processor_6502::dbgNmi(const wchar_t* fmt, ...) {
 #endif
 }
 
-void Processor_6502::PowerOn()
+void CPU::PowerOn()
 {
 	m_pc = 0xFFFC;
 	uint8_t resetLo = ReadNextByte();
@@ -96,12 +112,12 @@ void Processor_6502::PowerOn()
 	isFrozen = false;
 }
 
-void Processor_6502::Activate(bool active)
+void CPU::Activate(bool active)
 {
 	isActive = active;
 }
 
-void Processor_6502::Reset()
+void CPU::Reset()
 {
 	// TODO : Add the reset vector read from the bus
 	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
@@ -118,17 +134,17 @@ void Processor_6502::Reset()
 	isFrozen = false;
 }
 
-void Processor_6502::AddCycles(int count)
+void CPU::AddCycles(int count)
 {
 	m_cycle_count += count;
 }
 
-uint64_t Processor_6502::GetCycleCount()
+uint64_t CPU::GetCycleCount()
 {
 	return m_cycle_count;
 }
 
-void Processor_6502::handleNMI() {
+void CPU::handleNMI() {
 	if (isFrozen) {
 		return;
 	}
@@ -166,25 +182,25 @@ void Processor_6502::handleNMI() {
 }
 
 // Called by mappers/devices to set interrupt lines
-void Processor_6502::setNMI(bool state) {
+void CPU::setNMI(bool state) {
 	nmi_line = state;
 }
 
-void Processor_6502::setIRQ(bool state) {
+void CPU::setIRQ(bool state) {
 	irq_line = state;
 }
 
-void Processor_6502::push(uint8_t value) {
+void CPU::push(uint8_t value) {
 	bus->write(0x0100 + m_sp, value);
 	m_sp--;
 }
 
-uint8_t Processor_6502::pull() {
+uint8_t CPU::pull() {
 	m_sp++;
 	return bus->read(0x0100 + m_sp);
 }
 
-void Processor_6502::handleIRQ() {
+void CPU::handleIRQ() {
 	// IRQ takes 7 cycles
 
 	// Push PC (high byte first)
@@ -207,7 +223,7 @@ void Processor_6502::handleIRQ() {
 	m_cycle_count += 7;
 }
 
-int Processor_6502::checkInterrupts() {
+int CPU::checkInterrupts() {
 	// NMI - Edge-triggered (detects 0->1 transition)
 	if (nmi_line && !nmi_previous) {
 		nmi_pending = true;
@@ -223,14 +239,14 @@ int Processor_6502::checkInterrupts() {
 
 	// IRQ - Level-triggered, maskable by I flag
 	// Check if IRQ line is active AND hardware interrupts are enabled
-	if (prev_irq_line && !(m_p & FLAG_INTERRUPT)) {
+	if (irq_line && !(m_p & FLAG_INTERRUPT)) {
 	//if (irq_line) {
 		handleIRQ();
 		irq_line = false; // Clear IRQ line after handling
 		return 7;
 	}
 	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
-	irq_line = bus->IrqPending();
+	//irq_line = bus->IrqPending();
 	prev_irq_line = irq_line;
 
 	return 0;
@@ -239,7 +255,7 @@ int Processor_6502::checkInterrupts() {
 /// <summary>
 /// Speed is paramount so we try to reduce function hops as much as feasible while keeping the code readable.
 /// </summary>
-uint8_t Processor_6502::Clock()
+uint8_t CPU::Clock()
 {
 	if (!isActive) return 0;
 
@@ -552,19 +568,7 @@ uint8_t Processor_6502::Clock()
 		}
 		case BRK_IMPLIED:
 		{
-			//m_p |= FLAG_BREAK; // Set break flag
-			uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
-			uint16_t return_addr = static_cast<uint16_t>(m_pc + 1); // Increment PC by 1 to skip over the next byte (padding byte)
-			//m_pc += 1; 
-			// Push PC and P to stack
-			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // Push high byte of PC
-			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Push low byte of PC
-			bus->write(0x0100 + m_sp--, flags);                // Push processor status
-			// Set PC to NMI vector
-			m_pc = (static_cast<uint16_t>(ReadByte(0xFFFF) << 8)) | ReadByte(0xFFFE);
-			// Set Interrupt Disable flag in real status so IRQs are masked
-			m_p |= FLAG_INTERRUPT;
-			m_cycle_count += 7;
+
 			break;
 		}
 		case BVC_RELATIVE:
@@ -1267,8 +1271,6 @@ uint8_t Processor_6502::Clock()
 		}
 		case PHP_IMPLIED:
 		{
-			bus->write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
-			m_cycle_count += 3;
 			break;
 		}
 		case PLA_IMPLIED:
@@ -1650,37 +1652,37 @@ uint8_t Processor_6502::Clock()
 	return cyclesPassed;
 }
 
-uint8_t Processor_6502::GetSP()
+uint8_t CPU::GetSP()
 {
 	return m_sp;
 }
 
-void Processor_6502::SetSP(uint8_t sp)
+void CPU::SetSP(uint8_t sp)
 {
 	m_sp = sp;
 }
 
-inline uint8_t Processor_6502::ReadNextByte()
+inline uint8_t CPU::ReadNextByte()
 {
 	//dbg(L"0x%02X ", bus->read(m_pc));
 	return bus->read(m_pc++);
 }
 
-inline uint8_t Processor_6502::ReadNextByte(uint8_t offset)
+inline uint8_t CPU::ReadNextByte(uint8_t offset)
 {
 	uint8_t base = ReadNextByte();
 	uint8_t byte = (base + offset) & 0xFF; // Wraparound
 	return byte;
 }
 
-inline uint16_t Processor_6502::ReadNextWord()
+inline uint16_t CPU::ReadNextWord()
 {
 	uint8_t loByte = ReadNextByte();
 	uint8_t hiByte = ReadNextByte();
 	return (static_cast<uint16_t>(hiByte << 8) | loByte);
 }
 
-inline uint16_t Processor_6502::ReadNextWord(uint8_t offset)
+inline uint16_t CPU::ReadNextWord(uint8_t offset)
 {
 	uint8_t loByte = ReadNextByte();
 	uint8_t hiByte = ReadNextByte();
@@ -1695,7 +1697,7 @@ inline uint16_t Processor_6502::ReadNextWord(uint8_t offset)
 	return (static_cast<uint16_t>(hiByte << 8) | loByte);
 }
 
-inline uint16_t Processor_6502::ReadNextWordNoCycle(uint8_t offset)
+inline uint16_t CPU::ReadNextWordNoCycle(uint8_t offset)
 {
 	uint8_t loByte = ReadNextByte();
 	uint8_t hiByte = ReadNextByte();
@@ -1708,7 +1710,7 @@ inline uint16_t Processor_6502::ReadNextWordNoCycle(uint8_t offset)
 	return (static_cast<uint16_t>(hiByte << 8) | loByte);
 }
 
-inline uint16_t Processor_6502::ReadIndexedIndirect()
+inline uint16_t CPU::ReadIndexedIndirect()
 {
 	uint8_t zp_base = ReadNextByte();
 	// Add X register to base (with zp wraparound)
@@ -1718,7 +1720,7 @@ inline uint16_t Processor_6502::ReadIndexedIndirect()
 	return (addr_hi << 8) | addr_lo;
 }
 
-inline uint16_t Processor_6502::ReadIndirectIndexed()
+inline uint16_t CPU::ReadIndirectIndexed()
 {
 	uint8_t zp_base = ReadNextByte();
 	uint8_t addr_lo = bus->read(zp_base);
@@ -1732,7 +1734,7 @@ inline uint16_t Processor_6502::ReadIndirectIndexed()
 	return (addr_hi << 8) | addr_lo;
 }
 
-inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
+inline uint16_t CPU::ReadIndirectIndexedNoCycle()
 {
 	uint8_t zp_base = ReadNextByte();
 	uint8_t addr_lo = bus->read(zp_base);
@@ -1745,27 +1747,27 @@ inline uint16_t Processor_6502::ReadIndirectIndexedNoCycle()
 	return (addr_hi << 8) | addr_lo;
 }
 
-inline uint8_t Processor_6502::ReadByte(uint16_t addr)
+inline uint8_t CPU::ReadByte(uint16_t addr)
 {
 	return bus->read(addr);
 }
 
-uint8_t Processor_6502::GetStatus()
+uint8_t CPU::GetStatus()
 {
 	return m_p;
 }
 
-void Processor_6502::SetStatus(uint8_t status)
+void CPU::SetStatus(uint8_t status)
 {
 	m_p = status;
 }
 
-void Processor_6502::ClearFlag(uint8_t flag)
+void CPU::ClearFlag(uint8_t flag)
 {
 	m_p &= ~flag;
 }
 
-inline void Processor_6502::SetZero(uint8_t value)
+inline void CPU::SetZero(uint8_t value)
 {
 	// Set/clear zero flag
 	if (value == 0) {
@@ -1776,7 +1778,7 @@ inline void Processor_6502::SetZero(uint8_t value)
 	}
 }
 
-inline void Processor_6502::SetNegative(uint8_t value)
+inline void CPU::SetNegative(uint8_t value)
 {
 	// Set/clear negative flag (bit 7 of result)
 	if (value & 0x80) {
@@ -1787,7 +1789,7 @@ inline void Processor_6502::SetNegative(uint8_t value)
 	}
 }
 
-inline void Processor_6502::SetOverflow(bool condition)
+inline void CPU::SetOverflow(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_OVERFLOW;
@@ -1797,7 +1799,7 @@ inline void Processor_6502::SetOverflow(bool condition)
 	}
 }
 
-inline void Processor_6502::SetCarry(bool condition)
+inline void CPU::SetCarry(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_CARRY;
@@ -1807,7 +1809,7 @@ inline void Processor_6502::SetCarry(bool condition)
 	}
 }
 
-inline void Processor_6502::SetDecimal(bool condition)
+inline void CPU::SetDecimal(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_DECIMAL;
@@ -1817,7 +1819,7 @@ inline void Processor_6502::SetDecimal(bool condition)
 	}
 }
 
-inline void Processor_6502::SetInterrupt(bool condition)
+inline void CPU::SetInterrupt(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_INTERRUPT;
@@ -1827,7 +1829,7 @@ inline void Processor_6502::SetInterrupt(bool condition)
 	}
 }
 
-inline void Processor_6502::SetBreak(bool condition)
+inline void CPU::SetBreak(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_BREAK;
@@ -1837,7 +1839,7 @@ inline void Processor_6502::SetBreak(bool condition)
 	}
 }
 
-void Processor_6502::ADC(uint8_t operand)
+void CPU::ADC(uint8_t operand)
 {
 	uint8_t a_old = m_a;
 	
@@ -1879,7 +1881,7 @@ void Processor_6502::ADC(uint8_t operand)
 	}
 }
 
-void Processor_6502::_and(uint8_t operand)
+void CPU::_and(uint8_t operand)
 {
 	// AND operation with the accumulator
 	m_a &= operand;
@@ -1899,26 +1901,26 @@ void Processor_6502::_and(uint8_t operand)
 	}
 }
 
-void Processor_6502::ASL(uint8_t& byte)
+void CPU::ASL()
 {
 	// Set/clear carry flag based on bit 7
-	if (byte & 0x80) {
+	if (_operand & 0x80) {
 		m_p |= FLAG_CARRY;   // Set carry
 	}
 	else {
 		m_p &= ~FLAG_CARRY;  // Clear carry
 	}
 	// Shift left by 1
-	byte <<= 1;
+	_operand <<= 1;
 	// Set/clear zero flag
-	if (byte == 0) {
+	if (_operand == 0) {
 		m_p |= FLAG_ZERO;
 	}
 	else {
 		m_p &= ~FLAG_ZERO;
 	}
 	// Set/clear negative flag (bit 7 of result)
-	if (byte & 0x80) {
+	if (_operand & 0x80) {
 		m_p |= FLAG_NEGATIVE;
 	}
 	else {
@@ -1926,7 +1928,7 @@ void Processor_6502::ASL(uint8_t& byte)
 	}
 }
 
-bool Processor_6502::NearBranch(uint8_t value) {
+bool CPU::NearBranch(uint8_t value) {
 	int8_t offset = static_cast<int8_t>(value); // Convert to signed
 	// Determine if page crossed
 	uint8_t old_pc_hi = (m_pc & 0xFF00) >> 8;
@@ -1935,7 +1937,7 @@ bool Processor_6502::NearBranch(uint8_t value) {
 	return old_pc_hi != new_pc_hi;
 }
 
-void Processor_6502::BIT(uint8_t data) {
+void CPU::BIT(uint8_t data) {
 	// Set zero flag based on AND with accumulator
 	if ((m_a & data) == 0) {
 		m_p |= FLAG_ZERO;
@@ -1959,7 +1961,7 @@ void Processor_6502::BIT(uint8_t data) {
 	}
 }
 
-void Processor_6502::cp(uint8_t value, uint8_t operand)
+void CPU::cp(uint8_t value, uint8_t operand)
 {
 	uint8_t result = value - operand;
 	dbg(L"0x%02X", result);
@@ -1986,7 +1988,7 @@ void Processor_6502::cp(uint8_t value, uint8_t operand)
 	}
 }
 
-void Processor_6502::EOR(uint8_t operand)
+void CPU::EOR(uint8_t operand)
 {
 	// EOR operation with the accumulator
 	m_a ^= operand;
@@ -2007,7 +2009,7 @@ void Processor_6502::EOR(uint8_t operand)
 	}
 }
 
-void Processor_6502::LSR(uint8_t& byte)
+void CPU::LSR(uint8_t& byte)
 {
 	// Set/clear carry flag based on bit 0  
 	if (byte & 0x01) {
@@ -2030,10 +2032,10 @@ void Processor_6502::LSR(uint8_t& byte)
 	m_p &= ~FLAG_NEGATIVE; // Clear negative flag since result of LSR is always positive  
 }
 
-void Processor_6502::ORA(uint8_t operand)
+void CPU::ORA()
 {
 	// Perform bitwise OR operation with the accumulator  
-	m_a |= operand;
+	m_a |= _operand;
 	dbg(L"0x%02X", m_a);
 
 	// Set/clear zero flag  
@@ -2053,7 +2055,18 @@ void Processor_6502::ORA(uint8_t operand)
 	}
 }
 
-void Processor_6502::ROL(uint8_t& byte)  
+void CPU::PHP() {
+	bus->write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
+	m_cycle_count += 3;
+}
+
+void CPU::DMP() {
+	// Dummy instruction for illegal opcodes
+	// Does nothing, just consumes cycles
+	m_pc -= 1; // Step back to re-read the opcode
+}
+
+void CPU::ROL(uint8_t& byte)
 {  
 	// Save the carry flag before modifying it  
 	bool carry_in = (m_p & FLAG_CARRY) != 0;  
@@ -2075,7 +2088,7 @@ void Processor_6502::ROL(uint8_t& byte)
 	SetNegative(byte);  
 }
 
-void Processor_6502::ROR(uint8_t& byte)
+void CPU::ROR(uint8_t& byte)
 {
 	// Save the carry flag before modifying it  
 	bool carry_in = (m_p & FLAG_CARRY) != 0;  
@@ -2093,7 +2106,7 @@ void Processor_6502::ROR(uint8_t& byte)
 	SetNegative(byte);
 }
 
-void Processor_6502::SBC(uint8_t operand)
+void CPU::SBC(uint8_t operand)
 {
 	// Invert the operand for subtraction
 	uint8_t inverted_operand = ~operand;
@@ -2102,56 +2115,60 @@ void Processor_6502::SBC(uint8_t operand)
 }
 
 // Primarily used for testing purposes.
-uint8_t Processor_6502::GetA()
+uint8_t CPU::GetA()
 {
 	return m_a;
 }
 
-void Processor_6502::SetA(uint8_t a)
+void CPU::SetA(uint8_t a)
 {
 	m_a = a;
 }
 
-uint8_t Processor_6502::GetX()
+uint8_t CPU::GetX()
 {
 	return m_x;
 }
 
-void Processor_6502::SetX(uint8_t x)
+void CPU::SetX(uint8_t x)
 {
 	m_x = x;
 }
 
-uint8_t Processor_6502::GetY()
+uint8_t CPU::GetY()
 {
 	return m_y;
 }
 
-void Processor_6502::SetY(uint8_t y)
+void CPU::SetY(uint8_t y)
 {
 	m_y = y;
 }
 
-bool Processor_6502::GetFlag(uint8_t flag)
+bool CPU::GetFlag(uint8_t flag)
 {
 	return (m_p & flag) == flag;
 }
 
-void Processor_6502::SetFlag(uint8_t flag)
+void CPU::SetFlag(uint8_t flag)
 {
 	m_p |= flag;
 }
 
-uint16_t Processor_6502::GetPC() {
+uint16_t CPU::GetPC() {
 	return m_pc;
 }
 
-void Processor_6502::SetPC(uint16_t address)
+void CPU::SetPC(uint16_t address)
 {
 	m_pc = address;
 }
 
-void Processor_6502::buildMap() {
+void CPU::ConsumeCycle() {
+	m_cycle_count++;
+}
+
+void CPU::buildMap() {
 	instructionMap[0x69] = "ADC_IMMEDIATE";
 	instructionMap[0x65] = "ADC_ZEROPAGE";
 	instructionMap[0x75] = "ADC_ZEROPAGE_X";

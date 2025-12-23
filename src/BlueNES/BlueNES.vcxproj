@@ -142,6 +142,7 @@
     <ClCompile Include="CartMapper.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="DebuggerContext.cpp" />
     <ClCompile Include="DebuggerUI.cpp" />
     <ClCompile Include="EmulatorCore.cpp" />
     <ClCompile Include="HexViewer.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="DebuggerContext.h" />
     <ClInclude Include="DebuggerUI.h" />
     <ClInclude Include="EmulatorCore.h" />
     <ClInclude Include="HexViewer.h" />

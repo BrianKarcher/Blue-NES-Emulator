@@ -44,7 +44,7 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             nullptr,
             WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL,
             10, 120, 860, 520,
-            hwnd, nullptr, pMain->hInst, nullptr
+            hwnd, (HMENU)1001, pMain->hInst, nullptr
         );
 
         LVCOLUMN col{};

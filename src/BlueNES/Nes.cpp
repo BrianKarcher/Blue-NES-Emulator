@@ -69,6 +69,7 @@ void Nes::clock() {
             ppu_->writeOAM(dmaAddr, val);
             dmaAddr++;
         }
+        cpu_->ConsumeCycle();
         ppu_->Clock();
         ppu_->Clock();
         ppu_->Clock();

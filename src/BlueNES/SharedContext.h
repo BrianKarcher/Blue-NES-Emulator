@@ -23,6 +23,14 @@ private:
     // Flag to prevent spurious wakeups
     bool has_new_frame = false;
 public:
+    struct CpuState {
+        uint16_t pc;
+        uint8_t  a, x, y;
+        uint8_t  sp;
+        uint8_t  status;
+        uint64_t cycle;
+    };
+
     // Lock-free atomic input (UI writes, Core reads)
     std::atomic<uint8_t> atomic_input{ 0 };
     std::atomic<bool> is_running{ true };
