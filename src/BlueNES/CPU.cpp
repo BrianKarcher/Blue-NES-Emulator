@@ -554,16 +554,7 @@ uint8_t CPU::Clock()
 		}
 		case BPL_RELATIVE:
 		{
-			uint8_t offset = ReadNextByte();
-			dbg(L"0x%02X", offset);
-			if (!(m_p & FLAG_NEGATIVE)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
+			
 			break;
 		}
 		case BRK_IMPLIED:
@@ -597,12 +588,6 @@ uint8_t CPU::Clock()
 			else {
 				m_cycle_count += 2; // Branch not taken
 			}
-			break;
-		}
-		case CLC_IMPLIED:
-		{
-			m_p &= ~FLAG_CARRY; // Clear carry flag
-			m_cycle_count += 2;
 			break;
 		}
 		case CLD_IMPLIED:
@@ -950,20 +935,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 5;
 			break;
 		}
-		case JSR_ABSOLUTE:
-		{
-			uint16_t return_addr = m_pc + 1; // Address to return to after subroutine
-			// Push return address onto stack (high byte first)
-			bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
-			dbg(L"Pushing 0x%02X to stack 0x%02X\n", (return_addr >> 8) & 0xFF, m_sp + 1);
-			bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
-			dbg(L"Pushing 0x%02X to stack 0x%02X\n", return_addr & 0xFF, m_sp + 1);
-			// Set PC to target address
-			m_pc = ReadNextWord();
-			dbg(L"JSR to 0x%04X (return 0x%04X)", m_pc, return_addr);
-			m_cycle_count += 6;
-			break;
-		}
 		case LDA_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
@@ -1278,14 +1249,6 @@ uint8_t CPU::Clock()
 			m_a = ReadByte(0x0100 + ++m_sp);
 			SetZero(m_a);
 			SetNegative(m_a);
-			m_cycle_count += 4;
-			break;
-		}
-		case PLP_IMPLIED:
-		{
-			bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
-			m_p = ReadByte(0x0100 + ++m_sp);
-			SetBreak(break_flag); // Restore B flag state
 			m_cycle_count += 4;
 			break;
 		}
@@ -1881,10 +1844,10 @@ void CPU::ADC(uint8_t operand)
 	}
 }
 
-void CPU::_and(uint8_t operand)
+void CPU::AND()
 {
 	// AND operation with the accumulator
-	m_a &= operand;
+	m_a &= _operand;
 	// Set/clear zero flag
 	if (m_a == 0) {
 		m_p |= FLAG_ZERO;
@@ -1937,27 +1900,40 @@ bool CPU::NearBranch(uint8_t value) {
 	return old_pc_hi != new_pc_hi;
 }
 
-void CPU::BIT(uint8_t data) {
+void CPU::BIT() {
 	// Set zero flag based on AND with accumulator
-	if ((m_a & data) == 0) {
+	if ((m_a & _operand) == 0) {
 		m_p |= FLAG_ZERO;
 	}
 	else {
 		m_p &= ~FLAG_ZERO;
 	}
 	// Set negative flag based on bit 7 of data
-	if (data & 0x80) {
+	if (_operand & 0x80) {
 		m_p |= FLAG_NEGATIVE;
 	}
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
 	// Set overflow flag based on bit 6 of data
-	if (data & 0x40) {
+	if (_operand & 0x40) {
 		m_p |= FLAG_OVERFLOW;
 	}
 	else {
 		m_p &= ~FLAG_OVERFLOW;
+	}
+}
+
+void CPU::BPL() {
+	uint8_t offset = ReadNextByte();
+	dbg(L"0x%02X", offset);
+	if (!(m_p & FLAG_NEGATIVE)) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
 	}
 }
 
@@ -1988,10 +1964,16 @@ void CPU::cp(uint8_t value, uint8_t operand)
 	}
 }
 
-void CPU::EOR(uint8_t operand)
+void CPU::CLC() {
+	// Clear carry flag
+	m_p &= ~FLAG_CARRY;
+	m_cycle_count += 2;
+}
+
+void CPU::EOR()
 {
 	// EOR operation with the accumulator
-	m_a ^= operand;
+	m_a ^= _operand;
 	dbg(L"0x%02X", m_a);
 	// Set/clear zero flag
 	if (m_a == 0) {
@@ -2009,20 +1991,33 @@ void CPU::EOR(uint8_t operand)
 	}
 }
 
-void CPU::LSR(uint8_t& byte)
+void CPU::JSR() {
+	uint16_t return_addr = m_pc + 1; // Address to return to after subroutine
+	// Push return address onto stack (high byte first)
+	bus->write(0x0100 + m_sp--, (return_addr >> 8) & 0xFF); // High byte
+	dbg(L"Pushing 0x%02X to stack 0x%02X\n", (return_addr >> 8) & 0xFF, m_sp + 1);
+	bus->write(0x0100 + m_sp--, return_addr & 0xFF);        // Low byte
+	dbg(L"Pushing 0x%02X to stack 0x%02X\n", return_addr & 0xFF, m_sp + 1);
+	// Set PC to target address
+	m_pc = ReadNextWord();
+	dbg(L"JSR to 0x%04X (return 0x%04X)", m_pc, return_addr);
+	m_cycle_count += 6;
+}
+
+void CPU::LSR()
 {
 	// Set/clear carry flag based on bit 0  
-	if (byte & 0x01) {
+	if (_operand & 0x01) {
 		m_p |= FLAG_CARRY;   // Set carry  
 	}
 	else {
 		m_p &= ~FLAG_CARRY;  // Clear carry  
 	}
 	// Shift right by 1
-	byte >>= 1;
-	dbg(L"0x%02X", byte);
+	_operand >>= 1;
+	dbg(L"0x%02X", _operand);
 	// Set/clear zero flag  
-	if (byte == 0) {
+	if (_operand == 0) {
 		m_p |= FLAG_ZERO;
 	}
 	else {
@@ -2060,56 +2055,63 @@ void CPU::PHP() {
 	m_cycle_count += 3;
 }
 
+void CPU::PLP() {
+	bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
+	m_p = ReadByte(0x0100 + ++m_sp);
+	SetBreak(break_flag); // Restore B flag state
+	m_cycle_count += 4;
+}
+
 void CPU::DMP() {
 	// Dummy instruction for illegal opcodes
 	// Does nothing, just consumes cycles
 	m_pc -= 1; // Step back to re-read the opcode
 }
 
-void CPU::ROL(uint8_t& byte)
+void CPU::ROL()
 {  
 	// Save the carry flag before modifying it  
 	bool carry_in = (m_p & FLAG_CARRY) != 0;  
 
 	// Set/clear carry flag based on bit 7  
-	if (byte & 0x80) {  
+	if (_operand & 0x80) {  
 		m_p |= FLAG_CARRY;   // Set carry  
 	} else {  
 		m_p &= ~FLAG_CARRY;  // Clear carry  
 	}  
 
 	// Rotate left by 1 (shift left and insert carry into bit 0)  
-	byte = (byte << 1) | (carry_in ? 1 : 0);  
+	_operand = (_operand << 1) | (carry_in ? 1 : 0);
 
 	// Set/clear zero flag  
-	SetZero(byte);  
+	SetZero(_operand);
 
 	// Set/clear negative flag (bit 7 of result)  
-	SetNegative(byte);  
+	SetNegative(_operand);
 }
 
-void CPU::ROR(uint8_t& byte)
+void CPU::ROR()
 {
 	// Save the carry flag before modifying it  
 	bool carry_in = (m_p & FLAG_CARRY) != 0;  
 	// Set/clear carry flag based on bit 0  
-	if (byte & 0x01) {  
+	if (_operand & 0x01) {
 		m_p |= FLAG_CARRY;   // Set carry  
 	} else {  
 		m_p &= ~FLAG_CARRY;  // Clear carry  
 	}  
 	// Rotate right by 1 (shift right and insert carry into bit 7)  
-	byte = (byte >> 1) | (carry_in ? 0x80 : 0);  
+	_operand = (_operand >> 1) | (carry_in ? 0x80 : 0);
 	// Set/clear zero flag  
-	SetZero(byte);  
+	SetZero(_operand);
 	// Set/clear negative flag (bit 7 of result)  
-	SetNegative(byte);
+	SetNegative(_operand);
 }
 
-void CPU::SBC(uint8_t operand)
+void CPU::SBC()
 {
 	// Invert the operand for subtraction
-	uint8_t inverted_operand = ~operand;
+	uint8_t inverted_operand = ~_operand;
 	// Perform addition with inverted operand and carry flag
 	ADC(inverted_operand);
 }

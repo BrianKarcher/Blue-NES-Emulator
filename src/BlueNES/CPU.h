@@ -215,6 +215,8 @@ private:
 	OpFunc _opcodeTable[256] = {
 		//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
 		&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
+		&CPU::BPL,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::CLC,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP, // 1
+		&CPU::JSR,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::PLP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP, // 2
 	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
@@ -251,20 +253,24 @@ private:
 
 	// flags
 	uint8_t m_p;
-	void _and(uint8_t operand);
+	void AND();
 	void ASL();
 	void BRK();
 	bool NearBranch(uint8_t value);
-	void BIT(uint8_t data);
+	void BIT();
+	void BPL();
+	void CLC();
 	void cp(uint8_t value, uint8_t operand);
 	void DMP();
-	void EOR(uint8_t operand);
-	void LSR(uint8_t& byte);
+	void EOR();
+	void JSR();
+	void LSR();
 	void ORA();
 	void PHP();
-	void ROL(uint8_t& byte);
-	void ROR(uint8_t& byte);
-	void SBC(uint8_t operand);
+	void PLP();
+	void ROL();
+	void ROR();
+	void SBC();
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);
