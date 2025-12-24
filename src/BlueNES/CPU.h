@@ -217,6 +217,10 @@ private:
 		&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
 		&CPU::BPL,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::CLC,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP, // 1
 		&CPU::JSR,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::PLP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP, // 2
+		&CPU::BMI,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::SEC,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP, // 3
+		&CPU::RTI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::PHA,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::JMP_ABS,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 4
+		&CPU::BVC,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::CLI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 5
+		&CPU::RTS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::PLA,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::JMP_IND,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 6
 	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
@@ -234,7 +238,7 @@ private:
 	void handleNMI();
 	void handleIRQ();
 
-	void ADC(uint8_t operand);
+	
 	//void _and(uint8_t operand);
 	uint64_t m_cycle_count = 0;
 	// Program counter
@@ -247,30 +251,55 @@ private:
 	uint8_t m_a;
 	uint8_t m_x;
 	uint8_t m_y;
-	uint8_t _operand;
+	uint16_t _operand;
 
 	void buildMap();
 
 	// flags
 	uint8_t m_p;
+	void ADC();
 	void AND();
 	void ASL();
+	void BMI();
 	void BRK();
 	bool NearBranch(uint8_t value);
 	void BIT();
 	void BPL();
+	void BVC();
 	void CLC();
+	void CLI();
 	void cp(uint8_t value, uint8_t operand);
 	void DMP();
 	void EOR();
+	void JMP_ABS() {
+		JMP(ReadNextWord());
+		dbg(L"0x%04X", m_pc);
+		m_cycle_count += 3;
+	}
+	void JMP_IND() {
+		uint16_t addr = ReadNextWord();
+		uint8_t loByte = ReadByte(addr);
+		// Simulate page boundary hardware bug
+		uint8_t hiByte = ReadByte((addr & 0xFF00) | ((addr + 1) & 0x00FF));
+		JMP((hiByte << 8) | loByte);
+		dbg(L"0x%04X", m_pc);
+		dbg(L"0x%04X 0x%02X 0x%02X", addr, loByte, hiByte);
+		m_cycle_count += 5;
+	}
+	void JMP(uint16_t addr);
 	void JSR();
 	void LSR();
 	void ORA();
+	void PHA();
 	void PHP();
+	void PLA();
 	void PLP();
 	void ROL();
 	void ROR();
+	void RTI();
+	void RTS();
 	void SBC();
+	void SEC();
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);

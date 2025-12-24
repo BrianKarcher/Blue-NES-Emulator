@@ -14,6 +14,19 @@ void CPU::connectBus(Bus* bus) {
 	this->bus = bus;
 }
 
+void CPU::BMI() {
+	// Branch if negative flag is set
+	uint8_t offset = ReadNextByte();
+	if (m_p & FLAG_NEGATIVE) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
 void CPU::BRK() {
 	//m_p |= FLAG_BREAK; // Set break flag
 	uint8_t flags = m_p | FLAG_BREAK | FLAG_UNUSED;
@@ -525,48 +538,11 @@ uint8_t CPU::Clock()
 			BIT(data);
 			break;
 		}
-		case BMI_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (m_p & FLAG_NEGATIVE) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
 		case BNE_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
 			dbg(L"0x%02X", offset);
 			if (!(m_p & FLAG_ZERO)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BPL_RELATIVE:
-		{
-			
-			break;
-		}
-		case BRK_IMPLIED:
-		{
-
-			break;
-		}
-		case BVC_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			dbg(L"0x%02X", offset);
-			if (!(m_p & FLAG_OVERFLOW)) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
 				m_cycle_count += 3; // Branch taken
@@ -593,12 +569,6 @@ uint8_t CPU::Clock()
 		case CLD_IMPLIED:
 		{
 			m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CLI_IMPLIED:
-		{
-			m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
 			m_cycle_count += 2;
 			break;
 		}
@@ -911,30 +881,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 2;
 			break;
 		}
-		case JMP_ABSOLUTE:
-		{
-			m_pc = ReadNextWord();
-			dbg(L"0x%04X", m_pc);
-			m_cycle_count += 3;
-			break;
-		}
-		case JMP_INDIRECT:
-		{
-			uint16_t pointer_addr = ReadNextWord();
-			// Simulate page boundary hardware bug
-			uint8_t loByte = ReadByte(pointer_addr);
-			uint8_t hiByte;
-			if ((pointer_addr & 0x00FF) == 0x00FF) {
-				hiByte = ReadByte(pointer_addr & 0xFF00); // Wraparound
-			}
-			else {
-				hiByte = ReadByte(pointer_addr + 1);
-			}
-			dbg(L"0x%04X 0x%02X 0x%02X", pointer_addr, loByte, hiByte);
-			m_pc = (static_cast<uint16_t>(hiByte << 8) | loByte);
-			m_cycle_count += 5;
-			break;
-		}
 		case LDA_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
@@ -1234,22 +1180,8 @@ uint8_t CPU::Clock()
 			m_cycle_count += 5;
 			break;
 		}
-		case PHA_IMPLIED:
-		{
-			bus->write(0x0100 + m_sp--, m_a);
-			m_cycle_count += 3;
-			break;
-		}
 		case PHP_IMPLIED:
 		{
-			break;
-		}
-		case PLA_IMPLIED:
-		{
-			m_a = ReadByte(0x0100 + ++m_sp);
-			SetZero(m_a);
-			SetNegative(m_a);
-			m_cycle_count += 4;
 			break;
 		}
 		case ROL_ACCUMULATOR:
@@ -1336,41 +1268,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 7;
 			break;
 		}
-		case RTI_IMPLIED:
-		{
-			//bool break_flag = (m_p & FLAG_BREAK) != 0; // Save current B flag state
-			// Pull P from stack
-			dbgNmi(L"\nRTI (cycle %d)\n", m_cycle_count);
-			uint8_t pulledP = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pulledP, m_sp - 1);
-
-			m_p = static_cast<uint8_t>((pulledP & ~FLAG_BREAK) | FLAG_UNUSED);
-
-			//SetBreak(break_flag); // Restore B flag state
-			//SetInterrupt(false);
-			// Pull PC from stack (low byte first)
-			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_lo, m_sp - 1);
-			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_hi, m_sp - 1);
-			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
-			dbg(L"Setting PC to 0x%04X\n", m_pc);
-			m_cycle_count += 6;
-			break;
-		}
-		case RTS_IMPLIED:
-		{
-			// Pull return address from stack (low byte first)
-			uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_lo, m_sp);
-			uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
-			dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_hi, m_sp);
-			m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
-			m_pc++; // Increment PC to point to the next instruction after the JSR
-			dbg(L"Changing pc to 0x%04X\n", m_pc);
-			m_cycle_count += 6;
-			break;
-		}
 		case SBC_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
@@ -1431,12 +1328,6 @@ uint8_t CPU::Clock()
 			uint8_t operand = ReadByte(target_addr);
 			SBC(operand);
 			m_cycle_count += 5;
-			break;
-		}
-		case SEC_IMPLIED:
-		{
-			m_p |= FLAG_CARRY; // Set carry flag
-			m_cycle_count += 2;
 			break;
 		}
 		case SED_IMPLIED:
@@ -1802,11 +1693,11 @@ inline void CPU::SetBreak(bool condition)
 	}
 }
 
-void CPU::ADC(uint8_t operand)
+void CPU::ADC()
 {
 	uint8_t a_old = m_a;
 	
-	uint16_t result = m_a + operand + (m_p & FLAG_CARRY ? 1 : 0);
+	uint16_t result = m_a + _operand + (m_p & FLAG_CARRY ? 1 : 0);
 	m_a = result & 0xFF;  // Update accumulator with low byte
 	// Set/clear carry flag
 	if (result > 0xFF) {
@@ -1821,7 +1712,7 @@ void CPU::ADC(uint8_t operand)
 	// - Adding two negative numbers results in a positive number
 	// This can be detected by checking if the sign bits of both operands
 	// are the same, but different from the result's sign bit
-	if (((a_old ^ m_a) & (operand ^ m_a) & 0x80) != 0) {
+	if (((a_old ^ m_a) & (_operand ^ m_a) & 0x80) != 0) {
 		m_p |= FLAG_OVERFLOW;   // Set overflow
 	}
 	else {
@@ -1937,6 +1828,24 @@ void CPU::BPL() {
 	}
 }
 
+void CPU::BVC() {
+	uint8_t offset = ReadNextByte();
+	dbg(L"0x%02X", offset);
+	if (!(m_p & FLAG_OVERFLOW)) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
+void CPU::CLI() {
+	m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
+	m_cycle_count += 2;
+}
+
 void CPU::cp(uint8_t value, uint8_t operand)
 {
 	uint8_t result = value - operand;
@@ -1989,6 +1898,12 @@ void CPU::EOR()
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
+}
+
+void CPU::JMP(uint16_t addr) {
+	m_pc = addr
+	dbg(L"JMP to 0x%04X", m_pc);
+	m_cycle_count += 3;
 }
 
 void CPU::JSR() {
@@ -2050,6 +1965,18 @@ void CPU::ORA()
 	}
 }
 
+void CPU::PHA() {
+	bus->write(0x0100 + m_sp--, m_a);
+	m_cycle_count += 3;
+}
+
+void CPU::PLA() {
+	m_a = ReadByte(0x0100 + ++m_sp);
+	SetZero(m_a);
+	SetNegative(m_a);
+	m_cycle_count += 4;
+}
+
 void CPU::PHP() {
 	bus->write(0x0100 + m_sp--, m_p | FLAG_BREAK | 0x20); // Set B and unused flag bits when pushing P
 	m_cycle_count += 3;
@@ -2108,12 +2035,48 @@ void CPU::ROR()
 	SetNegative(_operand);
 }
 
+void CPU::RTI() {
+	// Pull P from stack
+	dbgNmi(L"\nRTI (cycle %d)\n", m_cycle_count);
+	uint8_t pulledP = ReadByte(0x0100 + ++m_sp);
+	dbg(L"Readomg 0x%02X from stack 0x%02X\n", pulledP, m_sp - 1);
+
+	m_p = static_cast<uint8_t>((pulledP & ~FLAG_BREAK) | FLAG_UNUSED);
+
+	// Pull PC from stack (low byte first)
+	uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+	dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_lo, m_sp - 1);
+	uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+	dbg(L"Readomg 0x%02X from stack 0x%02X\n", pc_hi, m_sp - 1);
+	m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
+	dbg(L"Setting PC to 0x%04X\n", m_pc);
+	m_cycle_count += 6;
+}
+
+void CPU::RTS() {
+	// Pull return address from stack (low byte first)
+	uint8_t pc_lo = ReadByte(0x0100 + ++m_sp);
+	dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_lo, m_sp);
+	uint8_t pc_hi = ReadByte(0x0100 + ++m_sp);
+	dbg(L"Pulling 0x%02X from stack 0x%02X\n", pc_hi, m_sp);
+	m_pc = (static_cast<uint16_t>(pc_hi << 8) | pc_lo);
+	m_pc++; // Increment PC to point to the next instruction after the JSR
+	dbg(L"Changing pc to 0x%04X\n", m_pc);
+	m_cycle_count += 6;
+}
+
+void CPU::SEC() {
+	// Set carry flag
+	m_p |= FLAG_CARRY;
+	m_cycle_count += 2;
+}
+
 void CPU::SBC()
 {
 	// Invert the operand for subtraction
-	uint8_t inverted_operand = ~_operand;
+	_operand = ~_operand;
 	// Perform addition with inverted operand and carry flag
-	ADC(inverted_operand);
+	ADC();
 }
 
 // Primarily used for testing purposes.
