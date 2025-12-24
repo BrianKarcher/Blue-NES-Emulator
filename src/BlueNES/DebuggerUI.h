@@ -43,6 +43,8 @@ private:
 		"BCS", "LDA", "DMP", "DMP", "LDY", "LDA", "LDX", "DMP", "CLV", "LDA", "TSX", "DMP", "LDY", "LDA", "LDX", "DMP", // B
 		"CPY", "CMP", "DMP", "DMP", "CPY", "CMP", "DEC", "DMP", "INY", "CMP", "DEX", "DMP", "CPY", "CMP", "DEC", "DMP", // C
 		"BNE", "CMP", "DMP", "DMP", "DMP", "CMP", "DEC", "DMP", "CLD", "CMP", "DMP", "DMP", "DMP", "CMP", "DEC", "DMP", // D
+		"CPX", "SBC", "DMP", "DMP", "CPX", "SBC", "INC", "DMP", "INX", "SBC", "NOP", "DMP", "CPX", "SBC", "INC", "DMP", // E
+		"BEQ", "SBC", "DMP", "DMP", "DMP", "SBC", "INC", "DMP", "SED", "SBC", "DMP", "DMP", "DMP", "SBC", "INC", "DMP", // F
 
 	};
 
@@ -62,6 +64,8 @@ private:
 		REL,  INDY, NONE, NONE,  ZPX,   ZPX,  ZPY, NONE, IMP,  ABSY,   IMP,  NONE,  ABSX,  ABSX, ABSY, NONE, // B
 		IMM,  INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // C
 		REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // D
+		IMM,  INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // E
+		REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // F
 	};
 
 	HINSTANCE hInst;

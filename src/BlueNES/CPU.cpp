@@ -483,19 +483,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 7;
 			break;
 		}
-		case BEQ_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (m_p & FLAG_ZERO) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
 		case BIT_ZEROPAGE:
 		{
 			uint8_t zp_addr = ReadNextByte();
@@ -566,13 +553,6 @@ uint8_t CPU::Clock()
 			uint8_t operand = ReadByte(target_addr);
 			cp(m_a, operand);
 			m_cycle_count += 5;
-			break;
-		}
-		case CPX_IMMEDIATE:
-		{
-			uint8_t operand = ReadNextByte();
-			cp(m_x, operand);
-			m_cycle_count += 2;
 			break;
 		}
 		case CPX_ZEROPAGE:
@@ -708,17 +688,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 5;
 			break;
 		}
-		case INC_ZEROPAGE:
-		{
-			uint8_t zp_addr = ReadNextByte();
-			uint8_t data = ReadByte(zp_addr);
-			data++;
-			bus->write(zp_addr, data);
-			SetZero(data);
-			SetNegative(data);
-			m_cycle_count += 5;
-			break;
-		}
 		case INC_ZEROPAGE_X:
 		{
 			uint8_t zp_addr = ReadNextByte(m_x);
@@ -753,15 +722,6 @@ uint8_t CPU::Clock()
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 7;
-			break;
-		}
-		case INX_IMPLIED:
-		{
-			m_x++;
-			// Set/clear zero flag
-			SetZero(m_x);
-			SetNegative(m_x);
-			m_cycle_count += 2;
 			break;
 		}
 		case LDA_IMMEDIATE:
@@ -985,12 +945,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 7;
 			break;
 		}
-		case NOP_IMPLIED:
-		{
-			// No operation
-			m_cycle_count += 2;
-			break;
-		}
 		case ORA_IMMEDIATE:
 		{
 			uint8_t operand = ReadNextByte();
@@ -1202,12 +1156,6 @@ uint8_t CPU::Clock()
 			uint8_t operand = ReadByte(target_addr);
 			SBC(operand);
 			m_cycle_count += 5;
-			break;
-		}
-		case SED_IMPLIED:
-		{
-			m_p |= FLAG_DECIMAL; // Set decimal mode flag
-			m_cycle_count += 2;
 			break;
 		}
 		case TAX_IMPLIED:
@@ -1553,6 +1501,19 @@ void CPU::BCS() {
 	}
 }
 
+void CPU::BEQ() {
+	uint8_t offset = ReadNextByte();
+	dbg(L"0x%02X", offset);
+	if (m_p & FLAG_ZERO) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
 void CPU::BIT() {
 	// Set zero flag based on AND with accumulator
 	if ((m_a & _operand) == 0) {
@@ -1683,6 +1644,11 @@ void CPU::cp(uint8_t value, uint8_t operand)
 	}
 }
 
+void CPU::CPX() {
+	cp(m_x, _operand);
+	m_cycle_count += 2;
+}
+
 void CPU::CPY () {
 	cp(m_y, _operand);
 	m_cycle_count += 2;
@@ -1738,6 +1704,23 @@ void CPU::EOR()
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
+}
+
+void CPU::INC() {
+	uint8_t data = ReadByte(_operand);
+	data++;
+	bus->write(_operand, data);
+	SetZero(data);
+	SetNegative(data);
+	m_cycle_count += 5;
+}
+
+void CPU::INX() {
+	m_x++;
+	// Set/clear zero flag
+	SetZero(m_x);
+	SetNegative(m_x);
+	m_cycle_count += 2;
 }
 
 void CPU::INY() {
@@ -1809,6 +1792,11 @@ void CPU::LSR()
 	}
 	// Set/clear negative flag (bit 7 of result)  
 	m_p &= ~FLAG_NEGATIVE; // Clear negative flag since result of LSR is always positive  
+}
+
+void CPU::NOP() {
+	// No operation
+	m_cycle_count += 2;
 }
 
 void CPU::ORA()
@@ -1939,6 +1927,12 @@ void CPU::SBC()
 void CPU::SEC() {
 	// Set carry flag
 	m_p |= FLAG_CARRY;
+	m_cycle_count += 2;
+}
+
+void CPU::SED() {
+	// Set decimal mode flag
+	m_p |= FLAG_DECIMAL;
 	m_cycle_count += 2;
 }
 

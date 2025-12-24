@@ -228,6 +228,8 @@ private:
 		&CPU::BCS,& CPU::LDA,& CPU::DMP,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::CLV,& CPU::LDA,& CPU::TSX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // B
 		&CPU::CPY,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::INY,& CPU::CMP,& CPU::DEX,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP, // C
 		&CPU::BNE,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::CLD,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP, // D
+		&CPU::CPX,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::INX,& CPU::SBC,& CPU::NOP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP, // E
+		&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
 	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
@@ -269,6 +271,7 @@ private:
 	void ASL();
 	void BCC();
 	void BCS();
+	void BEQ();
 	void BMI();
 	void BRK();
 	bool NearBranch(uint8_t value);
@@ -283,12 +286,15 @@ private:
 	void CLV();
 	void CMP();
 	void cp(uint8_t value, uint8_t operand);
+	void CPX();
 	void CPY();
 	void DEC();
 	void DEX();
 	void DEY();
 	void DMP();
 	void EOR();
+	void INC();
+	void INX();
 	void INY();
 	void JMP_ABS() {
 		JMP(ReadNextWord());
@@ -311,6 +317,7 @@ private:
 	void LDX();
 	void LDY();
 	void LSR();
+	void NOP();
 	void ORA();
 	void PHA();
 	void PHP();
@@ -322,6 +329,7 @@ private:
 	void RTS();
 	void SBC();
 	void SEC();
+	void SED();
 	void SEI();
 	void STA();
 	void STX();
