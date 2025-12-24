@@ -483,19 +483,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 7;
 			break;
 		}
-		case BCS_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (m_p & FLAG_CARRY) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
 		case BEQ_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
@@ -523,39 +510,6 @@ uint8_t CPU::Clock()
 			uint16_t addr = (static_cast<uint16_t>(hiByte << 8) | loByte);
 			uint8_t data = ReadByte(addr);
 			BIT(data);
-			break;
-		}
-		case BNE_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			dbg(L"0x%02X", offset);
-			if (!(m_p & FLAG_ZERO)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case CLD_IMPLIED:
-		{
-			m_p &= ~FLAG_DECIMAL; // Clear decimal mode flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CLV_IMPLIED:
-		{
-			m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
-			m_cycle_count += 2;
-			break;
-		}
-		case CMP_IMMEDIATE:
-		{
-			uint8_t operand = ReadNextByte();
-			cp(m_a, operand);
-			m_cycle_count += 2;
 			break;
 		}
 		case CMP_ZEROPAGE:
@@ -638,13 +592,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 4;
 			break;
 		}
-		case CPY_IMMEDIATE:
-		{
-			uint8_t operand = ReadNextByte();
-			cp(m_y, operand);
-			m_cycle_count += 2;
-			break;
-		}
 		case CPY_ZEROPAGE:
 		{
 			uint8_t operand = ReadByte(ReadNextByte());
@@ -660,17 +607,6 @@ uint8_t CPU::Clock()
 			uint8_t operand = ReadByte(memoryLocation);
 			cp(m_y, operand);
 			m_cycle_count += 4;
-			break;
-		}
-		case DEC_ZEROPAGE:
-		{
-			uint8_t zp_addr = ReadNextByte();
-			uint8_t data = ReadByte(zp_addr);
-			data--;
-			bus->write(zp_addr, data);
-			SetZero(data);
-			SetNegative(data);
-			m_cycle_count += 5;
 			break;
 		}
 		case DEC_ZEROPAGE_X:
@@ -706,16 +642,6 @@ uint8_t CPU::Clock()
 			SetZero(data);
 			SetNegative(data);
 			m_cycle_count += 7;
-			break;
-		}
-		case DEX_IMPLIED:
-		{
-			m_x--;
-			// Set/clear zero flag
-			SetZero(m_x);
-			// Set/clear negative flag (bit 7 of result)
-			SetNegative(m_x);
-			m_cycle_count += 2;
 			break;
 		}
 		case EOR_IMMEDIATE:
@@ -835,14 +761,6 @@ uint8_t CPU::Clock()
 			// Set/clear zero flag
 			SetZero(m_x);
 			SetNegative(m_x);
-			m_cycle_count += 2;
-			break;
-		}
-		case INY_IMPLIED:
-		{
-			m_y++;
-			SetZero(m_y);
-			SetNegative(m_y);
 			m_cycle_count += 2;
 			break;
 		}
@@ -1308,15 +1226,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 2;
 			break;
 		}
-		case TSX_IMPLIED:
-		{
-			m_x = m_sp;
-			dbg(L"Transferring sp 0x%02X to x\n", m_sp);
-			SetZero(m_x);
-			SetNegative(m_x);
-			m_cycle_count += 2;
-			break;
-		}
 	}
 	// Check for interrupts before fetching next instruction
 	// This must be placed AFTER the clock above. The reason is vblank related.
@@ -1632,6 +1541,18 @@ void CPU::BCC() {
 	}
 }
 
+void CPU::BCS() {
+	dbg(L"0x%02X", _operand);
+	if (m_p & FLAG_CARRY) {
+		if (NearBranch(_operand))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
 void CPU::BIT() {
 	// Set zero flag based on AND with accumulator
 	if ((m_a & _operand) == 0) {
@@ -1653,6 +1574,19 @@ void CPU::BIT() {
 	}
 	else {
 		m_p &= ~FLAG_OVERFLOW;
+	}
+}
+
+void CPU::BNE() {
+	uint8_t offset = ReadNextByte();
+	dbg(L"0x%02X", offset);
+	if (!(m_p & FLAG_ZERO)) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
 	}
 }
 
@@ -1700,6 +1634,28 @@ void CPU::CLI() {
 	m_cycle_count += 2;
 }
 
+void CPU::CLV() {
+	m_p &= ~FLAG_OVERFLOW; // Clear overflow flag
+	m_cycle_count += 2;
+}
+
+void CPU::CLC() {
+	// Clear carry flag
+	m_p &= ~FLAG_CARRY;
+	m_cycle_count += 2;
+}
+
+void CPU::CLD() {
+	// Clear decimal mode flag
+	m_p &= ~FLAG_DECIMAL;
+	m_cycle_count += 2;
+}
+
+void CPU::CMP() {
+	cp(m_a, _operand);
+	m_cycle_count += 2;
+}
+
 void CPU::cp(uint8_t value, uint8_t operand)
 {
 	uint8_t result = value - operand;
@@ -1727,9 +1683,25 @@ void CPU::cp(uint8_t value, uint8_t operand)
 	}
 }
 
-void CPU::CLC() {
-	// Clear carry flag
-	m_p &= ~FLAG_CARRY;
+void CPU::CPY () {
+	cp(m_y, _operand);
+	m_cycle_count += 2;
+}
+
+void CPU::DEC() {
+	uint8_t data = ReadByte(_operand);
+	data--;
+	bus->write(_operand, data);
+	SetZero(data);
+	SetNegative(data);
+	m_cycle_count += 5;
+}
+
+void CPU::DEX() {
+	m_x--;
+	// Set/clear zero flag
+	SetZero(m_x);
+	SetNegative(m_x);
 	m_cycle_count += 2;
 }
 
@@ -1766,6 +1738,14 @@ void CPU::EOR()
 	else {
 		m_p &= ~FLAG_NEGATIVE;
 	}
+}
+
+void CPU::INY() {
+	m_y++;
+	// Set/clear zero flag
+	SetZero(m_y);
+	SetNegative(m_y);
+	m_cycle_count += 2;
 }
 
 void CPU::JMP(uint16_t addr) {
@@ -1994,6 +1974,14 @@ void CPU::TAY() {
 	m_y = m_a;
 	SetZero(m_y);
 	SetNegative(m_y);
+	m_cycle_count += 2;
+}
+
+void CPU::TSX() {
+	m_x = m_sp;
+	dbg(L"Transferring sp 0x%02X to x\n", m_sp);
+	SetZero(m_x);
+	SetNegative(m_x);
 	m_cycle_count += 2;
 }
 

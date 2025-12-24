@@ -225,6 +225,9 @@ private:
 		&CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::DEY,& CPU::DMP,& CPU::TXA,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP, // 8
 		&CPU::BCC,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::TYA,& CPU::STA,& CPU::TXS,& CPU::DMP,& CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP, // 9
 		&CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::TAY,& CPU::LDA,& CPU::TAX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // A
+		&CPU::BCS,& CPU::LDA,& CPU::DMP,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::CLV,& CPU::LDA,& CPU::TSX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // B
+		&CPU::CPY,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::INY,& CPU::CMP,& CPU::DEX,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP, // C
+		&CPU::BNE,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::CLD,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP, // D
 	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
@@ -265,19 +268,28 @@ private:
 	void AND();
 	void ASL();
 	void BCC();
+	void BCS();
 	void BMI();
 	void BRK();
 	bool NearBranch(uint8_t value);
 	void BIT();
+	void BNE();
 	void BPL();
 	void BVC();
 	void BVS();
 	void CLC();
+	void CLD();
 	void CLI();
+	void CLV();
+	void CMP();
 	void cp(uint8_t value, uint8_t operand);
+	void CPY();
+	void DEC();
+	void DEX();
 	void DEY();
 	void DMP();
 	void EOR();
+	void INY();
 	void JMP_ABS() {
 		JMP(ReadNextWord());
 		dbg(L"0x%04X", m_pc);
@@ -316,9 +328,11 @@ private:
 	void STY();
 	void TAX();
 	void TAY();
+	void TSX();
 	void TXA();
 	void TXS();
 	void TYA();
+
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);
