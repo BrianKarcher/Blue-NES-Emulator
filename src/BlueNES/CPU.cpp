@@ -14,6 +14,19 @@ void CPU::connectBus(Bus* bus) {
 	this->bus = bus;
 }
 
+void CPU::cpu_tick() {
+	if (cycle_state == 0) {
+		// Fetch Opcode
+		uint8_t opcode = ReadByte(m_pc++);
+		current_opcode = opcode;
+		cycle_state = 1;
+	}
+	else {
+		// Execute the micro-op for the current instruction
+		opcode_table[current_opcode](*this);
+	}
+}
+
 void CPU::BMI() {
 	// Branch if negative flag is set
 	uint8_t offset = ReadNextByte();
@@ -411,9 +424,12 @@ inline uint16_t CPU::ReadIndirectIndexedNoCycle()
 	return (addr_hi << 8) | addr_lo;
 }
 
-inline uint8_t CPU::ReadByte(uint16_t addr)
-{
+inline uint8_t CPU::ReadByte(uint16_t addr) {
 	return bus->read(addr);
+}
+
+void CPU::WriteByte(uint16_t addr, uint8_t value) {
+	bus->write(addr, value);
 }
 
 uint8_t CPU::GetStatus()

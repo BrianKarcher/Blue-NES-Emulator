@@ -178,6 +178,17 @@ class CPU
 public:
 	CPU(OpenBusMapper& openBus);
 	void connectBus(Bus* bus);
+
+	inline uint8_t ReadNextByte();
+	inline uint8_t ReadNextByte(uint8_t offset);
+	inline uint16_t ReadNextWord();
+	inline uint16_t ReadNextWord(uint8_t offset);
+	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
+	inline uint8_t ReadByte(uint16_t addr);
+	inline uint16_t ReadIndexedIndirect();
+	inline uint16_t ReadIndirectIndexedNoCycle();
+	void WriteByte(uint16_t addr, uint8_t value);
+
 	void setNMI(bool state);
 	void setIRQ(bool state);
 	// Power On and Reset are different
@@ -210,6 +221,7 @@ public:
 	void ConsumeCycle();
 
 	// Internal Latch Registers (to hold state between cycles)
+	uint8_t  current_opcode;
 	uint8_t  addr_low;
 	uint8_t  addr_high;
 	uint16_t effective_addr;
@@ -217,6 +229,30 @@ public:
 	// Emulator State
 	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
 	bool page_crossed;
+
+	void init_cpu() {
+		// Replace the problematic line with the following code to explicitly use a lambda function:  
+		//std::function<InstructionHandler> func = [](CPU& cpu) {
+		//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+		//};
+		// Or use a direct function pointer assignment:
+
+		//std::function<void(CPU& cpu)> func = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
+
+		// $BD = LDA Absolute, X (Read operation)
+		// Mode_AbsoluteX takes <false> because LDA::is_write is false
+		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
+		//opcode_table[0xBD](cpu);
+
+		// $9D = STA Absolute, X (Write operation)
+		// This will automatically force the 5th cycle due to is_write=true
+		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+
+		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
+	}
+
+	// The CPU Tick Loop
+	void cpu_tick();
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
@@ -231,18 +267,18 @@ private:
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // Fetch Low
-				cpu.addr_low = bus_read(cpu.PC++);
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
 				cpu.cycle_state = 2;
 				return false;
 
 			case 2: // Fetch High & Calc
-				cpu.addr_high = bus_read(cpu.PC++);
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc++);
 
 				// Calculate effective address (wrapping low byte)
-				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.X) & 0xFF);
+				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
 
 				// Check page crossing
-				if (((uint16_t)cpu.addr_low + cpu.X) > 0xFF) {
+				if (((uint16_t)cpu.addr_low + cpu.m_x) > 0xFF) {
 					cpu.page_crossed = true;
 				}
 				else {
@@ -259,10 +295,10 @@ private:
 
 				if (is_write || cpu.page_crossed) {
 					// Do the dummy read (hardware does this)
-					bus_read(cpu.effective_addr);
+					cpu.ReadByte(cpu.effective_addr);
 
 					// Fix the high byte for the next cycle
-					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.X) & 0xFF);
+					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
 					cpu.cycle_state = 4;
 					return false;
 				}
@@ -290,13 +326,14 @@ private:
 
 	struct Op_STA {
 		static void execute(CPU& cpu) {
+			cpu.WriteByte(cpu.effective_addr, cpu.m_a);
 			//bus_write(cpu.effective_addr, cpu.A);
 		}
 		static constexpr bool is_write = true;
 	};
 
 	template <typename Mode, typename Op>
-	void run_instruction(CPU& cpu) {
+	static void run_instruction(CPU& cpu) {
 		// 1. Run the Addressing Mode logic
 		bool address_ready = Mode::step(cpu);
 
@@ -311,70 +348,33 @@ private:
 	}
 
 	// Define a function pointer type for our micro-op handlers
-	typedef void (CPU::*InstructionHandler)(CPU&);
-
-	
+	typedef void (*InstructionHandler)(CPU&);
 
 	// Template function
-	template <typename T>
-	T multiply(const T& a, const T& b) {
-		return a * b;
-	}
+	//template <typename T>
+	//T multiply(const T& a, const T& b) {
+	//	return a * b;
+	//}
 
-	void LDA_AbsX(CPU& cpu) {
-		run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
-	}
+	//void LDA_AbsX(CPU& cpu) {
+	//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+	//}
 
 	// The Lookup Table
-	InstructionHandler opcode_table[256] = { &LDA_AbsX };
+	InstructionHandler opcode_table[256]; // = { &LDA_AbsX };
     
-    void init_cpu() {
-		opcode_table[0xBD] = &LDA_AbsX;
-		// Use std::function to store a specific instance of the template
-		std::function<int(const int&, const int&)> func = &multiply<int>;
+  //  void init_cpu() {
+		////opcode_table[0xBD] = &LDA_AbsX;
 
-        // Use a lambda with explicit capture of 'this' to fix the error  
-        (*opcode_table[0xBD])(CPU&) = [this](CPU& cpu) {
-            this->run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);  
-        };  
+  //      // Use a lambda with explicit capture of 'this' to fix the error  
+  //      //(*opcode_table[0xBD])(CPU&) = [this](CPU& cpu) {
+  //      //    this->run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);  
+  //      //};  
 
-        opcode_table[0x9D] = [this](CPU& cpu) {  
-            this->run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>(cpu);  
-        };  
-    }
-	void init_cpu2() {
-		// Replace the problematic line with the following code to explicitly use a lambda function:  
-		std::function<InstructionHandler> func = [](CPU& cpu) {
-			run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
-		};
-		// Or use a direct function pointer assignment:
-
-		std::function<void(CPU& cpu)> func = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
-
-		// $BD = LDA Absolute, X (Read operation)
-		// Mode_AbsoluteX takes <false> because LDA::is_write is false
-		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
-
-		// $9D = STA Absolute, X (Write operation)
-		// This will automatically force the 5th cycle due to is_write=true
-		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
-
-		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
-	}
-
-	// The CPU Tick Loop
-	void cpu_tick(CPU& cpu) {
-		if (cpu.cycle_state == 0) {
-			// Fetch Opcode
-			uint8_t opcode = bus_read(cpu.m_pc++);
-			cpu.current_opcode = opcode;
-			cpu.cycle_state = 1;
-		}
-		else {
-			// Execute the micro-op for the current instruction
-			opcode_table[cpu.current_opcode](cpu);
-		}
-	}
+  //      //opcode_table[0x9D] = [this](CPU& cpu) {  
+  //      //    this->run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>(cpu);  
+  //      //};  
+  //  }
 
 	typedef void (CPU::* OpFunc)(void);
 	OpFunc _opcodeTable[256] = {
@@ -545,14 +545,7 @@ private:
 	void TYA();
 
 	bool isActive = false;
-	inline uint8_t ReadNextByte();
-	inline uint8_t ReadNextByte(uint8_t offset);
-	inline uint16_t ReadNextWord();
-	inline uint16_t ReadNextWord(uint8_t offset);
-	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
-	inline uint8_t ReadByte(uint16_t addr);
-	inline uint16_t ReadIndexedIndirect();
-	inline uint16_t ReadIndirectIndexedNoCycle();
+
 	inline void SetZero(uint8_t value);
 	inline void SetNegative(uint8_t value);
 	inline void SetOverflow(bool condition);

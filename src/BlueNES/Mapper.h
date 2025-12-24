@@ -31,7 +31,8 @@ public:
 	virtual void Serialize(Serializer& serializer) = 0;
 	virtual void Deserialize(Serializer& serializer) = 0;
 
-private:
 	void SetCHRRom(uint8_t* data, size_t size);
 	void SetPRGRom(uint8_t* data, size_t size);
+private:
+
 };

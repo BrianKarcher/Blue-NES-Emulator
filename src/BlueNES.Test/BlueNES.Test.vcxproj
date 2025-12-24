@@ -78,6 +78,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -104,7 +105,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CPU.obj;Bus.obj;nes_ppu.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;NES_APU.obj;Input.obj;RendererSlow.obj;MMC1.obj;NROM.obj;PPUViewer.obj;RendererLoopy.obj;Core.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;CPU.obj;Bus.obj;Mapper.obj;EmulatorCore.obj;PPU.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;Input.obj;MMC1.obj;NROM.obj;RendererLoopy.obj;Core.obj;DebuggerUI.obj;Nes.obj;AudioMapper.obj;MemoryMapper.obj;InputMappers.obj;Serializer.obj;AxROMMapper.obj;MMC3.obj;UxROMMapper.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>copy "..\BlueNES\x64\Debug\cpu.obj" "$(OutDir)"</Command>
