@@ -5,7 +5,7 @@
 #include <bitset>
 #include "CPU.h"
 
-MMC1::MMC1(Cartridge* cartridge, Processor_6502& c, uint8_t prgRomSize, uint8_t chrRomSize) : cpu(c) {
+MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize) : cpu(c) {
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
 	shiftRegister = 0b10000;
 	// init registers to reset-like defaults

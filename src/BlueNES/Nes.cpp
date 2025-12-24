@@ -19,7 +19,7 @@ Nes::Nes(SharedContext& ctx) {
 	apu_ = new APU();
     input_ = new Input();
     openBus_ = new OpenBusMapper();
-    cpu_ = new Processor_6502(*openBus_);
+    cpu_ = new CPU(*openBus_);
     cart_ = new Cartridge(ctx, *cpu_);
     ppu_ = new PPU(ctx, *this);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);

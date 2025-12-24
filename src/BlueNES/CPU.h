@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <array>
 #include <string>
+#include <functional>
 
 //#define CPUDEBUG
 //#define NMIDEBUG
@@ -208,9 +209,173 @@ public:
 	void toggleFrozen() { isFrozen = !isFrozen; }
 	void ConsumeCycle();
 
+	// Internal Latch Registers (to hold state between cycles)
+	uint8_t  addr_low;
+	uint8_t  addr_high;
+	uint16_t effective_addr;
+
+	// Emulator State
+	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	bool page_crossed;
+
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 private:
+
+	// Policy: Absolute X Addressing Mode
+// 'is_write' determines if we can optimize the page-crossing cycle
+	template <bool is_write>
+	struct Mode_AbsoluteX {
+
+		// Returns true when the addressing sequence is totally finished
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // Fetch Low
+				cpu.addr_low = bus_read(cpu.PC++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // Fetch High & Calc
+				cpu.addr_high = bus_read(cpu.PC++);
+
+				// Calculate effective address (wrapping low byte)
+				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.X) & 0xFF);
+
+				// Check page crossing
+				if (((uint16_t)cpu.addr_low + cpu.X) > 0xFF) {
+					cpu.page_crossed = true;
+				}
+				else {
+					cpu.page_crossed = false;
+				}
+
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // Potential Dummy Read / Fix Up
+				// If it's a WRITE or we crossed a page, we generally strictly need the fixup
+				// For READs: if page crossed, we read garbage (dummy), then fix.
+				// For READs: if NO cross, we are actually DONE with addressing.
+
+				if (is_write || cpu.page_crossed) {
+					// Do the dummy read (hardware does this)
+					bus_read(cpu.effective_addr);
+
+					// Fix the high byte for the next cycle
+					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.X) & 0xFF);
+					cpu.cycle_state = 4;
+					return false;
+				}
+				else {
+					// Optimization: No crossing on a Read.
+					// The address in effective_addr is already correct.
+					// We are ready to execute the operation IMMEDIATELY this cycle.
+					return true;
+				}
+
+			case 4: // Final cleanup for penalized instructions
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_LDA {
+		static void execute(CPU& cpu) {
+			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
+			//update_ZN_flags(cpu, cpu.m_a);
+		}
+		static constexpr bool is_write = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_STA {
+		static void execute(CPU& cpu) {
+			//bus_write(cpu.effective_addr, cpu.A);
+		}
+		static constexpr bool is_write = true;
+	};
+
+	template <typename Mode, typename Op>
+	void run_instruction(CPU& cpu) {
+		// 1. Run the Addressing Mode logic
+		bool address_ready = Mode::step(cpu);
+
+		// 2. If Address is ready, run the Operation
+		if (address_ready) {
+			Op::execute(cpu);
+
+			// Reset state for next opcode
+			cpu.cycle_state = 0;
+			// Trigger fetch of next opcode here or via main loop
+		}
+	}
+
+	// Define a function pointer type for our micro-op handlers
+	typedef void (CPU::*InstructionHandler)(CPU&);
+
+	
+
+	// Template function
+	template <typename T>
+	T multiply(const T& a, const T& b) {
+		return a * b;
+	}
+
+	void LDA_AbsX(CPU& cpu) {
+		run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+	}
+
+	// The Lookup Table
+	InstructionHandler opcode_table[256] = { &LDA_AbsX };
+    
+    void init_cpu() {
+		opcode_table[0xBD] = &LDA_AbsX;
+		// Use std::function to store a specific instance of the template
+		std::function<int(const int&, const int&)> func = &multiply<int>;
+
+        // Use a lambda with explicit capture of 'this' to fix the error  
+        (*opcode_table[0xBD])(CPU&) = [this](CPU& cpu) {
+            this->run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);  
+        };  
+
+        opcode_table[0x9D] = [this](CPU& cpu) {  
+            this->run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>(cpu);  
+        };  
+    }
+	void init_cpu2() {
+		// Replace the problematic line with the following code to explicitly use a lambda function:  
+		std::function<InstructionHandler> func = [](CPU& cpu) {
+			run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+		};
+		// Or use a direct function pointer assignment:
+
+		std::function<void(CPU& cpu)> func = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
+
+		// $BD = LDA Absolute, X (Read operation)
+		// Mode_AbsoluteX takes <false> because LDA::is_write is false
+		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
+
+		// $9D = STA Absolute, X (Write operation)
+		// This will automatically force the 5th cycle due to is_write=true
+		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+
+		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
+	}
+
+	// The CPU Tick Loop
+	void cpu_tick(CPU& cpu) {
+		if (cpu.cycle_state == 0) {
+			// Fetch Opcode
+			uint8_t opcode = bus_read(cpu.m_pc++);
+			cpu.current_opcode = opcode;
+			cpu.cycle_state = 1;
+		}
+		else {
+			// Execute the micro-op for the current instruction
+			opcode_table[cpu.current_opcode](cpu);
+		}
+	}
+
 	typedef void (CPU::* OpFunc)(void);
 	OpFunc _opcodeTable[256] = {
 		//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
@@ -231,6 +396,44 @@ private:
 		&CPU::CPX,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::INX,& CPU::SBC,& CPU::NOP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP, // E
 		&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
 	};
+
+	enum AddressingMode {
+		ACC,
+		IMP,
+		IMM,
+		ZP,
+		ZPX,
+		ZPY,
+		ABS,
+		ABSX,
+		ABSY,
+		IND,
+		INDX,
+		INDY,
+		REL,
+		NONE
+	};
+
+	AddressingMode instMode[256] = {
+		// 0     1	    2     3      4      5     6    7     8     9       A     B      C      D     E     F
+		   IMP,  INDX, NONE, NONE,  NONE,  ZP,   ZP,  NONE, IMP,  IMM,    ACC,  NONE,  NONE,  ABS,  ABS,  NONE, // 0
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // 1
+		   ABS,  INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    ACC,  NONE,  ABS,   ABS,  ABS,  NONE, // 2
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // 3
+		   IMP,  INDX, NONE, NONE,  NONE,  ZP,   ZP,  NONE, IMP,  IMM,    ACC,  NONE,  ABS,   ABS,  ABS,  NONE, // 4
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // 5
+		   IMP,  INDX, NONE, NONE,  NONE,  ZP,   ZP,  NONE, IMP,  IMM,    ACC,  NONE,  IND,   ABS,  ABS,  NONE, // 6
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // 7
+		   NONE, INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  NONE,   IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // 8
+		   REL,  INDY, NONE, NONE,  ZPX,   ZPX,  ZPY, NONE, IMP,  ABSY,   IMP,  NONE,  NONE,  ABSX, NONE, NONE, // 9
+		   IMM,  INDX, IMM,  NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // A
+		   REL,  INDY, NONE, NONE,  ZPX,   ZPX,  ZPY, NONE, IMP,  ABSY,   IMP,  NONE,  ABSX,  ABSX, ABSY, NONE, // B
+		   IMM,  INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // C
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // D
+		   IMM,  INDX, NONE, NONE,  ZP,    ZP,   ZP,  NONE, IMP,  IMM,    IMP,  NONE,  ABS,   ABS,  ABS,  NONE, // E
+		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // F
+	};
+
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
 	uint8_t pull();
@@ -365,3 +568,6 @@ private:
 	bool isFrozen = false;
 	int count = 0;
 };
+
+
+

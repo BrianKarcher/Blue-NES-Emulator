@@ -14,12 +14,12 @@ enum BoardType {
 };
 
 class Cartridge;
-class Processor_6502;
+class CPU;
 
 class MMC1 : public Mapper
 {
 public:
-	MMC1(Cartridge* cartridge, Processor_6502& cpu, uint8_t prgRomSize, uint8_t chrRomSize);
+	MMC1(Cartridge* cartridge, CPU& cpu, uint8_t prgRomSize, uint8_t chrRomSize);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	inline uint8_t readPRGROM(uint16_t addr) const;
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
@@ -56,7 +56,7 @@ private:
 	uint32_t chr0Addr = 0; // maps to PPU 0x0000-0x0FFF
 	uint32_t chr1Addr = 0; // maps to PPU 0x1000-0x1FFF
 	Cartridge* cartridge;
-	Processor_6502& cpu;
+	CPU& cpu;
 	//ines_file_t* inesFile;
 	//uint64_t lastWriteCycle = 0;
 	bool debug = false;

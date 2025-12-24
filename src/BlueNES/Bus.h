@@ -16,7 +16,7 @@ class Serializer;
 class Bus
 {
 public:
-	Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
+	Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
 	~Bus();
 
 	RAMMapper ramMapper;
@@ -39,7 +39,7 @@ public:
 	bool IrqPending();
 
 	// Devices connected to the bus
-	Processor_6502& cpu;
+	CPU& cpu;
 	PPU& ppu;
 	APU& apu;
 	Cartridge& cart;

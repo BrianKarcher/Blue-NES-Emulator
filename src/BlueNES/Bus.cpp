@@ -8,7 +8,7 @@
 #include "OpenBusMapper.h"
 #include "Serializer.h"
 
-Bus::Bus(Processor_6502& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
+Bus::Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
     // This may not be needed
     ramMapper.cpuRAM.fill(0);

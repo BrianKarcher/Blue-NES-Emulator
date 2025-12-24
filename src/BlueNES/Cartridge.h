@@ -8,7 +8,7 @@
 #include "INESLoader.h"
 #include <filesystem>
 
-class Processor_6502;
+class CPU;
 class Bus;
 class SharedContext;
 
@@ -22,7 +22,7 @@ public:
 		SINGLE_UPPER = 3,
 		FOUR_SCREEN = 4
 	};
-	Cartridge(SharedContext& ctx, Processor_6502& c);
+	Cartridge(SharedContext& ctx, CPU& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::wstring& filePath);
@@ -44,7 +44,7 @@ public:
 private:
 	Bus* m_bus;
 	MirrorMode m_mirrorMode;
-	Processor_6502& cpu;
+	CPU& cpu;
 	void loadSRAM();
 	void saveSRAM();
 	bool isBatteryBacked = false;

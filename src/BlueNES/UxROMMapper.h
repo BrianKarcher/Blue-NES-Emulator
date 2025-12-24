@@ -5,7 +5,7 @@
 
 class Bus;
 class Cartridge;
-class Processor_6502;
+class CPU;
 class RendererLoopy;
 
 //#define UXROMDEBUG
@@ -35,7 +35,7 @@ private:
 	uint8_t prgBank16kCount;
 
 	Cartridge* cart;
-	Processor_6502& cpu;
+	CPU& cpu;
 	Bus& bus;
 
 	void recomputeMappings();

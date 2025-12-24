@@ -6,7 +6,7 @@
 
 class Bus;
 class Cartridge;
-class Processor_6502;
+class CPU;
 class RendererLoopy;
 
 #define MMC3DEBUG
@@ -50,7 +50,7 @@ private:
 	uint8_t m_regSelect;
 
 	Cartridge* cart;
-	Processor_6502& cpu;
+	CPU& cpu;
 	Bus& bus;
 
 	// IRQ state
