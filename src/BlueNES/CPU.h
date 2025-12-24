@@ -221,6 +221,10 @@ private:
 		&CPU::RTI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::PHA,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::JMP_ABS,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 4
 		&CPU::BVC,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::CLI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 5
 		&CPU::RTS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::PLA,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::JMP_IND,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 6
+		&CPU::BVS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::SEI,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 7
+		&CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::DEY,& CPU::DMP,& CPU::TXA,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP, // 8
+		&CPU::BCC,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::TYA,& CPU::STA,& CPU::TXS,& CPU::DMP,& CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP, // 9
+		&CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::TAY,& CPU::LDA,& CPU::TAX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // A
 	};
 	OpenBusMapper& openBus;
 	void push(uint8_t value);
@@ -260,15 +264,18 @@ private:
 	void ADC();
 	void AND();
 	void ASL();
+	void BCC();
 	void BMI();
 	void BRK();
 	bool NearBranch(uint8_t value);
 	void BIT();
 	void BPL();
 	void BVC();
+	void BVS();
 	void CLC();
 	void CLI();
 	void cp(uint8_t value, uint8_t operand);
+	void DEY();
 	void DMP();
 	void EOR();
 	void JMP_ABS() {
@@ -288,6 +295,9 @@ private:
 	}
 	void JMP(uint16_t addr);
 	void JSR();
+	void LDA();
+	void LDX();
+	void LDY();
 	void LSR();
 	void ORA();
 	void PHA();
@@ -300,6 +310,15 @@ private:
 	void RTS();
 	void SBC();
 	void SEC();
+	void SEI();
+	void STA();
+	void STX();
+	void STY();
+	void TAX();
+	void TAY();
+	void TXA();
+	void TXS();
+	void TYA();
 	bool isActive = false;
 	inline uint8_t ReadNextByte();
 	inline uint8_t ReadNextByte(uint8_t offset);

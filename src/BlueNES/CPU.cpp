@@ -483,19 +483,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 7;
 			break;
 		}
-		case BCC_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			if (!(m_p & FLAG_CARRY)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
 		case BCS_RELATIVE:
 		{
 			uint8_t offset = ReadNextByte();
@@ -543,20 +530,6 @@ uint8_t CPU::Clock()
 			uint8_t offset = ReadNextByte();
 			dbg(L"0x%02X", offset);
 			if (!(m_p & FLAG_ZERO)) {
-				if (NearBranch(offset))
-					m_cycle_count++; // Extra cycle for page crossing
-				m_cycle_count += 3; // Branch taken
-			}
-			else {
-				m_cycle_count += 2; // Branch not taken
-			}
-			break;
-		}
-		case BVS_RELATIVE:
-		{
-			uint8_t offset = ReadNextByte();
-			dbg(L"0x%02X", offset);
-			if (m_p & FLAG_OVERFLOW) {
 				if (NearBranch(offset))
 					m_cycle_count++; // Extra cycle for page crossing
 				m_cycle_count += 3; // Branch taken
@@ -742,14 +715,6 @@ uint8_t CPU::Clock()
 			SetZero(m_x);
 			// Set/clear negative flag (bit 7 of result)
 			SetNegative(m_x);
-			m_cycle_count += 2;
-			break;
-		}
-		case DEY_IMPLIED:
-		{
-			m_y--;
-			SetZero(m_y);
-			SetNegative(m_y);
 			m_cycle_count += 2;
 			break;
 		}
@@ -1019,15 +984,6 @@ uint8_t CPU::Clock()
 			SetZero(m_x);
 			SetNegative(m_x);
 			m_cycle_count += 4;
-			break;
-		}
-		case LDY_IMMEDIATE:
-		{
-			uint8_t operand = ReadNextByte();
-			m_y = operand;
-			SetZero(m_y);
-			SetNegative(m_y);
-			m_cycle_count += 2;
 			break;
 		}
 		case LDY_ZEROPAGE:
@@ -1336,110 +1292,6 @@ uint8_t CPU::Clock()
 			m_cycle_count += 2;
 			break;
 		}
-		case SEI_IMPLIED:
-		{
-			m_p |= FLAG_INTERRUPT; // Set interrupt disable flag
-			m_cycle_count += 2;
-			break;
-		}
-		case STA_ZEROPAGE:
-		{
-			uint8_t zp_addr = ReadNextByte();
-			bus->write(zp_addr, m_a);
-			m_cycle_count += 3;
-			break;
-		}
-		case STA_ZEROPAGE_X:
-		{
-			uint8_t zp_addr = ReadNextByte(m_x);
-			bus->write(zp_addr, m_a);
-			m_cycle_count += 4;
-			break;
-		}
-		case STA_ABSOLUTE:
-		{
-			uint16_t addr = ReadNextWord();
-			dbg(L"0x%04X", addr);
-			bus->write(addr, m_a);
-			m_cycle_count += 4;
-			break;
-		}
-		case STA_ABSOLUTE_X:
-		{
-			uint16_t addr = ReadNextWordNoCycle(m_x);
-			if (addr >= 0x0200 && addr <= 0x02FF) {
-				int i = 0;
-			}
-			bus->write(addr, m_a);
-			m_cycle_count += 5;
-			break;
-		}
-		case STA_ABSOLUTE_Y:
-		{
-			uint16_t addr = ReadNextWordNoCycle(m_y);
-			if (addr >= 0x0200 && addr <= 0x02FF) {
-				int i = 0;
-			}
-			bus->write(addr, m_a);
-			m_cycle_count += 5;
-			break;
-		}
-		case STA_INDEXEDINDIRECT:
-		{
-			uint16_t target_addr = ReadIndexedIndirect();
-			bus->write(target_addr, m_a);
-			m_cycle_count += 6;
-			break;
-		}
-		case STA_INDIRECTINDEXED:
-		{
-			uint16_t target_addr = ReadIndirectIndexedNoCycle();
-			bus->write(target_addr, m_a);
-			m_cycle_count += 6;
-			break;
-		}
-		case STX_ZEROPAGE:
-		{
-			uint8_t zp_addr = ReadNextByte();
-			bus->write(zp_addr, m_x);
-			m_cycle_count += 3;
-			break;
-		}
-		case STX_ZEROPAGE_Y:
-		{
-			uint8_t zp_addr = ReadNextByte(m_y);
-			bus->write(zp_addr, m_x);
-			m_cycle_count += 4;
-			break;
-		}
-		case STX_ABSOLUTE:
-		{
-			uint16_t addr = ReadNextWord();
-			bus->write(addr, m_x);
-			m_cycle_count += 4;
-			break;
-		}
-		case STY_ZEROPAGE:
-		{
-			uint8_t zp_addr = ReadNextByte();
-			bus->write(zp_addr, m_y);
-			m_cycle_count += 3;
-			break;
-		}
-		case STY_ZEROPAGE_X:
-		{
-			uint8_t zp_addr = ReadNextByte(m_x);
-			bus->write(zp_addr, m_y);
-			m_cycle_count += 4;
-			break;
-		}
-		case STY_ABSOLUTE:
-		{
-			uint16_t addr = ReadNextWord();
-			bus->write(addr, m_y);
-			m_cycle_count += 4;
-			break;
-		}
 		case TAX_IMPLIED:
 		{
 			m_x = m_a;
@@ -1462,28 +1314,6 @@ uint8_t CPU::Clock()
 			dbg(L"Transferring sp 0x%02X to x\n", m_sp);
 			SetZero(m_x);
 			SetNegative(m_x);
-			m_cycle_count += 2;
-			break;
-		}
-		case TXA_IMPLIED:
-		{
-			m_a = m_x;
-			SetZero(m_a);
-			SetNegative(m_a);
-			m_cycle_count += 2;
-			break;
-		}
-		case TXS_IMPLIED:
-		{
-			m_sp = m_x;
-			m_cycle_count += 2;
-			break;
-		}
-		case TYA_IMPLIED:
-		{
-			m_a = m_y;
-			SetZero(m_a);
-			SetNegative(m_a);
 			m_cycle_count += 2;
 			break;
 		}
@@ -1791,6 +1621,17 @@ bool CPU::NearBranch(uint8_t value) {
 	return old_pc_hi != new_pc_hi;
 }
 
+void CPU::BCC() {
+	if (!(m_p & FLAG_CARRY)) {
+		if (NearBranch(_operand))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
 void CPU::BIT() {
 	// Set zero flag based on AND with accumulator
 	if ((m_a & _operand) == 0) {
@@ -1841,6 +1682,19 @@ void CPU::BVC() {
 	}
 }
 
+void CPU::BVS() {
+	uint8_t offset = ReadNextByte();
+	dbg(L"0x%02X", offset);
+	if (m_p & FLAG_OVERFLOW) {
+		if (NearBranch(offset))
+			m_cycle_count++; // Extra cycle for page crossing
+		m_cycle_count += 3; // Branch taken
+	}
+	else {
+		m_cycle_count += 2; // Branch not taken
+	}
+}
+
 void CPU::CLI() {
 	m_p &= ~FLAG_INTERRUPT; // Clear interrupt disable flag
 	m_cycle_count += 2;
@@ -1879,6 +1733,20 @@ void CPU::CLC() {
 	m_cycle_count += 2;
 }
 
+void CPU::DEY() {
+	m_y--;
+	// Set/clear zero flag
+	SetZero(m_y);
+	SetNegative(m_y);
+	m_cycle_count += 2;
+}
+
+void CPU::DMP() {
+	// Dummy instruction for illegal opcodes
+	// Does nothing, just consumes cycles
+	m_pc -= 1; // Step back to re-read the opcode
+}
+
 void CPU::EOR()
 {
 	// EOR operation with the accumulator
@@ -1901,7 +1769,7 @@ void CPU::EOR()
 }
 
 void CPU::JMP(uint16_t addr) {
-	m_pc = addr
+	m_pc = addr;
 	dbg(L"JMP to 0x%04X", m_pc);
 	m_cycle_count += 3;
 }
@@ -1917,6 +1785,27 @@ void CPU::JSR() {
 	m_pc = ReadNextWord();
 	dbg(L"JSR to 0x%04X (return 0x%04X)", m_pc, return_addr);
 	m_cycle_count += 6;
+}
+
+void CPU::LDA() {
+	m_a = _operand;
+	SetZero(m_a);
+	SetNegative(m_a);
+	m_cycle_count += 2;
+}
+
+void CPU::LDX() {
+	m_x = _operand;
+	SetZero(m_x);
+	SetNegative(m_x);
+	m_cycle_count += 2;
+}
+
+void CPU::LDY() {
+	m_y = _operand;
+	SetZero(m_y);
+	SetNegative(m_y);
+	m_cycle_count += 2;
 }
 
 void CPU::LSR()
@@ -1989,12 +1878,6 @@ void CPU::PLP() {
 	m_cycle_count += 4;
 }
 
-void CPU::DMP() {
-	// Dummy instruction for illegal opcodes
-	// Does nothing, just consumes cycles
-	m_pc -= 1; // Step back to re-read the opcode
-}
-
 void CPU::ROL()
 {  
 	// Save the carry flag before modifying it  
@@ -2065,18 +1948,72 @@ void CPU::RTS() {
 	m_cycle_count += 6;
 }
 
-void CPU::SEC() {
-	// Set carry flag
-	m_p |= FLAG_CARRY;
-	m_cycle_count += 2;
-}
-
 void CPU::SBC()
 {
 	// Invert the operand for subtraction
 	_operand = ~_operand;
 	// Perform addition with inverted operand and carry flag
 	ADC();
+}
+
+void CPU::SEC() {
+	// Set carry flag
+	m_p |= FLAG_CARRY;
+	m_cycle_count += 2;
+}
+
+void CPU::SEI() {
+	// Set interrupt disable flag
+	m_p |= FLAG_INTERRUPT;
+	m_cycle_count += 2;
+}
+
+void CPU::STA() {
+	bus->write(_operand, m_a);
+	m_cycle_count += 3;
+}
+
+void CPU::STX() {
+	bus->write(_operand, m_x);
+	m_cycle_count += 3;
+}
+
+void CPU::STY() {
+	bus->write(_operand, m_y);
+	m_cycle_count += 3;
+}
+
+void CPU::TAX() {
+	m_x = m_a;
+	SetZero(m_x);
+	SetNegative(m_x);
+	m_cycle_count += 2;
+}
+
+void CPU::TAY() {
+	m_y = m_a;
+	SetZero(m_y);
+	SetNegative(m_y);
+	m_cycle_count += 2;
+}
+
+void CPU::TXA() {
+	m_a = m_x;
+	SetZero(m_a);
+	SetNegative(m_a);
+	m_cycle_count += 2;
+}
+
+void CPU::TXS() {
+	m_sp = m_x;
+	m_cycle_count += 2;
+}
+
+void CPU::TYA() {
+	m_a = m_y;
+	SetZero(m_a);
+	SetNegative(m_a);
+	m_cycle_count += 2;
 }
 
 // Primarily used for testing purposes.
