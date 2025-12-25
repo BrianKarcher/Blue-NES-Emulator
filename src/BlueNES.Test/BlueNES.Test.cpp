@@ -263,6 +263,64 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 5);
 		}
 
+		TEST_METHOD(TestASLAccumulator)
+		{
+			uint8_t rom[] = { ASL_ACCUMULATOR };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x45); // 0100 0101
+			RunInst();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestASLZeroPage)
+		{
+			uint8_t rom[] = { ASL_ZEROPAGE, 0x10 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0010, 0x45); // 0100 0101
+			RunInst();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+		TEST_METHOD(TestASLZeroPageX)
+		{
+			uint8_t rom[] = { ASL_ZEROPAGE_X, 0x0F };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0010, 0x45); // 0100 0101
+			cpu->SetX(0x1);
+			RunInst();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestASLAbsolute)
+		{
+			uint8_t rom[] = { ASL_ABSOLUTE, 0x25, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1525, 0x45); // 0100 0101
+			RunInst();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestASLAbsoluteX)
+		{
+			uint8_t rom[] = { ASL_ABSOLUTE_X, 0x24, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1525, 0x45); // 0100 0101
+			cpu->SetX(0x1);
+			RunInst();
+			// Shift left: 1000 1010
+			Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
+
 		TEST_METHOD(TestINCAbsoluteX)
 		{
 			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
@@ -592,58 +650,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestASLAccumulator)
-		//{
-		//	uint8_t rom[] = { ASL_ACCUMULATOR };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x45); // 0100 0101
-		//	RunInst();
-		//	// Shift left: 1000 1010
-		//	Assert::AreEqual((uint8_t)0x8A, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestASLZeroPage)
-		//{
-		//	uint8_t rom[] = { ASL_ZEROPAGE, 0x10 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0010, 0x45); // 0100 0101
-		//	RunInst();
-		//	// Shift left: 1000 1010
-		//	Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestASLZeroPageX)
-		//{
-		//	uint8_t rom[] = { ASL_ZEROPAGE_X, 0x0F };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0010, 0x45); // 0100 0101
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	// Shift left: 1000 1010
-		//	Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestASLAbsolute)
-		//{
-		//	uint8_t rom[] = { ASL_ABSOLUTE, 0x25, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1525, 0x45); // 0100 0101
-		//	RunInst();
-		//	// Shift left: 1000 1010
-		//	Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestASLAbsoluteX)
-		//{
-		//	uint8_t rom[] = { ASL_ABSOLUTE_X, 0x24, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1525, 0x45); // 0100 0101
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	// Shift left: 1000 1010
-		//	Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
 		//TEST_METHOD(TestBCCRelative)
 		//{
 		//	uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };

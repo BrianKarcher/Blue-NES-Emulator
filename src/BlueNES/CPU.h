@@ -258,6 +258,13 @@ public:
 		// $BD = LDA Absolute, X (Read operation)
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+
+		opcode_table[0x06] = &run_instruction<Mode_ZeroPage, Op_ASL>;
+		opcode_table[0x0A] = &run_accumulator_instruction<Op_ASL>;
+		opcode_table[0x0E] = &run_instruction<Mode_Absolute, Op_ASL>;
+		opcode_table[0x16] = &run_instruction<Mode_ZeroPageX, Op_ASL>;
+		opcode_table[0x1E] = &run_instruction<Mode_AbsoluteX<Op_ASL::is_rmw>, Op_ASL>;
+
 		opcode_table[0x21] = &run_instruction<Mode_IndirectX, Op_AND>;
 		opcode_table[0x25] = &run_instruction<Mode_ZeroPage, Op_AND>;
 		opcode_table[0x29] = &run_instruction<Mode_Immediate, Op_AND>;
@@ -684,6 +691,49 @@ private:
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
 	};
 
+	struct Op_ASL {
+		static constexpr bool is_rmw = true;
+
+		// This version is called for ASL A (Accumulator Mode)
+		static bool step_acc(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Perform the shift internally
+			// Shift bit 7 into Carry
+			if (cpu.m_a & 0x80) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+
+			cpu.m_a <<= 1;
+
+			cpu.update_ZN_flags(cpu.m_a);
+			return true; // Complete in 2 cycles total
+		}
+
+		// This version is called for ASL Absolute, ZeroPage, etc. (Memory Mode)
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 0: // Read
+				cpu._operand = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 1;
+				return false;
+			case 1: // Dummy Write
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				cpu.cycle_state = 2;
+				return false;
+			case 2: // Shift and Write
+				if (cpu._operand & 0x80) cpu.SetFlag(FLAG_CARRY);
+				else cpu.ClearFlag(FLAG_CARRY);
+
+				cpu._operand <<= 1;
+				cpu.update_ZN_flags(cpu._operand);
+
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				return true;
+			}
+			return false;
+		}
+	};
+
 	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
 	struct Op_DEC {
 		static constexpr bool is_rmw = true;
@@ -761,6 +811,17 @@ private:
 		}
 		static constexpr bool is_rmw = true;
 	};
+
+	template <typename Op>
+	static void run_accumulator_instruction(CPU& cpu) {
+		// Accumulator instructions are always 2 cycles.
+		// T0 was the fetch. T1 is the execution.
+		if (Op::step_acc(cpu)) {
+			cpu.inst_complete = true;
+			cpu.cycle_state = 0;
+			cpu.addr_complete = false;
+		}
+	}
 
 	template <typename Mode, typename Op>
 	static void run_instruction(CPU& cpu) {
