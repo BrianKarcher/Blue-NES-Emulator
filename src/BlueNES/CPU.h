@@ -225,8 +225,8 @@ public:
 	uint8_t  addr_low;
 	uint8_t  addr_high;
 	uint16_t effective_addr;
-	bool inst_complete;
-	bool inAddrMode = true;
+	bool inst_complete = true;
+	bool addr_complete = false;
 
 	// Emulator State
 	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
@@ -253,12 +253,15 @@ public:
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
 		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
-		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
+		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
+		// $FE: INC Absolute, X
+		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
+		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
 		//opcode_table[0xBD](cpu);
 
 		// $9D = STA Absolute, X (Write operation)
 		// This will automatically force the 5th cycle due to is_write=true
-		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
 
 		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
 	}
@@ -309,10 +312,9 @@ private:
 	};
 
 	// Policy: Absolute X Addressing Mode
-// 'is_write' determines if we can optimize the page-crossing cycle
-	template <bool is_write>
+	// Template param 'AlwaysPenalty' is true for STA, INC, DEC, ASL, etc.
+	template <bool always_penalty>
 	struct Mode_AbsoluteX {
-
 		// Returns true when the addressing sequence is totally finished
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
@@ -322,26 +324,27 @@ private:
 				return false;
 
 			case 2: // Fetch High & Calc
+			{
 				cpu.addr_high = cpu.ReadByte(cpu.m_pc++);
 
 				// Calculate effective address (wrapping low byte)
 				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
 
 				// Check page crossing
-				if (((uint16_t)cpu.addr_low + cpu.m_x) > 0xFF) {
-					cpu.page_crossed = true;
-				}
-				else {
-					cpu.page_crossed = false;
-				}
+				cpu.page_crossed = ((uint16_t)cpu.addr_low + cpu.m_x) > 0xFF;
 
-				if (!is_write && !cpu.page_crossed) {
-					// Optimization: No forced dummy read on a Read operation
-					// We are done right here!
-					return true;
+				// DECISION:
+				// If it's a WRITE/RMW (AlwaysPenalty), we MUST do the fixup cycle.
+				// If it's a READ (LDA) and we crossed, we MUST do the fixup cycle.
+				if (always_penalty || cpu.page_crossed) {
+					cpu.cycle_state = 3;
+					return false;
+
 				}
-				cpu.cycle_state = 3;
-				return false;
+				// Optimization: No forced dummy read on a Read operation
+				// We are done right here!
+				return true;
+			}
 
 			case 3: // Potential Dummy Read / Fix Up
 				// If it's a WRITE or we crossed a page, we generally strictly need the fixup
@@ -352,47 +355,109 @@ private:
 				cpu.ReadByte(cpu.effective_addr);
 
 				// Fix the high byte for the next cycle
-				cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+				if (cpu.page_crossed) {
+					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+				}
+				// We are done. Op will run in the NEXT tick (T4).
 				return true;
 			}
+			return false;
+		}
+	};
+
+	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
+	struct Op_DEC {
+		static constexpr bool is_rmw = true;
+
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 0: // Read
+				cpu._operand = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 1;
+				return false;
+			case 1: // Dummy Write
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				cpu.cycle_state = 2;
+				return false;
+			case 2: // Modify & Write
+				cpu._operand--; // DECREMENT
+				cpu.update_ZN_flags(cpu._operand);
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_INC {
+		// Defines that this Op requires the "Always Penalty" path in addressing
+		static constexpr bool is_rmw = true;
+
+		static bool step(CPU& cpu) {
+			// cycle_state continues incrementing from where Mode left off
+			switch (cpu.cycle_state) {
+			case 0: // T4: Read Real Value
+				cpu._operand = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 1;
+				return false;
+
+			case 1: // T5: Dummy Write (Write original value back)
+				// 6502 quirk: It writes the unmodified value while ALU works
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T6: Final Write (Write modified value)
+				cpu._operand++; // The actual increment
+				cpu.update_ZN_flags(cpu._operand);
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+				return true; // Instruction Complete
+			}
+			return false;
 		}
 	};
 
 	struct Op_LDA {
-		static void execute(CPU& cpu) {
+		static bool step(CPU& cpu) {
 			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_a);
+			return true;
 		}
-		static constexpr bool is_write = false; // Trait used by the Addressing Mode
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
 	};
 
 	struct Op_STA {
-		static void execute(CPU& cpu) {
+		static bool step(CPU& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_a);
 			//bus_write(cpu.effective_addr, cpu.A);
+			return true;
 		}
-		static constexpr bool is_write = true;
+		static constexpr bool is_rmw = true;
 	};
 
 	template <typename Mode, typename Op>
 	static void run_instruction(CPU& cpu) {
 		// 1. Run the Addressing Mode logic
-		if (cpu.inAddrMode) {
-			bool address_ready = Mode::step(cpu);
-			if (address_ready) {
-				// Addressing complete, switch to Operation phase
-				cpu.inAddrMode = false;
+		if (!cpu.addr_complete) {
+			// Run Addressing Mode logic
+			// Returns TRUE when the effective_addr is ready on the bus
+			cpu.addr_complete = Mode::step(cpu);
+			if (cpu.addr_complete) {
+				// Reset cycle state for Op execution
+				cpu.cycle_state = 0;
 			}
 		}
 		else {
-			// 2. If Address is ready, run the Operation
-			Op::execute(cpu);
-
-			// Reset state for next opcode
-			cpu.inst_complete = true;
-			cpu.cycle_state = 0;
-			cpu.inAddrMode = true;
-			// Trigger fetch of next opcode here or via main loop
+			// Run Operation logic
+			// Returns TRUE when the instruction is fully complete
+			bool finished = Op::step(cpu);
+			if (finished) {
+				// Reset state for next opcode
+				cpu.inst_complete = true;
+				cpu.cycle_state = 0;
+				cpu.addr_complete = false;
+				// Trigger fetch of next opcode here or via main loop
+			}
 		}
 	}
 

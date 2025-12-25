@@ -44,6 +44,22 @@ namespace BlueNESTest
 			//processor.PowerOn();
 			//processor.Activate(true);
 		}
+		TEST_METHOD(TestINCAbsoluteX)
+		{
+			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x2A);
+			cpu->SetX(0x1);
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::IsTrue(bus->read(0x1215) == 0x2B);
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
 		TEST_METHOD(TestLDAZeroPage)
 		{
 			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
@@ -51,7 +67,9 @@ namespace BlueNESTest
 			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
 			cart->mapper->SetPRGRom(rom, sizeof(rom));
 			bus->write(0x0010, 0x37);
-			while (!cpu->inst_complete) {
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
 				cpu->cpu_tick();
 			}
 			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
@@ -68,7 +86,9 @@ namespace BlueNESTest
 			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
 			bus->write(0x1510, 0x37);
 			cpu->SetX(0x1);
-			while (!cpu->inst_complete) {
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
 				cpu->cpu_tick();
 			}
 			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
@@ -85,7 +105,9 @@ namespace BlueNESTest
 			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
 			bus->write(0x160E, 0x37);
 			cpu->SetX(0xFF);
-			while (!cpu->inst_complete) {
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
 				cpu->cpu_tick();
 			}
 			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
@@ -939,17 +961,6 @@ namespace BlueNESTest
 		//	uint8_t rom[] = { INC_ABSOLUTE, 0x15, 0x12 };
 		//	cart.SetPRGRom(rom, sizeof(rom));
 		//	bus.write(0x1215, 0x2A);
-		//	processor.Clock();
-		//	Assert::IsTrue(bus.read(0x1215) == 0x2B);
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestINCAbsoluteX)
-		//{
-		//	uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	bus.write(0x1215, 0x2A);
-		//	processor.SetX(0x1);
 		//	processor.Clock();
 		//	Assert::IsTrue(bus.read(0x1215) == 0x2B);
 		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));

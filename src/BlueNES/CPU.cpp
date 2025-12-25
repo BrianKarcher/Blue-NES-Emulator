@@ -15,7 +15,7 @@ void CPU::connectBus(Bus* bus) {
 }
 
 void CPU::cpu_tick() {
-	if (cycle_state == 0) {
+	if (inst_complete) {
 		// Fetch Opcode
 		uint8_t opcode = ReadByte(m_pc++);
 		current_opcode = opcode;
