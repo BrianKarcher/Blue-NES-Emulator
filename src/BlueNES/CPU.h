@@ -288,6 +288,8 @@ public:
 		opcode_table[0xB0] = &run_branch<Op_BCS>;
 		opcode_table[0xF0] = &run_branch<Op_BEQ>;
 
+		opcode_table[0x20] = &run_branch<Op_JSR>;
+
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
 		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
@@ -942,6 +944,44 @@ private:
 				cpu.update_ZN_flags(cpu._operand);
 				cpu.WriteByte(cpu.effective_addr, cpu._operand);
 				return true; // Instruction Complete
+			}
+			return false;
+		}
+	};
+
+	struct Op_JSR {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch Low Byte of destination
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Internal Operation (Stack Pointer preparation)
+				// Dummy read of stack pointer
+				cpu.ReadByte(cpu.m_sp);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Push PC High Byte to Stack
+				// Note: We push the current PC, which points to the high byte 
+				// of the JSR operand (the return address - 1).
+				cpu.WriteByte(0x0100 + cpu.m_sp--, (cpu.m_pc >> 8) & 0xFF);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Push PC Low Byte to Stack
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_pc & 0xFF);
+				cpu.cycle_state = 5;
+				return false;
+
+			case 5: // T5: Fetch High Byte and Update PC
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc);
+				// Final destination jump
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+
+				// Instruction is complete.
+				return true;
 			}
 			return false;
 		}

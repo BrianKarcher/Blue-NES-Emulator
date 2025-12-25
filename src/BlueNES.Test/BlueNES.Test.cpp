@@ -407,6 +407,23 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
+
+		TEST_METHOD(TestJSRAbsolute)
+		{
+			uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetPC(0x8000);
+			RunInst();
+			// After clocking JSR, PC should be at 0x8005
+			Assert::AreEqual((uint16_t)0x8005, cpu->GetPC());
+			// The return address (0x8002) should be on the stack
+			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 1);
+			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 2);
+			uint16_t returnAddress = (hi << 8) | lo;
+			Assert::AreEqual((uint16_t)0x8002, returnAddress);
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+
 		TEST_METHOD(TestLDAAbsolute)
 		{
 			uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
@@ -1316,20 +1333,6 @@ namespace BlueNESTest
 		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
 		//	RunInst();
 		//	Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestJSRAbsolute)
-		//{
-		//	uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetPC(0x8000);
-		//	RunInst();
-		//	// After clocking JSR, PC should be at 0x8005
-		//	Assert::AreEqual((uint16_t)0x8005, cpu->GetPC());
-		//	// The return address (0x8004) should be on the stack
-		//	uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 1);
-		//	uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 2);
-		//	uint16_t returnAddress = (hi << 8) | lo;
-		//	Assert::AreEqual((uint16_t)0x8002, returnAddress);
 		//}
 		//TEST_METHOD(TestLDXImmediate)
 		//{
