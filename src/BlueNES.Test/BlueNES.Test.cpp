@@ -38,6 +38,7 @@ namespace BlueNESTest
 			cart->mapper = new NROM(cart);
 			bus = nes->bus_;
 			cart->mapper->register_memory(*bus);
+			cart->mapper->m_prgRamData.resize(0x2000);
 			cpu = nes->cpu_;
 			cpu->init_cpu();
 			cpu->PowerOn();
@@ -331,6 +332,16 @@ namespace BlueNESTest
 			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
 			Assert::IsTrue(cpu->GetCycleCount() == 3);
 		}
+		TEST_METHOD(TestBCCRelativePageCross)
+		{
+			uint8_t rom[] = { BCC_RELATIVE, 0xDF, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_CARRY); // Clear carry to take branch
+			RunInst();
+			// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x7FE1, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
 		TEST_METHOD(TestBCCRelativeNotTaken)
 		{
 			uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
@@ -338,6 +349,27 @@ namespace BlueNESTest
 			cpu->SetFlag(FLAG_CARRY); // Set carry to not take branch
 			RunInst();
 			// After clocking BCC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestBCSRelative)
+		{
+			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_CARRY); // Set carry to take branch
+			RunInst();
+			// After clocking BCS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBCSRelativeNotTaken)
+		{
+			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_CARRY); // Clear carry to not take branch
+			RunInst();
+			// After clocking BCS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
 			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
@@ -671,24 +703,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestBCSRelative)
-		//{
-		//	uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry to take branch
-		//	RunInst();
-		//	// After clocking BCS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-		//	Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBCSRelativeNotTaken)
-		//{
-		//	uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_CARRY); // Clear carry to not take branch
-		//	RunInst();
-		//	// After clocking BCS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
 		//TEST_METHOD(TestBEQRelative)
 		//{
 		//	uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
