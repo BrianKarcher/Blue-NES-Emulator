@@ -284,19 +284,11 @@ public:
 		opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
 		opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
 
-		opcode_table[0x90] = &run_branch<Op_BCC>;
-		opcode_table[0xB0] = &run_branch<Op_BCS>;
-		opcode_table[0xF0] = &run_branch<Op_BEQ>;
+		opcode_table[0x90] = &run_standalone_instruction<Op_BCC>;
+		opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
+		opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
 
-		opcode_table[0x20] = &run_branch<Op_JSR>;
-
-		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
-		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
-		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
-		opcode_table[0x91] = &run_instruction<Mode_IndirectY<Op_STA::is_rmw>, Op_STA>;
-		opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
-		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
-		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+		opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
 
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
@@ -306,6 +298,16 @@ public:
 		opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
+
+		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
+		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
+		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
+		opcode_table[0x91] = &run_instruction<Mode_IndirectY<Op_STA::is_rmw>, Op_STA>;
+		opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
+		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
+		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+
+		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 
 		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
 		opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
@@ -996,6 +998,50 @@ private:
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
 	};
 
+	struct Op_RTI {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				// The 6502 performs a dummy read of the opcode byte (or stack)
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Increment Stack Pointer (Preparation)
+				// Internal cycle to prepare stack hardware
+				cpu.ReadByte(cpu.m_sp);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Pull Status Register (P)
+				// Pull the flags back from the stack
+				cpu.m_p = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+				// Ensure the unused bit (bit 5) and the Break bit (bit 4) are handled 
+				// per NES specifics (Bit 5 usually stays 1)
+				cpu.m_p = (cpu.m_p & 0xEF) | FLAG_UNUSED;
+
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Pull Program Counter Low (PC L)
+				cpu.addr_low = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+				cpu.cycle_state = 5;
+				return false;
+
+			case 5: // T5: Pull Program Counter High (PC H)
+				cpu.addr_high = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+
+				// Set the PC to the pulled address
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+
+				// In RTI, the address pulled is the actual return address.
+				// No increment is needed.
+				return true;
+			}
+			return false;
+		}
+	};
+
 	struct Op_SBC {
 		static bool step(CPU& cpu) {
 			// Invert the operand for subtraction
@@ -1025,7 +1071,7 @@ private:
 	}
 
 	template <typename Op>
-	static void run_branch(CPU& cpu) {
+	static void run_standalone_instruction(CPU& cpu) {
 		// Branches don't have a standard Effective Address mode, addressing is done in the branch logic
 		if (Op::step(cpu)) {
 			cpu.inst_complete = true;

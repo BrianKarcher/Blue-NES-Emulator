@@ -539,6 +539,23 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
+
+		TEST_METHOD(TestRTIImplied)
+		{
+			uint8_t rom[] = { RTI_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			// Push status and return address onto stack
+			bus->write(0x01FF, 0x80); // Return address high byte
+			bus->write(0x01FE, 0x00); // Return address low byte
+			bus->write(0x01FD, 0x24); // Status with some flags set
+			cpu->SetSP(0xFC); // Set SP to point to 0x01FD
+			RunInst();
+			Assert::AreEqual((uint16_t)0x8000, cpu->GetPC());
+			Assert::AreEqual((uint8_t)0x24, cpu->GetStatus());
+			Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+
 		TEST_METHOD(TestSBCImmediate)
 		{
 			uint8_t rom[] = { SBC_IMMEDIATE, 0x10 };
@@ -1757,20 +1774,6 @@ namespace BlueNESTest
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestRTIImplied)
-		//{
-		//	uint8_t rom[] = { RTI_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	// Push status and return address onto stack
-		//	bus->write(0x01FF, 0x80); // Return address high byte
-		//	bus->write(0x01FE, 0x00); // Return address low byte
-		//	bus->write(0x01FD, 0x24); // Status with some flags set
-		//	cpu->SetSP(0xFC); // Set SP to point to 0x01FD
-		//	RunInst();
-		//	Assert::AreEqual((uint16_t)0x8000, cpu->GetPC());
-		//	Assert::AreEqual((uint8_t)0x24, cpu->GetStatus());
-		//	Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
 		//}
 		//TEST_METHOD(TestRTSImplied)
 		//{
