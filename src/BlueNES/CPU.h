@@ -269,6 +269,26 @@ public:
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 private:
+	// The effective pattern we are following here is we advance one cycle per read/write to the bus
+	// We return false on each cycle until each process is complete.
+	// The last cycle in "Mode" returns true on an incomplete cycle
+	// with no bus access, so Op runs immediately the same cycle
+	// to access the bus and complete the cycle.
+
+	struct Mode_Immediate {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch the 8-bit address
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				// High byte is always 0x00 in Zero Page
+				cpu.effective_addr = (0x00 << 8) | cpu.addr_low;
+
+				// No page crossing possible, so we are ready for the Op next cycle
+				return true;
+			}
+			return false;
+		}
+	};
 
 	// Policy: Zero Page (e.g., LDA $nn)
 // Cycles: 3 total (T0: Opcode, T1: Fetch Address, T2: Read/Write)
@@ -281,8 +301,12 @@ private:
 				cpu.effective_addr = (0x00 << 8) | cpu.addr_low;
 
 				// No page crossing possible, so we are ready for the Op next cycle
+				cpu.cycle_state = 2;
+				return false;
+			case 2:
 				return true;
 			}
+			
 			return false;
 		}
 	};
@@ -333,32 +357,29 @@ private:
 				// Check page crossing
 				cpu.page_crossed = ((uint16_t)cpu.addr_low + cpu.m_x) > 0xFF;
 
-				// DECISION:
-				// If it's a WRITE/RMW (AlwaysPenalty), we MUST do the fixup cycle.
-				// If it's a READ (LDA) and we crossed, we MUST do the fixup cycle.
-				if (always_penalty || cpu.page_crossed) {
-					cpu.cycle_state = 3;
-					return false;
-
-				}
-				// Optimization: No forced dummy read on a Read operation
-				// We are done right here!
-				return true;
+				cpu.cycle_state = 3;
+				return false;
 			}
 
 			case 3: // Potential Dummy Read / Fix Up
 				// If it's a WRITE or we crossed a page, we generally strictly need the fixup
 				// For READs: if page crossed, we read garbage (dummy), then fix.
 				// For READs: if NO cross, we are actually DONE with addressing.
-
-				// Do the dummy read (hardware does this)
-				cpu.ReadByte(cpu.effective_addr);
-
-				// Fix the high byte for the next cycle
-				if (cpu.page_crossed) {
-					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+				
+				if (always_penalty || cpu.page_crossed) {
+					// Do the dummy read (hardware does this)
+					cpu.ReadByte(cpu.effective_addr);
+					if (cpu.page_crossed) {
+						// Fix the high byte for the next cycle
+						cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+					}
+					cpu.cycle_state = 4;
+					return false;
 				}
 				// We are done. Op will run in the NEXT tick (T4).
+				return true;
+			case 4:
+				// Address is now fixed. Ready to execute.
 				return true;
 			}
 			return false;
@@ -447,7 +468,8 @@ private:
 				cpu.cycle_state = 0;
 			}
 		}
-		else {
+		if (cpu.addr_complete) {
+			// See notes way above on why we run the op immediately after addressing completes
 			// Run Operation logic
 			// Returns TRUE when the instruction is fully complete
 			bool finished = Op::step(cpu);
