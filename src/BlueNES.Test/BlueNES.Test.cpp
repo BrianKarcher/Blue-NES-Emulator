@@ -44,20 +44,54 @@ namespace BlueNESTest
 			//processor.PowerOn();
 			//processor.Activate(true);
 		}
-
-		TEST_METHOD(TestLDAAbsoluteX)
+		TEST_METHOD(TestLDAZeroPage)
 		{
-			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
+			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
 			cart->mapper->SetPRGRom(rom, sizeof(rom));
-			bus->write(0x1510, 0x37);
-			cpu->SetX(0x1);
-			cpu->SetPC(0x8000);
-			for (int i = 0; i < 5; i++) {
+			bus->write(0x0010, 0x37);
+			while (!cpu->inst_complete) {
 				cpu->cpu_tick();
 			}
 			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
 			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+
+		TEST_METHOD(TestLDAAbsoluteX)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+			bus->write(0x1510, 0x37);
+			cpu->SetX(0x1);
+			while (!cpu->inst_complete) {
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestLDAAbsoluteXPageCross)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+			bus->write(0x160E, 0x37);
+			cpu->SetX(0xFF);
+			while (!cpu->inst_complete) {
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
 		}
 
 		//TEST_METHOD(TestADCImmediate1)
@@ -986,16 +1020,6 @@ namespace BlueNESTest
 		//	cart.SetPRGRom(rom, sizeof(rom));
 		//	processor.Clock();
 		//	Assert::AreEqual((uint8_t)0x42, processor.GetA());
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDAZeroPage)
-		//{
-		//	uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	bus.write(0x0010, 0x37);
-		//	processor.Clock();
-		//	Assert::AreEqual((uint8_t)0x37, processor.GetA());
 		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
 		//}

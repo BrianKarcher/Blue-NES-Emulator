@@ -225,10 +225,20 @@ public:
 	uint8_t  addr_low;
 	uint8_t  addr_high;
 	uint16_t effective_addr;
+	bool inst_complete;
+	bool inAddrMode = true;
 
 	// Emulator State
 	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
 	bool page_crossed;
+
+	// The CPU Tick Loop
+	void cpu_tick();
+	// Helper to update Zero and Negative flags
+	void update_ZN_flags(uint8_t value) {
+		if (value == 0) m_p |= 0x02; else m_p &= ~0x02; // Zero Flag
+		if (value & 0x80) m_p |= 0x80; else m_p &= ~0x80; // Negative Flag
+	}
 
 	void init_cpu() {
 		// Replace the problematic line with the following code to explicitly use a lambda function:  
@@ -241,6 +251,8 @@ public:
 
 		// $BD = LDA Absolute, X (Read operation)
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
+		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
 		//opcode_table[0xBD](cpu);
 
@@ -251,12 +263,50 @@ public:
 		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
 	}
 
-	// The CPU Tick Loop
-	void cpu_tick();
-
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 private:
+
+	// Policy: Zero Page (e.g., LDA $nn)
+// Cycles: 3 total (T0: Opcode, T1: Fetch Address, T2: Read/Write)
+	struct Mode_ZeroPage {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch the 8-bit address
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				// High byte is always 0x00 in Zero Page
+				cpu.effective_addr = (0x00 << 8) | cpu.addr_low;
+
+				// No page crossing possible, so we are ready for the Op next cycle
+				return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Zero Page, X (e.g., LDA $nn, X)
+	// Cycles: 4 total (T0: Opcode, T1: Fetch Addr, T2: Add X/Dummy Read, T3: Read/Write)
+	struct Mode_ZeroPageX {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch the base 8-bit address
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Add X and perform a Dummy Read
+				// Note: The 6502 hardware does a read here at the unindexed address
+				cpu.ReadByte((0x00 << 8) | cpu.addr_low);
+
+				// Add X and FORCE wrap within page zero (using & 0xFF)
+				cpu.effective_addr = (0x00 << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+
+				// Ready for the Op next cycle
+				return true;
+			}
+			return false;
+		}
+	};
 
 	// Policy: Absolute X Addressing Mode
 // 'is_write' determines if we can optimize the page-crossing cycle
@@ -285,6 +335,11 @@ private:
 					cpu.page_crossed = false;
 				}
 
+				if (!is_write && !cpu.page_crossed) {
+					// Optimization: No forced dummy read on a Read operation
+					// We are done right here!
+					return true;
+				}
 				cpu.cycle_state = 3;
 				return false;
 
@@ -293,33 +348,20 @@ private:
 				// For READs: if page crossed, we read garbage (dummy), then fix.
 				// For READs: if NO cross, we are actually DONE with addressing.
 
-				if (is_write || cpu.page_crossed) {
-					// Do the dummy read (hardware does this)
-					cpu.ReadByte(cpu.effective_addr);
+				// Do the dummy read (hardware does this)
+				cpu.ReadByte(cpu.effective_addr);
 
-					// Fix the high byte for the next cycle
-					cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
-					cpu.cycle_state = 4;
-					return false;
-				}
-				else {
-					// Optimization: No crossing on a Read.
-					// The address in effective_addr is already correct.
-					// We are ready to execute the operation IMMEDIATELY this cycle.
-					return true;
-				}
-
-			case 4: // Final cleanup for penalized instructions
+				// Fix the high byte for the next cycle
+				cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
 				return true;
 			}
-			return false;
 		}
 	};
 
 	struct Op_LDA {
 		static void execute(CPU& cpu) {
 			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
-			//update_ZN_flags(cpu, cpu.m_a);
+			cpu.update_ZN_flags(cpu.m_a);
 		}
 		static constexpr bool is_write = false; // Trait used by the Addressing Mode
 	};
@@ -335,14 +377,21 @@ private:
 	template <typename Mode, typename Op>
 	static void run_instruction(CPU& cpu) {
 		// 1. Run the Addressing Mode logic
-		bool address_ready = Mode::step(cpu);
-
-		// 2. If Address is ready, run the Operation
-		if (address_ready) {
+		if (cpu.inAddrMode) {
+			bool address_ready = Mode::step(cpu);
+			if (address_ready) {
+				// Addressing complete, switch to Operation phase
+				cpu.inAddrMode = false;
+			}
+		}
+		else {
+			// 2. If Address is ready, run the Operation
 			Op::execute(cpu);
 
 			// Reset state for next opcode
+			cpu.inst_complete = true;
 			cpu.cycle_state = 0;
+			cpu.inAddrMode = true;
 			// Trigger fetch of next opcode here or via main loop
 		}
 	}
@@ -358,6 +407,11 @@ private:
 
 	//void LDA_AbsX(CPU& cpu) {
 	//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+	//}
+
+	//void LDA_ZP(CPU& cpu) {
+	//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
+	//	run_instruction<Mode_ZeroPage<Op_LDA::is_write>, Op_LDA, Op_LDA>(cpu);
 	//}
 
 	// The Lookup Table

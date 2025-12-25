@@ -20,11 +20,13 @@ void CPU::cpu_tick() {
 		uint8_t opcode = ReadByte(m_pc++);
 		current_opcode = opcode;
 		cycle_state = 1;
+		inst_complete = false;
 	}
 	else {
 		// Execute the micro-op for the current instruction
 		opcode_table[current_opcode](*this);
 	}
+	m_cycle_count++;
 }
 
 void CPU::BMI() {
