@@ -523,44 +523,7 @@ inline void CPU::SetBreak(bool condition)
 
 void CPU::ADC()
 {
-	uint8_t a_old = m_a;
-	
-	uint16_t result = m_a + _operand + (m_p & FLAG_CARRY ? 1 : 0);
-	m_a = result & 0xFF;  // Update accumulator with low byte
-	// Set/clear carry flag
-	if (result > 0xFF) {
-		m_p |= FLAG_CARRY;   // Set carry
-	}
-	else {
-		m_p &= ~FLAG_CARRY;  // Clear carry
-	}
-	// Set/clear overflow flag
-	// Overflow occurs when:
-	// - Adding two positive numbers results in a negative number, OR
-	// - Adding two negative numbers results in a positive number
-	// This can be detected by checking if the sign bits of both operands
-	// are the same, but different from the result's sign bit
-	if (((a_old ^ m_a) & (_operand ^ m_a) & 0x80) != 0) {
-		m_p |= FLAG_OVERFLOW;   // Set overflow
-	}
-	else {
-		m_p &= ~FLAG_OVERFLOW;  // Clear overflow
-	}
-	// Set/clear zero flag
-	if (m_a == 0) {
-		m_p |= FLAG_ZERO;
-	}
-	else {
-		m_p &= ~FLAG_ZERO;
-	}
 
-	// Set/clear negative flag (bit 7 of result)
-	if (m_a & 0x80) {
-		m_p |= FLAG_NEGATIVE;
-	}
-	else {
-		m_p &= ~FLAG_NEGATIVE;
-	}
 }
 
 void CPU::AND()

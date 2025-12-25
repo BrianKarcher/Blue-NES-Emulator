@@ -220,6 +220,12 @@ public:
 	void toggleFrozen() { isFrozen = !isFrozen; }
 	void ConsumeCycle();
 
+	// Registers
+	uint8_t m_a;
+	uint8_t m_x;
+	uint8_t m_y;
+	uint16_t _operand;
+
 	// Internal Latch Registers (to hold state between cycles)
 	uint8_t  current_opcode;
 	uint8_t  addr_low;
@@ -252,6 +258,14 @@ public:
 		// $BD = LDA Absolute, X (Read operation)
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+		opcode_table[0x61] = &run_instruction<Mode_IndirectX, Op_ADC>;
+		opcode_table[0x65] = &run_instruction<Mode_ZeroPage, Op_ADC>;
+		opcode_table[0x69] = &run_instruction<Mode_Immediate, Op_ADC>;
+		opcode_table[0x6D] = &run_instruction<Mode_Absolute, Op_ADC>;
+		opcode_table[0x71] = &run_instruction<Mode_IndirectY<Op_ADC::is_rmw>, Op_ADC>;
+		opcode_table[0x75] = &run_instruction<Mode_ZeroPageX, Op_ADC>;
+		opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
+		opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
 		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
@@ -590,6 +604,53 @@ private:
 		}
 	};
 
+	struct Op_ADC {
+		static constexpr bool is_rmw = false;
+
+		static bool step(CPU& cpu) {
+			cpu._operand = cpu.ReadByte(cpu.effective_addr);
+			uint8_t a_old = cpu.m_a;
+
+			uint16_t result = cpu.m_a + cpu._operand + (cpu.m_p & FLAG_CARRY ? 1 : 0);
+			cpu.m_a = result & 0xFF;  // Update accumulator with low byte
+			// Set/clear carry flag
+			if (result > 0xFF) {
+				cpu.m_p |= FLAG_CARRY;   // Set carry
+			}
+			else {
+				cpu.m_p &= ~FLAG_CARRY;  // Clear carry
+			}
+			// Set/clear overflow flag
+			// Overflow occurs when:
+			// - Adding two positive numbers results in a negative number, OR
+			// - Adding two negative numbers results in a positive number
+			// This can be detected by checking if the sign bits of both operands
+			// are the same, but different from the result's sign bit
+			if (((a_old ^ cpu.m_a) & (cpu._operand ^ cpu.m_a) & 0x80) != 0) {
+				cpu.m_p |= FLAG_OVERFLOW;   // Set overflow
+			}
+			else {
+				cpu.m_p &= ~FLAG_OVERFLOW;  // Clear overflow
+			}
+			// Set/clear zero flag
+			if (cpu.m_a == 0) {
+				cpu.m_p |= FLAG_ZERO;
+			}
+			else {
+				cpu.m_p &= ~FLAG_ZERO;
+			}
+
+			// Set/clear negative flag (bit 7 of result)
+			if (cpu.m_a & 0x80) {
+				cpu.m_p |= FLAG_NEGATIVE;
+			}
+			else {
+				cpu.m_p &= ~FLAG_NEGATIVE;
+			}
+			return true;
+		}
+	};
+
 	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
 	struct Op_DEC {
 		static constexpr bool is_rmw = true;
@@ -803,12 +864,6 @@ private:
 	uint8_t m_sp = 0xFD;
 	inline void dbg(const wchar_t* fmt, ...);
 	inline void dbgNmi(const wchar_t* fmt, ...);
-
-	// Registers
-	uint8_t m_a;
-	uint8_t m_x;
-	uint8_t m_y;
-	uint16_t _operand;
 
 	void buildMap();
 

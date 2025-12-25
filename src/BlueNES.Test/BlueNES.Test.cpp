@@ -51,6 +51,109 @@ namespace BlueNESTest
 			//cpu->PowerOn();
 			//cpu->Activate(true);
 		}
+		TEST_METHOD(TestADCImmediate1)
+		{
+			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+
+			RunInst();
+			Assert::AreEqual((uint8_t)0x20, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestADCImmediateWithCarry)
+		{
+			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x11);
+			cpu->SetFlag(FLAG_CARRY);
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x32, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestADCImmediateWithOverflow)
+		{
+			// $ef + $20 will result in overflow
+			cpu->SetA(0xef);
+			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			RunInst();
+			Assert::AreEqual((uint8_t)0xf, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestADCZeroPage)
+		{
+			// Add what is at zero page 0x15 to A.
+			uint8_t rom[] = { ADC_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x69);
+			cpu->SetA(0x18);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x81, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+
+		TEST_METHOD(TestADCZeroPage_X)
+		{
+			// Add what is at zero page 0x15 to A.
+			uint8_t rom[] = { ADC_ZEROPAGE_X, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0016, 0x69);
+			cpu->SetA(0x18);
+			cpu->SetX(0x1);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x81, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestADCAbsolute)
+		{
+			// I think the 6502 stores in little endian, need to double check
+			uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x323, 0x40);
+			cpu->SetA(0x20);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x60, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestADCNonNegative)
+		{
+			// I think the 6502 stores in little endian, need to double check
+			uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x323, 0x40);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_ZERO);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x60, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestADCImmediateNegativeResult)
+		{
+			uint8_t rom[] = { ADC_IMMEDIATE, 0x90 }; // 144 decimal
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x50); // 80 decimal
+			RunInst();
+			// 80 + 144 = 224 which is negative in signed 8-bit
+			Assert::AreEqual((uint8_t)0xE0, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestINCAbsoluteX)
 		{
 			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
@@ -251,101 +354,6 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
-
-		//TEST_METHOD(TestADCImmediate1)
-		//{
-		//	uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x20, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCImmediateWithCarry)
-		//{
-		//	uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x11);
-		//	cpu->SetFlag(FLAG_CARRY);
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x32, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCImmediateWithOverflow)
-		//{
-		//	// $ef + $20 will result in overflow
-		//	cpu->SetA(0xef);
-		//	uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0xf, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCZeroPage)
-		//{
-		//	// Add what is at zero page 0x15 to A.
-		//	uint8_t rom[] = { ADC_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x69);
-		//	cpu->SetA(0x18);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x81, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCZeroPage_X)
-		//{
-		//	// Add what is at zero page 0x15 to A.
-		//	uint8_t rom[] = { ADC_ZEROPAGE_X, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0016, 0x69);
-		//	cpu->SetA(0x18);
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x81, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCAbsolute)
-		//{
-		//	// I think the 6502 stores in little endian, need to double check
-		//	uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x323, 0x40);
-		//	cpu->SetA(0x20);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x60, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-
-		//TEST_METHOD(TestADCNonNegative)
-		//{
-		//	// I think the 6502 stores in little endian, need to double check
-		//	uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x323, 0x40);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_ZERO);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x60, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//}
-		//TEST_METHOD(TestADCImmediateNegativeResult)
-		//{
-		//	uint8_t rom[] = { ADC_IMMEDIATE, 0x90 }; // 144 decimal
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x50); // 80 decimal
-		//	RunInst();
-		//	// 80 + 144 = 224 which is negative in signed 8-bit
-		//	Assert::AreEqual((uint8_t)0xE0, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
 
 		//TEST_METHOD(TestANDImmediate)
 		//{
