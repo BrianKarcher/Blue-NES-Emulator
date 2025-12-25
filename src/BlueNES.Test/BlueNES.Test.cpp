@@ -60,24 +60,6 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
-		TEST_METHOD(TestLDAZeroPage)
-		{
-			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
-			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
-			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
-			cart->mapper->SetPRGRom(rom, sizeof(rom));
-			bus->write(0x0010, 0x37);
-			bool first = true;
-			while (first || !cpu->inst_complete) {
-				first = false;
-				cpu->cpu_tick();
-			}
-			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-			Assert::IsTrue(cpu->GetCycleCount() == 3);
-		}
-
 		TEST_METHOD(TestLDAAbsoluteX)
 		{
 			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
@@ -114,6 +96,89 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+		TEST_METHOD(TestLDAAbsoluteY)
+		{
+			uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1510, 0x37);
+			cpu->SetY(0x1);
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDAImmediate)
+		{
+			uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x42, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestLDAIndexedIndirect)
+		{
+			bus->write(0x0020, 0x40);
+			bus->write(0x0021, 0x12); // Pointer to 0x1240
+			bus->write(0x1240, 0x37);
+			uint8_t rom[] = { LDA_INDEXEDINDIRECT, 0x1C };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x4);
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestLDAIndirectIndexed)
+		{
+			bus->write(0x0020, 0x40);
+			bus->write(0x0021, 0x12); // Pointer to 0x1240
+			bus->write(0x1242, 0x37);
+			uint8_t rom[] = { LDA_INDIRECTINDEXED, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x2);
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+		TEST_METHOD(TestLDAZeroPage)
+		{
+			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
+			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0010, 0x37);
+			bool first = true;
+			while (first || !cpu->inst_complete) {
+				first = false;
+				cpu->cpu_tick();
+			}
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
 		}
 
 		//TEST_METHOD(TestADCImmediate1)
@@ -1025,15 +1090,6 @@ namespace BlueNESTest
 		//	uint16_t returnAddress = (hi << 8) | lo;
 		//	Assert::AreEqual((uint16_t)0x8002, returnAddress);
 		//}
-		//TEST_METHOD(TestLDAImmediate)
-		//{
-		//	uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	processor.Clock();
-		//	Assert::AreEqual((uint8_t)0x42, processor.GetA());
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
 		//TEST_METHOD(TestLDAZeroPageX)
 		//{
 		//	uint8_t rom[] = { LDA_ZEROPAGE_X, 0x10 };
@@ -1050,44 +1106,6 @@ namespace BlueNESTest
 		//	uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
 		//	cart.SetPRGRom(rom, sizeof(rom));
 		//	bus.write(0x1510, 0x37);
-		//	processor.Clock();
-		//	Assert::AreEqual((uint8_t)0x37, processor.GetA());
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
-
-		//TEST_METHOD(TestLDAAbsoluteY)
-		//{
-		//	uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	bus.write(0x1510, 0x37);
-		//	processor.SetY(0x1);
-		//	processor.Clock();
-		//	Assert::AreEqual((uint8_t)0x37, processor.GetA());
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDAIndexedIndirect)
-		//{
-		//	bus.write(0x0020, 0x40);
-		//	bus.write(0x0021, 0x12); // Pointer to 0x1240
-		//	bus.write(0x1240, 0x37);
-		//	uint8_t rom[] = { LDA_INDEXEDINDIRECT, 0x1C };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	processor.SetX(0x4);
-		//	processor.Clock();
-		//	Assert::AreEqual((uint8_t)0x37, processor.GetA());
-		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(processor.GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDAIndirectIndexed)
-		//{
-		//	bus.write(0x0020, 0x40);
-		//	bus.write(0x0021, 0x12); // Pointer to 0x1240
-		//	bus.write(0x1242, 0x37);
-		//	uint8_t rom[] = { LDA_INDIRECTINDEXED, 0x20 };
-		//	cart.SetPRGRom(rom, sizeof(rom));
-		//	processor.SetY(0x2);
 		//	processor.Clock();
 		//	Assert::AreEqual((uint8_t)0x37, processor.GetA());
 		//	Assert::IsFalse(processor.GetFlag(FLAG_ZERO));

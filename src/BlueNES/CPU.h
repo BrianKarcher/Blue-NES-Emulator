@@ -252,7 +252,13 @@ public:
 		// $BD = LDA Absolute, X (Read operation)
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
+		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
+		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
+		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
 		// $FE: INC Absolute, X
 		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
@@ -261,7 +267,7 @@ public:
 
 		// $9D = STA Absolute, X (Write operation)
 		// This will automatically force the 5th cycle due to is_write=true
-		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+		
 
 		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
 	}
@@ -278,12 +284,10 @@ private:
 	struct Mode_Immediate {
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
-			case 1: // T1: Fetch the 8-bit address
-				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
-				// High byte is always 0x00 in Zero Page
-				cpu.effective_addr = (0x00 << 8) | cpu.addr_low;
+			case 1:
+				cpu.effective_addr = cpu.m_pc++;
 
-				// No page crossing possible, so we are ready for the Op next cycle
+				// No bus access so no cycle is consumed here
 				return true;
 			}
 			return false;
@@ -376,10 +380,172 @@ private:
 					cpu.cycle_state = 4;
 					return false;
 				}
-				// We are done. Op will run in the NEXT tick (T4).
+				// We are done.
 				return true;
 			case 4:
 				// Address is now fixed. Ready to execute.
+				return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Absolute Y Addressing Mode
+	// Template param 'AlwaysPenalty' is true for STA, INC, DEC, ASL, etc.
+	template <bool always_penalty>
+	struct Mode_AbsoluteY {
+		// Returns true when the addressing sequence is totally finished
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // Fetch Low
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // Fetch High & Calc
+			{
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc++);
+
+				// Calculate effective address (wrapping low byte)
+				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.m_y) & 0xFF);
+
+				// Check page crossing
+				cpu.page_crossed = ((uint16_t)cpu.addr_low + cpu.m_y) > 0xFF;
+
+				cpu.cycle_state = 3;
+				return false;
+			}
+
+			case 3: // Potential Dummy Read / Fix Up
+				// If it's a WRITE or we crossed a page, we generally strictly need the fixup
+				// For READs: if page crossed, we read garbage (dummy), then fix.
+				// For READs: if NO cross, we are actually DONE with addressing.
+
+				if (always_penalty || cpu.page_crossed) {
+					// Do the dummy read (hardware does this)
+					cpu.ReadByte(cpu.effective_addr);
+					if (cpu.page_crossed) {
+						// Fix the high byte for the next cycle
+						cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_y) & 0xFF);
+					}
+					cpu.cycle_state = 4;
+					return false;
+				}
+				// We are done.
+				return true;
+			case 4:
+				// Address is now fixed. Ready to execute.
+				return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Indexed Indirect X Addressing Mode ($nn, X)
+	// Usage: LDA ($nn, X)
+	// This mode is always a fixed length (6 cycles total).
+	struct Mode_IndirectX {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+				case 1: // Fetch Zero Page Base Address
+					// Read the immediate byte (base address in ZP)
+					cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+					cpu.cycle_state = 2;
+					return false;
+
+				case 2: // T2: Addition / Dummy Read
+					// Hardware adds X to the base address. 
+					// It performs a dummy read at the base address.
+					cpu.ReadByte(cpu.addr_low);
+
+					// Calculate the actual pointer location (wrapped in ZP)
+					cpu.addr_low = (cpu.addr_low + cpu.m_x) & 0xFF;
+					cpu.cycle_state = 3;
+					return false;
+
+				case 3: // T3: Fetch Effective Address Low
+					// Read the low byte of the final address from ZP
+					cpu.effective_addr = cpu.ReadByte(cpu.addr_low);
+					cpu.cycle_state = 4;
+					return false;
+
+				case 4: // T4: Fetch Effective Address High
+					// Read the high byte of the final address from ZP+1
+					// Must use & 0xFF to ensure ZP wrap-around (FF -> 00)
+					{
+						uint8_t high = cpu.ReadByte((cpu.addr_low + 1) & 0xFF);
+						cpu.effective_addr |= (high << 8);
+					}
+
+					// The address is now fully formed.
+					// In the 6502 architecture, this mode always completes the 
+					// addressing phase here. The Op runs in T5.
+					cpu.cycle_state = 5;
+					return false;
+				case 5:
+					return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Indirect Indexed Y Addressing Mode ($nn), Y
+	// Usage: LDA ($nn), Y etc.
+	template <bool always_penalty>
+	struct Mode_IndirectY {
+		// Returns true when the addressing sequence is totally finished
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // Fetch Pointer Address (from Zero Page)
+				// We temporarily use effective_addr to hold the ZP pointer address
+				cpu.effective_addr = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // Fetch Effective Address Low Byte
+				// Read the low byte of the pointer from ZP
+				cpu.addr_low = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // Fetch Effective Address High Byte & Add Y
+			{
+				// Read the high byte of the pointer from ZP+1 (WITH ZP WRAP!)
+				cpu.addr_high = cpu.ReadByte((cpu.effective_addr + 1) & 0xFF);
+
+				// Now we calculate the "tentative" effective address (without carry fix)
+				// effective_addr = (Pointer_High << 8) | ((Pointer_Low + Y) & 0xFF)
+				cpu.effective_addr = (cpu.addr_high << 8) | ((cpu.addr_low + cpu.m_y) & 0xFF);
+
+				// Check if adding Y crossed a page boundary
+				cpu.page_crossed = ((uint16_t)cpu.addr_low + cpu.m_y) > 0xFF;
+
+				cpu.cycle_state = 4;
+				return false;
+			}
+
+			case 4: // Potential Dummy Read / Fix Up
+
+				if (always_penalty || cpu.page_crossed) {
+					// Dummy Read from the "wrong" page (bits 0-7 correct, bits 8-15 wrong)
+					cpu.ReadByte(cpu.effective_addr);
+
+					// Fix the high byte for the next cycle
+					// Address = ((Pointer_High + 1) << 8) | (Pointer_Low + Y)
+					if (cpu.page_crossed) {
+						cpu.effective_addr = ((cpu.addr_high + 1) << 8) | ((cpu.addr_low + cpu.m_y) & 0xFF);
+					}
+
+					cpu.cycle_state = 5;
+					return false;
+				}
+
+				// Optimization: If Read & No Cross, we are done.
+				// Op will run immediately in this same tick (T4).
+				return true;
+
+			case 5:
+				// Address is fixed. Ready to execute (T5).
 				return true;
 			}
 			return false;
