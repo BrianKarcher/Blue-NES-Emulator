@@ -253,11 +253,18 @@ public:
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
+		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
+		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
+		opcode_table[0x91] = &run_instruction<Mode_IndirectY<Op_STA::is_rmw>, Op_STA>;
+		opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
+		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
 		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
 		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
+		opcode_table[0xAD] = &run_instruction<Mode_Absolute, Op_LDA>;
 		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
 		// $FE: INC Absolute, X
@@ -320,19 +327,50 @@ private:
 	struct Mode_ZeroPageX {
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
-			case 1: // T1: Fetch the base 8-bit address
+				case 1: // T1: Fetch the base 8-bit address
+					cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+					cpu.cycle_state = 2;
+					return false;
+
+				case 2: // T2: Add X and perform a Dummy Read
+					// Note: The 6502 hardware does a read here at the unindexed address
+					cpu.ReadByte((0x00 << 8) | cpu.addr_low);
+
+					// Add X and FORCE wrap within page zero (using & 0xFF)
+					cpu.effective_addr = (0x00 << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+
+					// Ready for the Op next cycle
+					cpu.cycle_state = 3;
+					return false;
+
+				case 3:
+					return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Absolute Addressing Mode ($aaaa)
+	// Usage: LDA $1234, STA $4000, etc.
+	struct Mode_Absolute {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch Low Byte of Address
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
 				cpu.cycle_state = 2;
 				return false;
 
-			case 2: // T2: Add X and perform a Dummy Read
-				// Note: The 6502 hardware does a read here at the unindexed address
-				cpu.ReadByte((0x00 << 8) | cpu.addr_low);
+			case 2: // T2: Fetch High Byte of Address
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc++);
 
-				// Add X and FORCE wrap within page zero (using & 0xFF)
-				cpu.effective_addr = (0x00 << 8) | ((cpu.addr_low + cpu.m_x) & 0xFF);
+				// Combine into the 16-bit effective address
+				cpu.effective_addr = (cpu.addr_high << 8) | cpu.addr_low;
 
-				// Ready for the Op next cycle
+				// In Absolute mode, the address is now fully formed.
+				// There is no addition, so no T3 penalty/dummy read is needed.
+				cpu.cycle_state = 3;
+				return false;
+			case 3:
 				return true;
 			}
 			return false;
