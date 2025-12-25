@@ -231,6 +231,7 @@ public:
 	uint8_t  addr_low;
 	uint8_t  addr_high;
 	uint16_t effective_addr;
+	int8_t offset;
 	bool inst_complete = true;
 	bool addr_complete = false;
 
@@ -282,6 +283,8 @@ public:
 		opcode_table[0x75] = &run_instruction<Mode_ZeroPageX, Op_ADC>;
 		opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
 		opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
+
+		opcode_table[0x90] = &run_branch<Op_BCC>;
 
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
@@ -734,6 +737,58 @@ private:
 		}
 	};
 
+	struct Op_BCC {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1:
+			{
+				// T1: Fetch the relative offset (signed 8-bit)
+				// This ALWAYS happens, regardless of whether we take the branch.
+				int8_t offset = (int8_t)cpu.ReadByte(cpu.m_pc++);
+
+				// Check the condition: Branch if Carry is CLEAR (0)
+				bool condition_met = (cpu.GetFlag(FLAG_CARRY) == 0);
+
+				if (!condition_met) {
+					// Condition failed: 2 cycles total. We are done right now.
+					return true;
+				}
+
+				// If we reach here, the condition is met. 
+				// We need at least one more cycle to calculate and apply the branch.
+				cpu.offset = offset; // Store offset for next cycle
+				cpu.cycle_state = 2;
+				return false;
+			}
+			case 2: // T2: Apply the low byte and check for page cross
+			{
+				uint16_t old_pc = cpu.m_pc;
+				// Add the signed offset to the PC
+				cpu.m_pc += cpu.offset;
+
+				// Page crossing occurs if the High Byte of the PC changes
+				bool page_crossed = (old_pc & 0xFF00) != (cpu.m_pc & 0xFF00);
+
+				if (page_crossed) {
+					// 6502 hardware performs a dummy read here
+					cpu.ReadByte((old_pc & 0xFF00) | (cpu.m_pc & 0x00FF));
+					cpu.cycle_state = 3;
+					return false; // Need one more cycle to fix high byte
+				}
+
+				// No page cross: 3 cycles total. Done.
+				return true;
+			}
+
+			case 3: // T3: Final cycle for page-crossing branch
+				// Hardware performs a read at the new, fixed PC
+				cpu.ReadByte(cpu.m_pc);
+				return true;
+			}
+			return false;
+		}
+	};
+
 	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
 	struct Op_DEC {
 		static constexpr bool is_rmw = true;
@@ -817,6 +872,16 @@ private:
 		// Accumulator instructions are always 2 cycles.
 		// T0 was the fetch. T1 is the execution.
 		if (Op::step_acc(cpu)) {
+			cpu.inst_complete = true;
+			cpu.cycle_state = 0;
+			cpu.addr_complete = false;
+		}
+	}
+
+	template <typename Op>
+	static void run_branch(CPU& cpu) {
+		// Branches don't have a standard Effective Address mode, addressing is done in the branch logic
+		if (Op::step(cpu)) {
 			cpu.inst_complete = true;
 			cpu.cycle_state = 0;
 			cpu.addr_complete = false;
