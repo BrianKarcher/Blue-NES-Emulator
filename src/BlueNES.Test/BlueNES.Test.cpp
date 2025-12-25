@@ -154,6 +154,115 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
 
+		TEST_METHOD(TestANDImmediate)
+		{
+			uint8_t rom[] = { AND_IMMEDIATE, 0x7 }; // 0111
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestANDZeroPage)
+		{
+			bus->write(0x0035, 0x07); // 0111
+			uint8_t rom[] = { AND_ZEROPAGE, 0x35 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+
+		TEST_METHOD(TestANDZeroPageX)
+		{
+			bus->write(0x0035, 0x07); // 0111
+			uint8_t rom[] = { AND_ZEROPAGE_X, 0x34 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x1);
+			cpu->SetA(0xE); // 1110
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestANDAbsolute)
+		{
+			bus->write(0x0235, 0x07); // 0111
+			uint8_t rom[] = { AND_ABSOLUTE, 0x35, 0x02 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestANDAbsoluteX)
+		{
+			bus->write(0x0235, 0x07); // 0111
+			uint8_t rom[] = { AND_ABSOLUTE_X, 0x33, 0x02 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+			cpu->SetX(0x2);
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestANDAbsoluteY)
+		{
+			bus->write(0x0235, 0x07); // 0111
+			uint8_t rom[] = { AND_ABSOLUTE_Y, 0x33, 0x02 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+			cpu->SetY(0x2);
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
+		TEST_METHOD(TestANDIndexedIndirect)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x02); // Pointer to 0x0235
+			bus->write(0x0235, 0x07); // 0111
+			uint8_t rom[] = { AND_INDEXEDINDIRECT, 0x33 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+			cpu->SetX(0x2);
+
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestANDIndirectIndexed)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x02); // Pointer to 0x0235
+			bus->write(0x0237, 0x07); // 0111
+			uint8_t rom[] = { AND_INDIRECTINDEXED, 0x35 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xE); // 1110
+			cpu->SetY(0x2);
+			RunInst();
+			// 0x11 + 0x20 + 1 (Carry) = 0x32
+			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+
 		TEST_METHOD(TestINCAbsoluteX)
 		{
 			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
@@ -482,107 +591,6 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
-
-		//TEST_METHOD(TestANDImmediate)
-		//{
-		//	uint8_t rom[] = { AND_IMMEDIATE, 0x7 }; // 0111
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDZeroPage)
-		//{
-		//	bus->write(0x0035, 0x07); // 0111
-		//	uint8_t rom[] = { AND_ZEROPAGE, 0x35 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDZeroPageX)
-		//{
-		//	bus->write(0x0035, 0x07); // 0111
-		//	uint8_t rom[] = { AND_ZEROPAGE_X, 0x34 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0xE); // 1110
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDAbsolute)
-		//{
-		//	bus->write(0x0235, 0x07); // 0111
-		//	uint8_t rom[] = { AND_ABSOLUTE, 0x35, 0x02 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDAbsoluteX)
-		//{
-		//	bus->write(0x0235, 0x07); // 0111
-		//	uint8_t rom[] = { AND_ABSOLUTE_X, 0x33, 0x02 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-		//	cpu->SetX(0x2);
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDAbsoluteY)
-		//{
-		//	bus->write(0x0235, 0x07); // 0111
-		//	uint8_t rom[] = { AND_ABSOLUTE_Y, 0x33, 0x02 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-		//	cpu->SetY(0x2);
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-
-		//TEST_METHOD(TestANDIndexedIndirect)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x02); // Pointer to 0x0235
-		//	bus->write(0x0235, 0x07); // 0111
-		//	uint8_t rom[] = { AND_INDEXEDINDIRECT, 0x33 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-		//	cpu->SetX(0x2);
-
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
-		//TEST_METHOD(TestANDIndirectIndexed)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x02); // Pointer to 0x0235
-		//	bus->write(0x0237, 0x07); // 0111
-		//	uint8_t rom[] = { AND_INDIRECTINDEXED, 0x35 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xE); // 1110
-		//	cpu->SetY(0x2);
-		//	RunInst();
-		//	// 0x11 + 0x20 + 1 (Carry) = 0x32
-		//	Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-		//}
 
 		//TEST_METHOD(TestASLAccumulator)
 		//{

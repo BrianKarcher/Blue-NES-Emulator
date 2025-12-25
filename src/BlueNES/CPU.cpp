@@ -528,22 +528,7 @@ void CPU::ADC()
 
 void CPU::AND()
 {
-	// AND operation with the accumulator
-	m_a &= _operand;
-	// Set/clear zero flag
-	if (m_a == 0) {
-		m_p |= FLAG_ZERO;
-	}
-	else {
-		m_p &= ~FLAG_ZERO;
-	}
-	// Set/clear negative flag (bit 7 of result)
-	if (m_a & 0x80) {
-		m_p |= FLAG_NEGATIVE;
-	}
-	else {
-		m_p &= ~FLAG_NEGATIVE;
-	}
+	
 }
 
 void CPU::ASL()
@@ -1022,10 +1007,6 @@ void CPU::RTS() {
 
 void CPU::SBC()
 {
-	// Invert the operand for subtraction
-	_operand = ~_operand;
-	// Perform addition with inverted operand and carry flag
-	ADC();
 }
 
 void CPU::SEC() {

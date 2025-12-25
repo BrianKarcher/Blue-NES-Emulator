@@ -258,6 +258,15 @@ public:
 		// $BD = LDA Absolute, X (Read operation)
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
+		opcode_table[0x21] = &run_instruction<Mode_IndirectX, Op_AND>;
+		opcode_table[0x25] = &run_instruction<Mode_ZeroPage, Op_AND>;
+		opcode_table[0x29] = &run_instruction<Mode_Immediate, Op_AND>;
+		opcode_table[0x2D] = &run_instruction<Mode_Absolute, Op_AND>;
+		opcode_table[0x31] = &run_instruction<Mode_IndirectY<Op_AND::is_rmw>, Op_AND>;
+		opcode_table[0x35] = &run_instruction<Mode_ZeroPageX, Op_AND>;
+		opcode_table[0x39] = &run_instruction<Mode_AbsoluteY<Op_AND::is_rmw>, Op_AND>;
+		opcode_table[0x3D] = &run_instruction<Mode_AbsoluteX<Op_AND::is_rmw>, Op_AND>;
+
 		opcode_table[0x61] = &run_instruction<Mode_IndirectX, Op_ADC>;
 		opcode_table[0x65] = &run_instruction<Mode_ZeroPage, Op_ADC>;
 		opcode_table[0x69] = &run_instruction<Mode_Immediate, Op_ADC>;
@@ -266,6 +275,7 @@ public:
 		opcode_table[0x75] = &run_instruction<Mode_ZeroPageX, Op_ADC>;
 		opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
 		opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
+
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
 		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
@@ -273,6 +283,7 @@ public:
 		opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
 		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
 		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
 		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
@@ -663,6 +674,16 @@ private:
 		}
 	};
 
+	struct Op_AND {
+		static bool step(CPU& cpu) {
+			// AND operation with the accumulator
+			cpu.m_a &= cpu.ReadByte(cpu.effective_addr);
+			cpu.update_ZN_flags(cpu.m_a);
+			return true;
+		}
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
 	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
 	struct Op_DEC {
 		static constexpr bool is_rmw = true;
@@ -726,6 +747,7 @@ private:
 
 	struct Op_SBC {
 		static bool step(CPU& cpu) {
+			// Invert the operand for subtraction
 			return Op_ADC::step(cpu, ~cpu.ReadByte(cpu.effective_addr));
 		}
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
