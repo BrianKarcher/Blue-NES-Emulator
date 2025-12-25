@@ -281,6 +281,134 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
+		TEST_METHOD(TestSBCImmediate)
+		{
+			uint8_t rom[] = { SBC_IMMEDIATE, 0x10 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestSBCZeroPage)
+		{
+			uint8_t rom[] = { SBC_ZEROPAGE, 0x30 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0030, 0x10);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestSBCZeroPageX)
+		{
+			uint8_t rom[] = { SBC_ZEROPAGE_X, 0x2F };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0030, 0x10);
+			cpu->SetX(0x1);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestSBCAbsolute)
+		{
+			uint8_t rom[] = { SBC_ABSOLUTE, 0x40, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1240, 0x10);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestSBCAbsoluteX)
+		{
+			uint8_t rom[] = { SBC_ABSOLUTE_X, 0x3F, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1240, 0x10);
+			cpu->SetX(0x1);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestSBCAbsoluteY)
+		{
+			uint8_t rom[] = { SBC_ABSOLUTE_Y, 0x3F, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1240, 0x10);
+			cpu->SetY(0x1);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestSBCIndexedIndirect)
+		{
+			bus->write(0x0040, 0x50);
+			bus->write(0x0041, 0x12); // Pointer to 0x1250
+			bus->write(0x1250, 0x10);
+			uint8_t rom[] = { SBC_INDEXEDINDIRECT, 0x3C };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x4);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestSBCIndirectIndexed)
+		{
+			bus->write(0x0040, 0x50);
+			bus->write(0x0041, 0x12); // Pointer to 0x1250
+			bus->write(0x1252, 0x10);
+			uint8_t rom[] = { SBC_INDIRECTINDEXED, 0x40 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x2);
+			cpu->SetA(0x20);
+			cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::AreEqual((uint8_t)0x10, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
 		TEST_METHOD(TestSTAAbsolute)
 		{
 			uint8_t rom[] = { STA_ABSOLUTE, 0x20, 0x15 };
@@ -1618,126 +1746,6 @@ namespace BlueNESTest
 		//	RunInst();
 		//	Assert::AreEqual((uint16_t)0x8006, cpu->GetPC()); // PC should be return address + 1
 		//	Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
-		//}
-		//TEST_METHOD(TestSBCImmediate)
-		//{
-		//	uint8_t rom[] = { SBC_IMMEDIATE, 0x10 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCZeroPage)
-		//{
-		//	uint8_t rom[] = { SBC_ZEROPAGE, 0x30 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0030, 0x10);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCZeroPageX)
-		//{
-		//	uint8_t rom[] = { SBC_ZEROPAGE_X, 0x2F };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0030, 0x10);
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCAbsolute)
-		//{
-		//	uint8_t rom[] = { SBC_ABSOLUTE, 0x40, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1240, 0x10);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCAbsoluteX)
-		//{
-		//	uint8_t rom[] = { SBC_ABSOLUTE_X, 0x3F, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1240, 0x10);
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCAbsoluteY)
-		//{
-		//	uint8_t rom[] = { SBC_ABSOLUTE_Y, 0x3F, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1240, 0x10);
-		//	cpu->SetY(0x1);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCIndexedIndirect)
-		//{
-		//	bus->write(0x0040, 0x50);
-		//	bus->write(0x0041, 0x12); // Pointer to 0x1250
-		//	bus->write(0x1250, 0x10);
-		//	uint8_t rom[] = { SBC_INDEXEDINDIRECT, 0x3C };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x4);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSBCIndirectIndexed)
-		//{
-		//	bus->write(0x0040, 0x50);
-		//	bus->write(0x0041, 0x12); // Pointer to 0x1250
-		//	bus->write(0x1252, 0x10);
-		//	uint8_t rom[] = { SBC_INDIRECTINDEXED, 0x40 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x2);
-		//	cpu->SetA(0x20);
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x10, cpu->GetA());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//}
 		//TEST_METHOD(TestSECImplied)
 		//{

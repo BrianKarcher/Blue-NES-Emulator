@@ -281,6 +281,15 @@ public:
 		opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
+
+		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
+		opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
+		opcode_table[0xE9] = &run_instruction<Mode_Immediate, Op_SBC>;
+		opcode_table[0xED] = &run_instruction<Mode_Absolute, Op_SBC>;
+		opcode_table[0xF1] = &run_instruction<Mode_IndirectY<Op_SBC::is_rmw>, Op_SBC>;
+		opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
+		opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
+		opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
 		// $FE: INC Absolute, X
 		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
 		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
@@ -608,10 +617,13 @@ private:
 		static constexpr bool is_rmw = false;
 
 		static bool step(CPU& cpu) {
-			cpu._operand = cpu.ReadByte(cpu.effective_addr);
+			return step(cpu, cpu.ReadByte(cpu.effective_addr));
+		}
+		
+		static bool step(CPU& cpu, uint8_t operand) {
 			uint8_t a_old = cpu.m_a;
 
-			uint16_t result = cpu.m_a + cpu._operand + (cpu.m_p & FLAG_CARRY ? 1 : 0);
+			uint16_t result = cpu.m_a + operand + (cpu.m_p & FLAG_CARRY ? 1 : 0);
 			cpu.m_a = result & 0xFF;  // Update accumulator with low byte
 			// Set/clear carry flag
 			if (result > 0xFF) {
@@ -626,7 +638,7 @@ private:
 			// - Adding two negative numbers results in a positive number
 			// This can be detected by checking if the sign bits of both operands
 			// are the same, but different from the result's sign bit
-			if (((a_old ^ cpu.m_a) & (cpu._operand ^ cpu.m_a) & 0x80) != 0) {
+			if (((a_old ^ cpu.m_a) & (operand ^ cpu.m_a) & 0x80) != 0) {
 				cpu.m_p |= FLAG_OVERFLOW;   // Set overflow
 			}
 			else {
@@ -708,6 +720,13 @@ private:
 			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_a);
 			return true;
+		}
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_SBC {
+		static bool step(CPU& cpu) {
+			return Op_ADC::step(cpu, ~cpu.ReadByte(cpu.effective_addr));
 		}
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
 	};
