@@ -315,6 +315,18 @@ public:
 		opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
 		opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
 
+		opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_DEC>;
+		opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_DEC>;
+		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_DEC>;
+		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<Op_DEC::is_rmw>, Op_DEC>;
+
+		opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_INC>;
+		opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_INC>;
+		opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_INC>;
+		// $FE: INC Absolute, X
+		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
+		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
+
 		opcode_table[0x4C] = &run_standalone_instruction<Op_JMP_Absolute>;
 		opcode_table[0x6C] = &run_standalone_instruction<Op_JMP_Indirect>;
 
@@ -329,9 +341,6 @@ public:
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
 		
-		
-		
-
 		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
 
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
@@ -360,9 +369,6 @@ public:
 		opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
 		opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
 		opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
-		// $FE: INC Absolute, X
-		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
-		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
 
 		// Phantom op codes
 		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
