@@ -297,6 +297,10 @@ public:
 		opcode_table[0xC1] = &run_instruction<Mode_IndirectX, Op_CMP>;
 		opcode_table[0xD1] = &run_instruction<Mode_IndirectY<Op_CMP::is_rmw>, Op_CMP>;
 
+		opcode_table[0xE0] = &run_instruction<Mode_Immediate, Op_CPX>;
+		opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
+		opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
+
 		opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
 
 		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
@@ -967,6 +971,16 @@ private:
 			cpu.update_ZN_flags((uint8_t)(result & 0xFF));
 
 			return true; // Instruction complete
+		}
+	};
+
+	struct Op_CPX {
+		static constexpr bool is_rmw = false;
+		static bool step(CPU& cpu) {
+			uint8_t val = cpu.ReadByte(cpu.effective_addr);
+			if (cpu.m_x >= val) cpu.SetFlag(FLAG_CARRY); else cpu.ClearFlag(FLAG_CARRY);
+			cpu.update_ZN_flags((uint8_t)(cpu.m_x - val));
+			return true;
 		}
 	};
 

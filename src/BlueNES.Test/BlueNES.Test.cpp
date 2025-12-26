@@ -503,6 +503,43 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 5);
 		}
 
+		TEST_METHOD(TestCPXImmediate)
+		{
+			uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x40);
+			RunInst();
+			// X (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestCPXZeroPage)
+		{
+			uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x30);
+			cpu->SetX(0x40);
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestCPXAbsolute)
+		{
+			uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x30);
+			cpu->SetX(0x40);
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 		TEST_METHOD(TestINCAbsoluteX)
 		{
 			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
@@ -1120,39 +1157,6 @@ namespace BlueNESTest
 		//	cpu->SetFlag(FLAG_OVERFLOW); // Set overflow flag
 		//	RunInst();
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
-		//}
-		//TEST_METHOD(TestCPXImmediate)
-		//{
-		//	uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x40);
-		//	RunInst();
-		//	// X (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestCPXZeroPage)
-		//{
-		//	uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x30);
-		//	cpu->SetX(0x40);
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestCPXAbsolute)
-		//{
-		//	uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x30);
-		//	cpu->SetX(0x40);
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//}
 		//TEST_METHOD(TestCPYImmediate)
 		//{
