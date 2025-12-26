@@ -311,6 +311,10 @@ public:
 		opcode_table[0x96] = &run_instruction<Mode_ZeroPageY, Op_STX>;
 		opcode_table[0x8E] = &run_instruction<Mode_Absolute, Op_STX>;
 
+		opcode_table[0x84] = &run_instruction<Mode_ZeroPage, Op_STY>;
+		opcode_table[0x94] = &run_instruction<Mode_ZeroPageX, Op_STY>;
+		opcode_table[0x8C] = &run_instruction<Mode_Absolute, Op_STY>;
+
 		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 
 		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
@@ -1085,7 +1089,6 @@ private:
 	struct Op_STA {
 		static bool step(CPU& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_a);
-			//bus_write(cpu.effective_addr, cpu.A);
 			return true;
 		}
 		static constexpr bool is_rmw = true;
@@ -1094,7 +1097,14 @@ private:
 	struct Op_STX {
 		static bool step(CPU& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_x);
-			//bus_write(cpu.effective_addr, cpu.A);
+			return true;
+		}
+		static constexpr bool is_rmw = true;
+	};
+
+	struct Op_STY {
+		static bool step(CPU& cpu) {
+			cpu.WriteByte(cpu.effective_addr, cpu.m_y);
 			return true;
 		}
 		static constexpr bool is_rmw = true;
