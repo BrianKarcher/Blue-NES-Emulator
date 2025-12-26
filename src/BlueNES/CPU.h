@@ -299,6 +299,8 @@ public:
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
 
+		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
+
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
 		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
@@ -1072,6 +1074,45 @@ private:
 
 				// In RTI, the address pulled is the actual return address.
 				// No increment is needed.
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_RTS {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				// The 6502 performs a dummy read of the opcode byte (internal processing)
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Internal Operation (Stack Pointer increment)
+				// Preparing the stack hardware
+				// Dummy read
+				cpu.ReadByte(cpu.m_sp);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Pull Program Counter Low (PC L)
+				cpu.addr_low = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Pull Program Counter High (PC H)
+				cpu.addr_high = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+				cpu.cycle_state = 5;
+				return false;
+
+			case 5: // T5: Increment PC (The "Return Address + 1" rule)
+				// Hardware quirk: RTS pulls PC, then reads from it, 
+				// then increments it to find the real next opcode.
+				cpu.ReadByte(cpu.m_pc++);
+
+				// Instruction is now complete.
 				return true;
 			}
 			return false;

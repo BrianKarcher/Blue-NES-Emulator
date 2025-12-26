@@ -556,6 +556,20 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 6);
 		}
 
+		TEST_METHOD(TestRTSImplied)
+		{
+			uint8_t rom[] = { RTS_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			// Push return address onto stack
+			bus->write(0x01FF, 0x80); // Return address high byte
+			bus->write(0x01FE, 0x05); // Return address low byte
+			cpu->SetSP(0xFD); // Set SP to point to 0x01FE
+			RunInst();
+			Assert::AreEqual((uint16_t)0x8006, cpu->GetPC()); // PC should be return address + 1
+			Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+
 		TEST_METHOD(TestSBCImmediate)
 		{
 			uint8_t rom[] = { SBC_IMMEDIATE, 0x10 };
@@ -1832,18 +1846,6 @@ namespace BlueNESTest
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestRTSImplied)
-		//{
-		//	uint8_t rom[] = { RTS_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	// Push return address onto stack
-		//	bus->write(0x01FF, 0x80); // Return address high byte
-		//	bus->write(0x01FE, 0x05); // Return address low byte
-		//	cpu->SetSP(0xFD); // Set SP to point to 0x01FE
-		//	RunInst();
-		//	Assert::AreEqual((uint16_t)0x8006, cpu->GetPC()); // PC should be return address + 1
-		//	Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
 		//}
 		//TEST_METHOD(TestSECImplied)
 		//{
