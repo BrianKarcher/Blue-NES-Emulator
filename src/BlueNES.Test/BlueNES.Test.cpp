@@ -800,6 +800,43 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
+		TEST_METHOD(TestCPYImmediate)
+		{
+			uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x40);
+			RunInst();
+			// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestCPYZeroPage)
+		{
+			uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x30);
+			cpu->SetY(0x40);
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestCPYAbsolute)
+		{
+			uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x30);
+			cpu->SetY(0x40);
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 		TEST_METHOD(TestDECZeroPage)
 		{
 			uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
@@ -1760,39 +1797,7 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
-		//TEST_METHOD(TestCPYImmediate)
-		//{
-		//	uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x40);
-		//	RunInst();
-		//	// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestCPYZeroPage)
-		//{
-		//	uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x30);
-		//	cpu->SetY(0x40);
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestCPYAbsolute)
-		//{
-		//	uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x30);
-		//	cpu->SetY(0x40);
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
+		
 		//TEST_METHOD(TestDEXImplied)
 		//{
 		//	uint8_t rom[] = { DEX_IMPLIED  };

@@ -323,6 +323,10 @@ public:
 		opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
 		opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
 
+		opcode_table[0xC0] = &run_instruction<Mode_Immediate, Op_CPY>;
+		opcode_table[0xC4] = &run_instruction<Mode_ZeroPage, Op_CPY>;
+		opcode_table[0xCC] = &run_instruction<Mode_Absolute, Op_CPY>;
+
 		opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_DEC>;
 		opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_DEC>;
 		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_DEC>;
@@ -1422,8 +1426,20 @@ private:
 		static constexpr bool is_rmw = false;
 		static bool step(CPU& cpu) {
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
-			if (cpu.m_x >= val) cpu.SetFlag(FLAG_CARRY); else cpu.ClearFlag(FLAG_CARRY);
+			if (cpu.m_x >= val) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
 			cpu.update_ZN_flags((uint8_t)(cpu.m_x - val));
+			return true;
+		}
+	};
+
+	struct Op_CPY {
+		static constexpr bool is_rmw = false;
+		static bool step(CPU& cpu) {
+			uint8_t val = cpu.ReadByte(cpu.effective_addr);
+			if (cpu.m_y >= val) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+			cpu.update_ZN_flags((uint8_t)(cpu.m_y - val));
 			return true;
 		}
 	};
