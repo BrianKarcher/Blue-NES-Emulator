@@ -307,6 +307,10 @@ public:
 		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
 		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
 
+		opcode_table[0x86] = &run_instruction<Mode_ZeroPage, Op_STX>;
+		opcode_table[0x96] = &run_instruction<Mode_ZeroPageY, Op_STX>;
+		opcode_table[0x8E] = &run_instruction<Mode_Absolute, Op_STX>;
+
 		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 
 		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
@@ -395,6 +399,34 @@ private:
 
 				case 3:
 					return true;
+			}
+			return false;
+		}
+	};
+
+	// Policy: Zero Page, Y (e.g., LDA $nn, Y)
+	// Cycles: 4 total (T0: Opcode, T1: Fetch Addr, T2: Add Y/Dummy Read, T3: Read/Write)
+	struct Mode_ZeroPageY {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch the base 8-bit address
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Add X and perform a Dummy Read
+				// Note: The 6502 hardware does a read here at the unindexed address
+				cpu.ReadByte((0x00 << 8) | cpu.addr_low);
+
+				// Add X and FORCE wrap within page zero (using & 0xFF)
+				cpu.effective_addr = (0x00 << 8) | ((cpu.addr_low + cpu.m_y) & 0xFF);
+
+				// Ready for the Op next cycle
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3:
+				return true;
 			}
 			return false;
 		}
@@ -1053,6 +1085,15 @@ private:
 	struct Op_STA {
 		static bool step(CPU& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_a);
+			//bus_write(cpu.effective_addr, cpu.A);
+			return true;
+		}
+		static constexpr bool is_rmw = true;
+	};
+
+	struct Op_STX {
+		static bool step(CPU& cpu) {
+			cpu.WriteByte(cpu.effective_addr, cpu.m_x);
 			//bus_write(cpu.effective_addr, cpu.A);
 			return true;
 		}

@@ -757,6 +757,35 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
+		TEST_METHOD(TestSTXZeroPage)
+		{
+			uint8_t rom[] = { STX_ZEROPAGE, 0x10 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x37);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestSTXZeroPageY)
+		{
+			uint8_t rom[] = { STX_ZEROPAGE_Y, 0x0F };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x1);
+			cpu->SetX(0x37);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestSTXAbsolute)
+		{
+			uint8_t rom[] = { STX_ABSOLUTE, 0x20, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x37);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x37, bus->read(0x1520));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 
 		//TEST_METHOD(TestBITZeroPage)
 		//{
@@ -1810,31 +1839,6 @@ namespace BlueNESTest
 		//	cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt disable flag
 		//	RunInst();
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-		//}
-		//TEST_METHOD(TestSTXZeroPage)
-		//{
-		//	uint8_t rom[] = { STX_ZEROPAGE, 0x10 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x37);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
-		//}
-		//TEST_METHOD(TestSTXZeroPageY)
-		//{
-		//	uint8_t rom[] = { STX_ZEROPAGE_Y, 0x0F };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x1);
-		//	cpu->SetX(0x37);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
-		//}
-		//TEST_METHOD(TestSTXAbsolute)
-		//{
-		//	uint8_t rom[] = { STX_ABSOLUTE, 0x20, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x37);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x37, bus->read(0x1520));
 		//}
 		//TEST_METHOD(TestSTYZeroPage)
 		//{
