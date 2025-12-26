@@ -506,6 +506,29 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
 
+		TEST_METHOD(TestBRKImplied)
+		{
+			// ROM needs to be large enough to store the reset vector.
+			uint8_t rom[0x8000];
+			rom[0] = BRK_IMPLIED;
+			rom[1] = NOP_IMPLIED;
+			rom[2] = NOP_IMPLIED;
+			rom[3] = NOP_IMPLIED;
+			uint8_t lo = 0x88;
+			uint8_t hi = 0x80;
+			rom[0xFFFE - 0x8000] = lo;
+			rom[0xFFFF - 0x8000] = hi;
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+
+			cpu->SetPC(0x8000);
+			RunInst();
+			// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
+			uint16_t irqVector = (hi << 8) | lo;
+			Assert::AreEqual(irqVector, cpu->GetPC());
+			// Also check that the Interrupt flag is set
+			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+		}
+
 		TEST_METHOD(TestCMPImmediate)
 		{
 			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
@@ -1115,23 +1138,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestBRKImplied)
-		//{
-		//	uint8_t rom[] = { BRK_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	uint8_t lo = 0x88;
-		//	uint8_t hi = 0x80;
-		//	// TODO This test is currently broken because ROM is not writeable. Fix!
-		//	bus->write(0xFFFE, lo); // Set IRQ vector low byte to 0x0088
-		//	bus->write(0xFFFF, hi); // Set IRQ vector high byte to 0x8000
-		//	cpu->SetPC(0x8000);
-		//	RunInst();
-		//	// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
-		//	uint16_t irqVector = (hi << 8) | lo;
-		//	Assert::AreEqual(irqVector, cpu->GetPC());
-		//	// Also check that the Interrupt flag is set
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-		//}
 		//TEST_METHOD(TestBVCRelative)
 		//{
 		//	uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };

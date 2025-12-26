@@ -292,6 +292,8 @@ public:
 		opcode_table[0xD0] = &run_standalone_instruction<Op_BNE>;
 		opcode_table[0x10] = &run_standalone_instruction<Op_BPL>;
 
+		opcode_table[0x00] = &run_standalone_instruction<Op_BRK>;
+
 		opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
 		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
 
@@ -1138,6 +1140,52 @@ private:
 				// Hardware performs a read at the new, fixed PC
 				cpu.ReadByte(cpu.m_pc);
 				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_BRK {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Fetch
+				// The 6502 fetches the byte after BRK and ignores it
+				cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Push PC High Byte
+				cpu.WriteByte(0x0100 + cpu.m_sp--, (cpu.m_pc >> 8) & 0xFF);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Push PC Low Byte
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_pc & 0xFF);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Push Status Register (with B flag set)
+			{
+				// When pushed via BRK, Bit 4 (B flag) and Bit 5 are set to 1
+				uint8_t status_to_push = cpu.m_p | 0x30;
+				cpu.WriteByte(0x0100 + cpu.m_sp--, status_to_push);
+
+				// The interrupt flag is set internally to prevent nested interrupts
+				cpu.SetFlag(FLAG_INTERRUPT);
+				cpu.cycle_state = 5;
+				return false;
+			}
+
+			case 5: // T5: Fetch Vector Low
+				cpu.addr_low = cpu.ReadByte(0xFFFE);
+				cpu.cycle_state = 6;
+				return false;
+
+			case 6: // T6: Fetch Vector High and Jump
+				cpu.addr_high = cpu.ReadByte(0xFFFF);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+
+				return true; // Complete
 			}
 			return false;
 		}
