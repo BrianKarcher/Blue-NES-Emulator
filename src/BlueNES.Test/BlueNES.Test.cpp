@@ -52,6 +52,52 @@ namespace BlueNESTest
 			//cpu->PowerOn();
 			//cpu->Activate(true);
 		}
+
+		TEST_METHOD(TestHardwareNMI)
+		{
+			uint8_t rom[0x8000];
+			rom[0] = ADC_IMMEDIATE;
+			rom[1] = 0x20;
+			rom[0xFFFA - 0x8000] = 0x00;
+			rom[0xFFFB - 0x8000] = 0x90;
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->setNMI(true);
+			uint8_t p = cpu->GetStatus();
+			RunInst();
+			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
+			// The return address (0x8000) should be on the stack
+			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
+			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+			Assert::AreEqual(0x8000, (hi << 8) | lo);
+			Assert::AreEqual((uint8_t)0x00, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
+		TEST_METHOD(TestHardwareBRK)
+		{
+			uint8_t rom[0x8000];
+			rom[0] = ADC_IMMEDIATE;
+			rom[1] = 0x20;
+			rom[0xFFFE - 0x8000] = 0x00;
+			rom[0xFFFF - 0x8000] = 0x90;
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->setIRQ(true);
+			uint8_t p = cpu->GetStatus();
+			RunInst();
+			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
+			// The return address (0x8000) should be on the stack
+			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
+			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+			Assert::AreEqual(0x8000, (hi << 8) | lo);
+			Assert::AreEqual((uint8_t)0x00, cpu->GetA());
+			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
+
 		TEST_METHOD(TestADCImmediate1)
 		{
 			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
@@ -527,6 +573,7 @@ namespace BlueNESTest
 			Assert::AreEqual(irqVector, cpu->GetPC());
 			// Also check that the Interrupt flag is set
 			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
 		TEST_METHOD(TestCMPImmediate)

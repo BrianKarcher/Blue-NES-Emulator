@@ -16,9 +16,24 @@ void CPU::connectBus(Bus* bus) {
 
 void CPU::cpu_tick() {
 	if (inst_complete) {
-		// Fetch Opcode
-		uint8_t opcode = ReadByte(m_pc++);
-		current_opcode = opcode;
+		// Priority 1: NMI
+		if (nmi_line) {
+			// Hardware puts PC on address bus but ignores the data returned,
+			// then prepares the NMI sequence.
+			ReadByte(m_pc);
+			current_opcode = OP_NMI;
+			nmi_line = false;
+		}
+		// Priority 2: IRQ
+		else if (irq_line && GetFlag(FLAG_INTERRUPT) == 0) {
+			ReadByte(m_pc);
+			current_opcode = OP_IRQ;
+		}
+		// Priority 3: Normal Fetch
+		else {
+			// This is the actual T0 Read.
+			current_opcode = ReadByte(m_pc++);
+		}
 		cycle_state = 1;
 		inst_complete = false;
 	}

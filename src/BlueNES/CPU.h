@@ -227,7 +227,8 @@ public:
 	uint16_t _operand;
 
 	// Internal Latch Registers (to hold state between cycles)
-	uint8_t  current_opcode;
+	// We widen this to 16-bit to hold 0x100 (NMI) and 0x101 (IRQ)
+	uint16_t  current_opcode;
 	uint8_t  addr_low;
 	uint8_t  addr_high;
 	uint8_t  m_temp_low;
@@ -239,6 +240,10 @@ public:
 	// Emulator State
 	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
 	bool page_crossed;
+
+	// --- Constants for Phantom Opcodes ---
+	static constexpr uint16_t OP_NMI = 0x100;
+	static constexpr uint16_t OP_IRQ = 0x101;
 
 	// The CPU Tick Loop
 	void cpu_tick();
@@ -358,13 +363,10 @@ public:
 		// $FE: INC Absolute, X
 		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
 		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
-		//opcode_table[0xBD](cpu);
 
-		// $9D = STA Absolute, X (Write operation)
-		// This will automatically force the 5th cycle due to is_write=true
-		
-
-		// You can reuse Mode_AbsoluteX for ADC, CMP, EOR, etc. easily!
+		// Phantom op codes
+		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
+		opcode_table[0x101] = &run_standalone_instruction<Op_HardwareInterrupt_BRK>;
 	}
 
 	void Serialize(Serializer& serializer);
@@ -1246,6 +1248,88 @@ private:
 		}
 	};
 
+	struct Op_HardwareInterrupt_NMI {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Another Dummy Read (The 6502 is quirky like this)
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Push PC High
+				cpu.WriteByte(0x0100 + cpu.m_sp--, (cpu.m_pc >> 8) & 0xFF);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Push PC Low
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_pc & 0xFF);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Push Status
+			{
+				uint8_t p = (cpu.m_p & 0xEF) | 0x20;
+				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
+				cpu.SetFlag(FLAG_INTERRUPT);
+				cpu.cycle_state = 5;
+				return false;
+			}
+			case 5: // T5: Fetch Vector Low
+				cpu.addr_low = cpu.ReadByte(0xFFFA);
+				cpu.cycle_state = 6;
+				return false;
+
+			case 6: // T6: Fetch Vector High
+				cpu.addr_high = cpu.ReadByte(0xFFFB);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+				cpu.cycle_state = 0; // Reset
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_HardwareInterrupt_BRK {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Another Dummy Read (The 6502 is quirky like this)
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Push PC High
+				cpu.WriteByte(0x0100 + cpu.m_sp--, (cpu.m_pc >> 8) & 0xFF);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Push PC Low
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_pc & 0xFF);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Push Status
+			{
+				uint8_t p = (cpu.m_p & 0xEF) | 0x20;
+				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
+				cpu.SetFlag(FLAG_INTERRUPT);
+				cpu.cycle_state = 5;
+				return false;
+			}
+			case 5: // T5: Fetch Vector Low
+				cpu.addr_low = cpu.ReadByte(0xFFFE);
+				cpu.cycle_state = 6;
+				return false;
+
+			case 6: // T6: Fetch Vector High
+				cpu.addr_high = cpu.ReadByte(0xFFFF);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+				cpu.cycle_state = 0; // Reset
+				return true;
+			}
+			return false;
+		}
+	};
+
 	struct Op_INC {
 		// Defines that this Op requires the "Always Penalty" path in addressing
 		static constexpr bool is_rmw = true;
@@ -1566,7 +1650,7 @@ private:
 	//}
 
 	// The Lookup Table
-	InstructionHandler opcode_table[256]; // = { &LDA_AbsX };
+	InstructionHandler opcode_table[258]; // = { &LDA_AbsX };
     
   //  void init_cpu() {
 		////opcode_table[0xBD] = &LDA_AbsX;
