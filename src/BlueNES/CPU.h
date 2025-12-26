@@ -320,6 +320,15 @@ public:
 		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_DEC>;
 		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<Op_DEC::is_rmw>, Op_DEC>;
 
+		opcode_table[0x49] = &run_instruction<Mode_Immediate, Op_EOR>;
+		opcode_table[0x45] = &run_instruction<Mode_ZeroPage, Op_EOR>;
+		opcode_table[0x55] = &run_instruction<Mode_ZeroPageX, Op_EOR>;
+		opcode_table[0x4D] = &run_instruction<Mode_Absolute, Op_EOR>;
+		opcode_table[0x5D] = &run_instruction<Mode_AbsoluteX<Op_EOR::is_write>, Op_EOR>;
+		opcode_table[0x59] = &run_instruction<Mode_AbsoluteY<Op_EOR::is_write>, Op_EOR>;
+		opcode_table[0x41] = &run_instruction<Mode_IndirectX, Op_EOR>;
+		opcode_table[0x51] = &run_instruction<Mode_IndirectY<Op_EOR::is_write>, Op_EOR>;
+
 		opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_INC>;
 		opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_INC>;
 		opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_INC>;
@@ -1251,6 +1260,24 @@ private:
 				return true;
 			}
 			return false;
+		}
+	};
+
+	struct Op_EOR {
+		// Allows page-cross optimization (Read operation)
+		static constexpr bool is_write = false;
+
+		static bool step(CPU& cpu) {
+			// Fetch the value from the address prepared by the Mode
+			uint8_t val = cpu.ReadByte(cpu.effective_addr);
+
+			// Perform the Exclusive OR
+			cpu.m_a ^= val;
+
+			// Update Zero and Negative flags based on the Accumulator
+			cpu.update_ZN_flags(cpu.m_a);
+
+			return true; // Complete
 		}
 	};
 

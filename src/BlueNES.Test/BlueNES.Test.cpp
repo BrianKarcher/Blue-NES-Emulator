@@ -779,6 +779,112 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
+		TEST_METHOD(TestEORImmediate)
+		{
+			uint8_t rom[] = { EOR_IMMEDIATE, 0xAA }; // 1010 1010
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xFF);
+			RunInst();
+			// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestEORZeroPage)
+		{
+			uint8_t rom[] = { EOR_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0xAA); // 1010 1010
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestEORZeroPageX)
+		{
+			uint8_t rom[] = { EOR_ZEROPAGE_X, 0x14 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0xAA); // 1010 1010
+			cpu->SetX(0x1);
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestEORAbsolute)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE, 0x15, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0xAA); // 1010 1010
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestEORAbsoluteX)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE_X, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0xAA); // 1010 1010
+			cpu->SetX(0x1);
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestEORAbsoluteY)
+		{
+			uint8_t rom[] = { EOR_ABSOLUTE_Y, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0xAA); // 1010 1010
+			cpu->SetY(0x1);
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestEORIndexedIndirect)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x12); // Pointer to 0x1235
+			bus->write(0x1235, 0xAA); // 1010 1010
+			uint8_t rom[] = { EOR_INDEXEDINDIRECT, 0x33 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x2);
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestEORIndirectIndexed)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x12); // Pointer to 0x1235
+			bus->write(0x1237, 0xAA); // 1010 1010
+			uint8_t rom[] = { EOR_INDIRECTINDEXED, 0x35 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x2);
+			cpu->SetA(0xFF);
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+
 		TEST_METHOD(TestINCZeroPage)
 		{
 			uint8_t rom[] = { INC_ZEROPAGE, 0x15 };
@@ -1396,103 +1502,6 @@ namespace BlueNESTest
 		//	RunInst();
 		//	Assert::AreEqual((uint8_t)0x00, cpu->GetY());
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORImmediate)
-		//{
-		//	uint8_t rom[] = { EOR_IMMEDIATE, 0xAA }; // 1010 1010
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORZeroPage)
-		//{
-		//	uint8_t rom[] = { EOR_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0xAA); // 1010 1010
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORZeroPageX)
-		//{
-		//	uint8_t rom[] = { EOR_ZEROPAGE_X, 0x14 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0xAA); // 1010 1010
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORAbsolute)
-		//{
-		//	uint8_t rom[] = { EOR_ABSOLUTE, 0x15, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0xAA); // 1010 1010
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORAbsoluteX)
-		//{
-		//	uint8_t rom[] = { EOR_ABSOLUTE_X, 0x14, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0xAA); // 1010 1010
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORAbsoluteY)
-		//{
-		//	uint8_t rom[] = { EOR_ABSOLUTE_Y, 0x14, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0xAA); // 1010 1010
-		//	cpu->SetY(0x1);
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORIndexedIndirect)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x12); // Pointer to 0x1235
-		//	bus->write(0x1235, 0xAA); // 1010 1010
-		//	uint8_t rom[] = { EOR_INDEXEDINDIRECT, 0x33 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x2);
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestEORIndirectIndexed)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x12); // Pointer to 0x1235
-		//	bus->write(0x1237, 0xAA); // 1010 1010
-		//	uint8_t rom[] = { EOR_INDIRECTINDEXED, 0x35 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x2);
-		//	cpu->SetA(0xFF);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xFF ^ 0xAA), cpu->GetA()); // 0101 0101
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//}
 		//TEST_METHOD(TestINXImplied)
