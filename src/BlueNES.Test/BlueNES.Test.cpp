@@ -597,6 +597,16 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
 
+		TEST_METHOD(TestCLCImplied)
+		{
+			uint8_t rom[] = { CLC_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_CARRY); // Set carry flag
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY)); // Carry flag should be cleared
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestCMPImmediate)
 		{
 			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
@@ -1114,6 +1124,112 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
+		TEST_METHOD(TestORAImmediate)
+		{
+			uint8_t rom[] = { ORA_IMMEDIATE, 0x0F }; // 0000 1111
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			// A (0xF0) | M (0x0F) = 0xFF
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestORAZeroPage)
+		{
+			uint8_t rom[] = { ORA_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x0F); // 0000 1111
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestORAZeroPageX)
+		{
+			uint8_t rom[] = { ORA_ZEROPAGE_X, 0x14 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x0F); // 0000 1111
+			cpu->SetX(0x1);
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestORAAbsolute)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE, 0x15, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x0F); // 0000 1111
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestORAAbsoluteX)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE_X, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x0F); // 0000 1111
+			cpu->SetX(0x1);
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestORAAbsoluteY)
+		{
+			uint8_t rom[] = { ORA_ABSOLUTE_Y, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x0F); // 0000 1111
+			cpu->SetY(0x1);
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestORAIndexedIndirect)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x12); // Pointer to 0x1235
+			bus->write(0x1235, 0x0F); // 0000 1111
+			uint8_t rom[] = { ORA_INDEXEDINDIRECT, 0x33 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x2);
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestORAIndirectIndexed)
+		{
+			bus->write(0x0035, 0x35);
+			bus->write(0x0036, 0x12); // Pointer to 0x1235
+			bus->write(0x1237, 0x0F); // 0000 1111
+			uint8_t rom[] = { ORA_INDIRECTINDEXED, 0x35 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x2);
+			cpu->SetA(0xF0); // 1111 0000
+			RunInst();
+			Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+
 		TEST_METHOD(TestRTIImplied)
 		{
 			uint8_t rom[] = { RTI_IMPLIED };
@@ -1272,6 +1388,37 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 5);
 		}
+
+		TEST_METHOD(TestSECImplied)
+		{
+			uint8_t rom[] = { SEC_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_CARRY); // Set carry for no borrow
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestSEDImplied)
+		{
+			uint8_t rom[] = { SED_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_DECIMAL); // Clear decimal flag
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_DECIMAL));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+		TEST_METHOD(TestSEIImplied)
+		{
+			uint8_t rom[] = { SEI_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt disable flag
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestSTAAbsolute)
 		{
 			uint8_t rom[] = { STA_ABSOLUTE, 0x20, 0x15 };
@@ -1421,14 +1568,6 @@ namespace BlueNESTest
 		//	RunInst();
 		//	// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
 		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestCLCImplied)
-		//{
-		//	uint8_t rom[] = { CLC_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_CARRY); // Set carry flag
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY)); // Carry flag should be cleared
 		//}
 		//TEST_METHOD(TestCLDImplied)
 		//{
@@ -1686,103 +1825,6 @@ namespace BlueNESTest
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 		//}
-		//TEST_METHOD(TestORAImmediate)
-		//{
-		//	uint8_t rom[] = { ORA_IMMEDIATE, 0x0F }; // 0000 1111
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	// A (0xF0) | M (0x0F) = 0xFF
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAZeroPage)
-		//{
-		//	uint8_t rom[] = { ORA_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x0F); // 0000 1111
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAZeroPageX)
-		//{
-		//	uint8_t rom[] = { ORA_ZEROPAGE_X, 0x14 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x0F); // 0000 1111
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAAbsolute)
-		//{
-		//	uint8_t rom[] = { ORA_ABSOLUTE, 0x15, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x0F); // 0000 1111
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAAbsoluteX)
-		//{
-		//	uint8_t rom[] = { ORA_ABSOLUTE_X, 0x14, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x0F); // 0000 1111
-		//	cpu->SetX(0x1);
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAAbsoluteY)
-		//{
-		//	uint8_t rom[] = { ORA_ABSOLUTE_Y, 0x14, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x0F); // 0000 1111
-		//	cpu->SetY(0x1);
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAIndexedIndirect)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x12); // Pointer to 0x1235
-		//	bus->write(0x1235, 0x0F); // 0000 1111
-		//	uint8_t rom[] = { ORA_INDEXEDINDIRECT, 0x33 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x2);
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestORAIndirectIndexed)
-		//{
-		//	bus->write(0x0035, 0x35);
-		//	bus->write(0x0036, 0x12); // Pointer to 0x1235
-		//	bus->write(0x1237, 0x0F); // 0000 1111
-		//	uint8_t rom[] = { ORA_INDIRECTINDEXED, 0x35 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x2);
-		//	cpu->SetA(0xF0); // 1111 0000
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)(0xF0 | 0x0F), cpu->GetA()); // 1111 1111
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
 		//TEST_METHOD(TestPHAImplied)
 		//{
 		//	uint8_t rom[] = { PHA_IMPLIED  };
@@ -1950,30 +1992,6 @@ namespace BlueNESTest
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
 		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestSECImplied)
-		//{
-		//	uint8_t rom[] = { SEC_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_CARRY); // Set carry for no borrow
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestSEDImplied)
-		//{
-		//	uint8_t rom[] = { SED_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_DECIMAL); // Clear decimal flag
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_DECIMAL));
-		//}
-		//TEST_METHOD(TestSEIImplied)
-		//{
-		//	uint8_t rom[] = { SEI_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt disable flag
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
 		//}
 		//TEST_METHOD(TestTAXImplied)
 		//{

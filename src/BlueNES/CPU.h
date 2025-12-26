@@ -304,6 +304,8 @@ public:
 		opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
 		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
 
+		opcode_table[0x18] = &run_instruction<Mode_Implied, Op_CLC>;
+
 		opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
 		opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
 		opcode_table[0xD5] = &run_instruction<Mode_ZeroPageX, Op_CMP>;
@@ -351,8 +353,31 @@ public:
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+
+		opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
+		opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
+		opcode_table[0x15] = &run_instruction<Mode_ZeroPageX, Op_ORA>;
+		opcode_table[0x0D] = &run_instruction<Mode_Absolute, Op_ORA>;
+		opcode_table[0x1D] = &run_instruction<Mode_AbsoluteX<Op_ORA::is_rmw>, Op_ORA>;
+		opcode_table[0x19] = &run_instruction<Mode_AbsoluteY<Op_ORA::is_rmw>, Op_ORA>;
+		opcode_table[0x01] = &run_instruction<Mode_IndirectX, Op_ORA>;
+		opcode_table[0x11] = &run_instruction<Mode_IndirectY<Op_ORA::is_rmw>, Op_ORA>;
 		
+		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
+
+		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
+		opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
+		opcode_table[0xE9] = &run_instruction<Mode_Immediate, Op_SBC>;
+		opcode_table[0xED] = &run_instruction<Mode_Absolute, Op_SBC>;
+		opcode_table[0xF1] = &run_instruction<Mode_IndirectY<Op_SBC::is_rmw>, Op_SBC>;
+		opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
+		opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
+		opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
+
+		opcode_table[0x38] = &run_instruction<Mode_Implied, Op_SEC>;
+		opcode_table[0xF8] = &run_instruction<Mode_Implied, Op_SED>;
+		opcode_table[0x78] = &run_instruction<Mode_Implied, Op_SEI>;
 
 		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
 		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
@@ -369,17 +394,6 @@ public:
 		opcode_table[0x84] = &run_instruction<Mode_ZeroPage, Op_STY>;
 		opcode_table[0x94] = &run_instruction<Mode_ZeroPageX, Op_STY>;
 		opcode_table[0x8C] = &run_instruction<Mode_Absolute, Op_STY>;
-
-		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
-
-		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
-		opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
-		opcode_table[0xE9] = &run_instruction<Mode_Immediate, Op_SBC>;
-		opcode_table[0xED] = &run_instruction<Mode_Absolute, Op_SBC>;
-		opcode_table[0xF1] = &run_instruction<Mode_IndirectY<Op_SBC::is_rmw>, Op_SBC>;
-		opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
-		opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
-		opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
 
 		// Phantom op codes
 		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
@@ -405,6 +419,16 @@ private:
 				return true;
 			}
 			return false;
+		}
+	};
+
+	// Policy: Implied Addressing Mode
+	// Usage: CLC, PHA, INX, etc.
+	struct Mode_Implied {
+		static bool step(CPU& cpu) {
+			// No address to fetch.
+			// Return true so the Op runs in the cycle immediately following the fetch.
+			return true;
 		}
 	};
 
@@ -1262,6 +1286,17 @@ private:
 		}
 	};
 
+	struct Op_CLC {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Clear the Carry Flag
+			cpu.ClearFlag(FLAG_CARRY);
+			// Instruction complete
+			return true;
+		}
+	};
+
 	struct Op_CMP {
 		// Defines that this is a Read operation (allows page-cross optimization)
 		static constexpr bool is_rmw = false;
@@ -1555,6 +1590,24 @@ private:
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
 	};
 
+	struct Op_ORA {
+		// Allows page-cross optimization (Read operation)
+		static constexpr bool is_rmw = false;
+
+		static bool step(CPU& cpu) {
+			// Fetch the value from the address prepared by the Mode
+			uint8_t val = cpu.ReadByte(cpu.effective_addr);
+
+			// Perform the Exclusive OR
+			cpu.m_a |= val;
+
+			// Update Zero and Negative flags based on the Accumulator
+			cpu.update_ZN_flags(cpu.m_a);
+
+			return true; // Complete
+		}
+	};
+
 	struct Op_RTI {
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
@@ -1644,6 +1697,39 @@ private:
 			return Op_ADC::step(cpu, ~cpu.ReadByte(cpu.effective_addr));
 		}
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_SEC {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Clear the Carry Flag
+			cpu.SetFlag(FLAG_CARRY);
+			// Instruction complete
+			return true;
+		}
+	};
+
+	struct Op_SED {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Clear the Carry Flag
+			cpu.SetFlag(FLAG_DECIMAL);
+			// Instruction complete
+			return true;
+		}
+	};
+
+	struct Op_SEI {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Clear the Carry Flag
+			cpu.SetFlag(FLAG_INTERRUPT);
+			// Instruction complete
+			return true;
+		}
 	};
 
 	struct Op_STA {
