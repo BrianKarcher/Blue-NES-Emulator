@@ -1246,6 +1246,55 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 6);
 		}
 
+		TEST_METHOD(TestPHAImplied)
+		{
+			uint8_t rom[] = { PHA_IMPLIED  };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x42);
+			uint8_t initialSP = cpu->GetSP();
+			RunInst();
+			uint8_t valueOnStack = bus->read(0x0100 + initialSP);
+			Assert::AreEqual((uint8_t)0x42, valueOnStack);
+			Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestPHPImplied)
+		{
+			uint8_t rom[] = { PHP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetStatus(0b10100000); // Set some flags
+			uint8_t initialSP = cpu->GetSP();
+			RunInst();
+			uint8_t valueOnStack = bus->read(0x0100 + initialSP);
+			Assert::AreEqual((uint8_t)(0b10100000 | 0b00110000), valueOnStack); // Break and Unused bits should be set
+			Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestPLAImplied)
+		{
+			uint8_t rom[] = { PLA_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x01FF, 0x37); // Value to pull from stack
+			cpu->SetSP(0xFE); // Set SP to point to 0x01FF
+			RunInst();
+			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
+			Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestPLPImplied)
+		{
+			uint8_t rom[] = { PLP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x01FF, 0b11010101); // Value to pull from stack
+			cpu->SetSP(0xFE); // Set SP to point to 0x01FF
+			RunInst();
+			Assert::AreEqual((uint8_t)0xC5, cpu->GetStatus()); // Break and Unused bits should be ignored
+			Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 		TEST_METHOD(TestRTSImplied)
 		{
 			uint8_t rom[] = { RTS_IMPLIED };
@@ -1824,50 +1873,6 @@ namespace BlueNESTest
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestPHAImplied)
-		//{
-		//	uint8_t rom[] = { PHA_IMPLIED  };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x42);
-		//	uint8_t initialSP = cpu->GetSP();
-		//	RunInst();
-		//	uint8_t valueOnStack = bus->read(0x0100 + initialSP);
-		//	Assert::AreEqual((uint8_t)0x42, valueOnStack);
-		//	Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
-		//}
-		//TEST_METHOD(TestPHPImplied)
-		//{
-		//	uint8_t rom[] = { PHP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetStatus(0b10100000); // Set some flags
-		//	uint8_t initialSP = cpu->GetSP();
-		//	RunInst();
-		//	uint8_t valueOnStack = bus->read(0x0100 + initialSP);
-		//	Assert::AreEqual((uint8_t)(0b10100000 | 0b00110000), valueOnStack); // Break and Unused bits should be set
-		//	Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
-		//}
-		//TEST_METHOD(TestPLAImplied)
-		//{
-		//	uint8_t rom[] = { PLA_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x01FF, 0x37); // Value to pull from stack
-		//	cpu->SetSP(0xFE); // Set SP to point to 0x01FF
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-		//	Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestPLPImplied)
-		//{
-		//	uint8_t rom[] = { PLP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x01FF, 0b11010101); // Value to pull from stack
-		//	cpu->SetSP(0xFE); // Set SP to point to 0x01FF
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0xC5, cpu->GetStatus()); // Break and Unused bits should be ignored
-		//	Assert::AreEqual((uint8_t)0xFF, cpu->GetSP());
 		//}
 		//TEST_METHOD(TestROLAccumulator)
 		//{

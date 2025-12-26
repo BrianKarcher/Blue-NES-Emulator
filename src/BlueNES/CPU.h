@@ -362,6 +362,11 @@ public:
 		opcode_table[0x19] = &run_instruction<Mode_AbsoluteY<Op_ORA::is_rmw>, Op_ORA>;
 		opcode_table[0x01] = &run_instruction<Mode_IndirectX, Op_ORA>;
 		opcode_table[0x11] = &run_instruction<Mode_IndirectY<Op_ORA::is_rmw>, Op_ORA>;
+
+		opcode_table[0x48] = &run_standalone_instruction<Op_PHA>;
+		opcode_table[0x08] = &run_standalone_instruction<Op_PHP>;
+		opcode_table[0x68] = &run_standalone_instruction<Op_PLA>;
+		opcode_table[0x28] = &run_standalone_instruction<Op_PLP>;
 		
 		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
@@ -1605,6 +1610,101 @@ private:
 			cpu.update_ZN_flags(cpu.m_a);
 
 			return true; // Complete
+		}
+	};
+
+	struct Op_PHA {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				// Hardware quirk: reads the next byte (PC) but ignores it
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Write Accumulator to Stack
+				// The stack is at Page 1 ($0100 - $01FF)
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_a);
+
+				// Instruction complete
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_PHP {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				// Hardware quirk: reads the next byte (PC) but ignores it
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Write Accumulator to Stack
+				// The stack is at Page 1 ($0100 - $01FF)
+				cpu.WriteByte(0x0100 + cpu.m_sp--, cpu.m_p | FLAG_BREAK | 0x20);
+
+				// Instruction complete
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_PLA {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				// Hardware reads the opcode address again (internal sync)
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Internal Operation
+				// The CPU uses this cycle to increment the Stack Pointer (SP++)
+				// No bus activity is needed, but we do a dummy read to stay in sync.
+				cpu.ReadByte(0x0100 + cpu.m_sp);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Pull and Update Flags
+				// 1. Increment SP and read from the stack
+				cpu.m_a = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+
+				// 2. PLA affects the Zero and Negative flags
+				cpu.update_ZN_flags(cpu.m_a);
+
+				// Instruction complete (4 cycles total: T0, T1, T2, T3)
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_PLP {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Dummy Read
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Internal Operation (SP++)
+				cpu.ReadByte(0x0100 + cpu.m_sp);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Pull Status Register
+			{
+				uint8_t pulled_p = cpu.ReadByte(0x0100 + ++cpu.m_sp);
+				// Ignoring the Break and Unused flags.
+				cpu.m_p = (pulled_p & 0b11001111) | (cpu.m_p & ~0b11001111);
+				return true; // 4 cycles total
+			}
+			}
+			return false;
 		}
 	};
 
