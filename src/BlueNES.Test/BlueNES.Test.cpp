@@ -465,6 +465,47 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
 
+		TEST_METHOD(TestBNERelative)
+		{
+			uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_ZERO); // Clear zero to take branch
+			RunInst();
+			// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBNERelativeNotTaken)
+		{
+			uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_ZERO); // Set zero to not take branch
+			RunInst();
+			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestBPLRelative)
+		{
+			uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_NEGATIVE); // Clear zero to take branch
+			RunInst();
+			// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBPLRelativeNotTaken)
+		{
+			uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_NEGATIVE); // Set zero to not take branch
+			RunInst();
+			// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestCMPImmediate)
 		{
 			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
@@ -1074,42 +1115,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestBNERelative)
-		//{
-		//	uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_ZERO); // Clear zero to take branch
-		//	RunInst();
-		//	// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-		//	Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBNERelativeNotTaken)
-		//{
-		//	uint8_t rom[] = { BNE_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_ZERO); // Set zero to not take branch
-		//	RunInst();
-		//	// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBPLRelative)
-		//{
-		//	uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_NEGATIVE); // Clear zero to take branch
-		//	RunInst();
-		//	// After clocking BNE, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-		//	Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBPLRelativeNotTaken)
-		//{
-		//	uint8_t rom[] = { BPL_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_NEGATIVE); // Set zero to not take branch
-		//	RunInst();
-		//	// After clocking BNE, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
 		//TEST_METHOD(TestBRKImplied)
 		//{
 		//	uint8_t rom[] = { BRK_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
