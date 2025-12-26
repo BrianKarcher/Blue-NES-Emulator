@@ -289,6 +289,9 @@ public:
 		opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
 		opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
 
+		opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
+		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
+
 		opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
 		opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
 		opcode_table[0xD5] = &run_instruction<Mode_ZeroPageX, Op_CMP>;
@@ -954,6 +957,30 @@ private:
 				return true;
 			}
 			return false;
+		}
+	};
+
+	struct Op_BIT {
+		// Standard read-only operation
+		static constexpr bool is_write = false;
+
+		static bool step(CPU& cpu) {
+			// Addressing mode has already set cpu.effective_addr
+			uint8_t mem_val = cpu.ReadByte(cpu.effective_addr);
+
+			// 1. Zero Flag: Result of (A AND M)
+			if ((cpu.m_a & mem_val) == 0) cpu.SetFlag(FLAG_ZERO);
+			else cpu.ClearFlag(FLAG_ZERO);
+
+			// 2. Negative Flag: Directly from Memory Bit 7
+			if (mem_val & 0x80) cpu.SetFlag(FLAG_NEGATIVE);
+			else cpu.ClearFlag(FLAG_NEGATIVE);
+
+			// 3. Overflow Flag: Directly from Memory Bit 6
+			if (mem_val & 0x40) cpu.SetFlag(FLAG_OVERFLOW);
+			else cpu.ClearFlag(FLAG_OVERFLOW);
+
+			return true; // Complete
 		}
 	};
 

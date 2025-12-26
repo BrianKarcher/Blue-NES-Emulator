@@ -395,6 +395,55 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
 
+		TEST_METHOD(TestBITZeroPage)
+		{
+			uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0010, 0b11000000); // Set bits 6 and 7
+			cpu->SetA(0b11111111); // A can be anything, just testing flags
+			RunInst();
+			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 set
+			Assert::IsTrue(cpu->GetFlag(FLAG_OVERFLOW)); // Bit 6 set
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));    // A & M != 0
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBITAbsolute)
+		{
+			uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1510, 0b01000000); // Set bit 6
+			cpu->SetA(0b11111111); // A can be anything, just testing flags
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsTrue(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 set
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));     // A & M != 0
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestBITZeroPageZeroResult)
+		{
+			uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0010, 0b00001111); // Lower nibble set
+			cpu->SetA(0b11110000); // A upper nibble set, so A & M = 0
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
+			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));       // A & M == 0
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBITAbsoluteZeroResult)
+		{
+			uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1510, 0b00001111); // Lower nibble set
+			cpu->SetA(0b11110000); // A upper nibble set, so A & M = 0
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
+			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));       // A & M == 0
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 		TEST_METHOD(TestCMPImmediate)
 		{
 			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
@@ -1004,50 +1053,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestBITZeroPage)
-		//{
-		//	uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0010, 0b11000000); // Set bits 6 and 7
-		//	cpu->SetA(0b11111111); // A can be anything, just testing flags
-		//	RunInst();
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 set
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_OVERFLOW)); // Bit 6 set
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));    // A & M != 0
-		//}
-		//TEST_METHOD(TestBITAbsolute)
-		//{
-		//	uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1510, 0b01000000); // Set bit 6
-		//	cpu->SetA(0b11111111); // A can be anything, just testing flags
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 set
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));     // A & M != 0
-		//}
-		//TEST_METHOD(TestBITZeroPageZeroResult)
-		//{
-		//	uint8_t rom[] = { BIT_ZEROPAGE, 0x10 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0010, 0b00001111); // Lower nibble set
-		//	cpu->SetA(0b11110000); // A upper nibble set, so A & M = 0
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));       // A & M == 0
-		//}
-		//TEST_METHOD(TestBITAbsoluteZeroResult)
-		//{
-		//	uint8_t rom[] = { BIT_ABSOLUTE, 0x10, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1510, 0b00001111); // Lower nibble set
-		//	cpu->SetA(0b11110000); // A upper nibble set, so A & M = 0
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE)); // Bit 7 clear
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW));  // Bit 6 clear
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));       // A & M == 0
-		//}
 		//TEST_METHOD(TestBMIRelative)
 		//{
 		//	uint8_t rom[] = { BMI_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
