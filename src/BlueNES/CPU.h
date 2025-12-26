@@ -288,16 +288,28 @@ public:
 		opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
 		opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
 
+		opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
+		opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
+		opcode_table[0xD5] = &run_instruction<Mode_ZeroPageX, Op_CMP>;
+		opcode_table[0xCD] = &run_instruction<Mode_Absolute, Op_CMP>;
+		opcode_table[0xDD] = &run_instruction<Mode_AbsoluteX<Op_CMP::is_rmw>, Op_CMP>;
+		opcode_table[0xD9] = &run_instruction<Mode_AbsoluteY<Op_CMP::is_rmw>, Op_CMP>;
+		opcode_table[0xC1] = &run_instruction<Mode_IndirectX, Op_CMP>;
+		opcode_table[0xD1] = &run_instruction<Mode_IndirectY<Op_CMP::is_rmw>, Op_CMP>;
+
 		opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
 
-		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
-		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
 		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
-		opcode_table[0xAD] = &run_instruction<Mode_Absolute, Op_LDA>;
-		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
 		opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
-		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xAD] = &run_instruction<Mode_Absolute, Op_LDA>;
 		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
+		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
+		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+		
+		
+		
 
 		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
 
@@ -934,6 +946,27 @@ private:
 				return true;
 			}
 			return false;
+		}
+	};
+
+	struct Op_CMP {
+		// Defines that this is a Read operation (allows page-cross optimization)
+		static constexpr bool is_rmw = false;
+
+		static bool step(CPU& cpu) {
+			// This runs once the Addressing Mode has set cpu.effective_addr
+			uint8_t val = cpu.ReadByte(cpu.effective_addr);
+
+			uint16_t result = (uint16_t)cpu.m_a - (uint16_t)val;
+
+			// Carry Flag: Set if A >= val (No borrow occurred)
+			if (cpu.m_a >= val) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+
+			// Zero and Negative flags are based on the 8-bit result
+			cpu.update_ZN_flags((uint8_t)(result & 0xFF));
+
+			return true; // Instruction complete
 		}
 	};
 
