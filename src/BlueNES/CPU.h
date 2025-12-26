@@ -230,6 +230,7 @@ public:
 	uint8_t  current_opcode;
 	uint8_t  addr_low;
 	uint8_t  addr_high;
+	uint8_t  m_temp_low;
 	uint16_t effective_addr;
 	int8_t offset;
 	bool inst_complete = true;
@@ -300,6 +301,9 @@ public:
 		opcode_table[0xE0] = &run_instruction<Mode_Immediate, Op_CPX>;
 		opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
 		opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
+
+		opcode_table[0x4C] = &run_standalone_instruction<Op_JMP_Absolute>;
+		opcode_table[0x6C] = &run_standalone_instruction<Op_JMP_Indirect>;
 
 		opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
 
@@ -1031,6 +1035,69 @@ private:
 				cpu.update_ZN_flags(cpu._operand);
 				cpu.WriteByte(cpu.effective_addr, cpu._operand);
 				return true; // Instruction Complete
+			}
+			return false;
+		}
+	};
+
+	struct Op_JMP_Absolute {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch Low Byte
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Fetch High Byte and Jump
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+
+				// Instruction complete in 3 cycles total (T0, T1, T2)
+				return true;
+			}
+			return false;
+		}
+	};
+
+	struct Op_JMP_Indirect {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Fetch Pointer Low
+				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Fetch Pointer High
+				cpu.addr_high = cpu.ReadByte(cpu.m_pc++);
+				// effective_addr now holds the location of the target vector
+				cpu.effective_addr = (cpu.addr_high << 8) | cpu.addr_low;
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Fetch Target Low
+				cpu.m_temp_low = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Fetch Target High (With Hardware Bug)
+			{
+				uint16_t target_high_addr;
+
+				// Replicate the 6502 bug: 
+				// If the low byte of the pointer is 0xFF, the high byte is fetched
+				// from the start of the same page rather than crossing the page.
+				if ((cpu.effective_addr & 0xFF) == 0xFF) {
+					target_high_addr = cpu.effective_addr & 0xFF00; // Wraps to $xx00
+				}
+				else {
+					target_high_addr = cpu.effective_addr + 1;
+				}
+
+				uint8_t target_high = cpu.ReadByte(target_high_addr);
+				cpu.m_pc = (target_high << 8) | cpu.m_temp_low;
+
+				return true; // 5 cycles total
+			}
 			}
 			return false;
 		}
