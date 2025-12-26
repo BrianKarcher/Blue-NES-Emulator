@@ -288,6 +288,7 @@ public:
 		opcode_table[0x90] = &run_standalone_instruction<Op_BCC>;
 		opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
 		opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
+		opcode_table[0x30] = &run_standalone_instruction<Op_BMI>;
 
 		opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
 		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
@@ -981,6 +982,58 @@ private:
 			else cpu.ClearFlag(FLAG_OVERFLOW);
 
 			return true; // Complete
+		}
+	};
+
+	struct Op_BMI {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1:
+			{
+				// T1: Fetch the relative offset (signed 8-bit)
+				// This ALWAYS happens, regardless of whether we take the branch.
+				int8_t offset = (int8_t)cpu.ReadByte(cpu.m_pc++);
+
+				// Check the condition: Branch if Negative
+				bool condition_met = cpu.GetFlag(FLAG_NEGATIVE);
+
+				if (!condition_met) {
+					// Condition failed: 2 cycles total. We are done right now.
+					return true;
+				}
+
+				// If we reach here, the condition is met. 
+				// We need at least one more cycle to calculate and apply the branch.
+				cpu.offset = offset; // Store offset for next cycle
+				cpu.cycle_state = 2;
+				return false;
+			}
+			case 2: // T2: Apply the low byte and check for page cross
+			{
+				uint16_t old_pc = cpu.m_pc;
+				// Add the signed offset to the PC
+				cpu.m_pc += cpu.offset;
+
+				// Page crossing occurs if the High Byte of the PC changes
+				bool page_crossed = (old_pc & 0xFF00) != (cpu.m_pc & 0xFF00);
+
+				if (page_crossed) {
+					// 6502 hardware performs a dummy read here
+					cpu.ReadByte((old_pc & 0xFF00) | (cpu.m_pc & 0x00FF));
+					cpu.cycle_state = 3;
+					return false; // Need one more cycle to fix high byte
+				}
+
+				// No page cross: 3 cycles total. Done.
+				return true;
+			}
+
+			case 3: // T3: Final cycle for page-crossing branch
+				// Hardware performs a read at the new, fixed PC
+				cpu.ReadByte(cpu.m_pc);
+				return true;
+			}
+			return false;
 		}
 	};
 
