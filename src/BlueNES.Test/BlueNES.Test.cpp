@@ -576,6 +576,27 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
+		TEST_METHOD(TestBVCRelative)
+		{
+			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to take branch
+			RunInst();
+			// After clocking BVC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBVCRelativeNotTaken)
+		{
+			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to not take branch
+			RunInst();
+			// After clocking BVC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestCMPImmediate)
 		{
 			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
@@ -1383,24 +1404,6 @@ namespace BlueNESTest
 		}
 
 
-		//TEST_METHOD(TestBVCRelative)
-		//{
-		//	uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to take branch
-		//	RunInst();
-		//	// After clocking BVC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-		//	Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBVCRelativeNotTaken)
-		//{
-		//	uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to not take branch
-		//	RunInst();
-		//	// After clocking BVC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
 		//TEST_METHOD(TestBVSRelative)
 		//{
 		//	uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
