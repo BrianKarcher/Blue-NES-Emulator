@@ -596,6 +596,26 @@ namespace BlueNESTest
 			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
+		TEST_METHOD(TestBVSRelative)
+		{
+			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to take branch
+			RunInst();
+			// After clocking BVS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestBVSRelativeNotTaken)
+		{
+			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to not take branch
+			RunInst();
+			// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
 
 		TEST_METHOD(TestCLCImplied)
 		{
@@ -606,6 +626,34 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY)); // Carry flag should be cleared
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
+		TEST_METHOD(TestCLDImplied)
+		{
+			uint8_t rom[] = { CLD_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_DECIMAL); // Set decimal flag
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_DECIMAL)); // Decimal flag should be cleared
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestCLIImplied)
+		{
+			uint8_t rom[] = { CLI_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_INTERRUPT); // Set interrupt flag
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_INTERRUPT)); // Interrupt flag should be cleared
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestCLVImplied)
+		{
+			uint8_t rom[] = { CLV_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow flag
+			RunInst();
+			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 
 		TEST_METHOD(TestCMPImmediate)
 		{
@@ -1124,6 +1172,119 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
+		TEST_METHOD(TestLDXImmediate)
+		{
+			uint8_t rom[] = { LDX_IMMEDIATE, 0x55  };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			RunInst();
+			Assert::AreEqual((uint8_t)0x55, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestLDXZeroPage)
+		{
+			uint8_t rom[] = { LDX_ZEROPAGE, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0020, 0x66);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x66, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestLDXZeroPageY)
+		{
+			uint8_t rom[] = { LDX_ZEROPAGE_Y, 0x1F };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0024, 0x66);
+			cpu->SetY(0x5);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x66, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDXAbsolute)
+		{
+			uint8_t rom[] = { LDX_ABSOLUTE, 0x30, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1530, 0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDXAbsoluteY)
+		{
+			uint8_t rom[] = { LDX_ABSOLUTE_Y, 0x2F, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1530, 0x77);
+			cpu->SetY(0x1);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDYImmediate)
+		{
+			uint8_t rom[] = { LDY_IMMEDIATE, 0x55 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			RunInst();
+			Assert::AreEqual((uint8_t)0x55, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestLDYZeroPage)
+		{
+			uint8_t rom[] = { LDY_ZEROPAGE, 0x20 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0020, 0x66);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x66, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
+		TEST_METHOD(TestLDYZeroPageX)
+		{
+			uint8_t rom[] = { LDY_ZEROPAGE_X, 0x1F };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0024, 0x66);
+			cpu->SetX(0x5);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x66, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDYAbsolute)
+		{
+			uint8_t rom[] = { LDY_ABSOLUTE, 0x30, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1530, 0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+		TEST_METHOD(TestLDYAbsoluteX)
+		{
+			uint8_t rom[] = { LDY_ABSOLUTE_X, 0x2F, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1530, 0x77);
+			cpu->SetX(0x1);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 4);
+		}
+
 		TEST_METHOD(TestORAImmediate)
 		{
 			uint8_t rom[] = { ORA_IMMEDIATE, 0x0F }; // 0000 1111
@@ -1599,49 +1760,6 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
-
-		//TEST_METHOD(TestBVSRelative)
-		//{
-		//	uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to take branch
-		//	RunInst();
-		//	// After clocking BVS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-		//	Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestBVSRelativeNotTaken)
-		//{
-		//	uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to not take branch
-		//	RunInst();
-		//	// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-		//	Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-		//}
-		//TEST_METHOD(TestCLDImplied)
-		//{
-		//	uint8_t rom[] = { CLD_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_DECIMAL); // Set decimal flag
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_DECIMAL)); // Decimal flag should be cleared
-		//}
-		//TEST_METHOD(TestCLIImplied)
-		//{
-		//	uint8_t rom[] = { CLI_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_INTERRUPT); // Set interrupt flag
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_INTERRUPT)); // Interrupt flag should be cleared
-		//}
-		//TEST_METHOD(TestCLVImplied)
-		//{
-		//	uint8_t rom[] = { CLV_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetFlag(FLAG_OVERFLOW); // Set overflow flag
-		//	RunInst();
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
-		//}
 		//TEST_METHOD(TestCPYImmediate)
 		//{
 		//	uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
@@ -1712,108 +1830,6 @@ namespace BlueNESTest
 		//	cpu->SetY(0x01);
 		//	RunInst();
 		//	Assert::AreEqual((uint8_t)0x02, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDXImmediate)
-		//{
-		//	uint8_t rom[] = { LDX_IMMEDIATE, 0x55  };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x55, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDXZeroPage)
-		//{
-		//	uint8_t rom[] = { LDX_ZEROPAGE, 0x20 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0020, 0x66);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x66, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDXZeroPageY)
-		//{
-		//	uint8_t rom[] = { LDX_ZEROPAGE_Y, 0x1F };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0024, 0x66);
-		//	cpu->SetY(0x5);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x66, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDXAbsolute)
-		//{
-		//	uint8_t rom[] = { LDX_ABSOLUTE, 0x30, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1530, 0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDXAbsoluteY)
-		//{
-		//	uint8_t rom[] = { LDX_ABSOLUTE_Y, 0x2F, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1530, 0x77);
-		//	cpu->SetY(0x1);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDYImmediate)
-		//{
-		//	uint8_t rom[] = { LDY_IMMEDIATE, 0x55 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x55, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDYZeroPage)
-		//{
-		//	uint8_t rom[] = { LDY_ZEROPAGE, 0x20 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0020, 0x66);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x66, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDYZeroPageX)
-		//{
-		//	uint8_t rom[] = { LDY_ZEROPAGE_X, 0x1F };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0024, 0x66);
-		//	cpu->SetX(0x5);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x66, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDYAbsolute)
-		//{
-		//	uint8_t rom[] = { LDY_ABSOLUTE, 0x30, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1530, 0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLDYAbsoluteX)
-		//{
-		//	uint8_t rom[] = { LDY_ABSOLUTE_X, 0x2F, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1530, 0x77);
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetY());
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 		//}

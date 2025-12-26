@@ -297,6 +297,7 @@ public:
 		opcode_table[0xD0] = &run_standalone_instruction<Op_BNE>;
 		opcode_table[0x10] = &run_standalone_instruction<Op_BPL>;
 		opcode_table[0x50] = &run_standalone_instruction<Op_BVC>;
+		opcode_table[0x70] = &run_standalone_instruction<Op_BVS>;
 		
 
 		opcode_table[0x00] = &run_standalone_instruction<Op_BRK>;
@@ -305,6 +306,9 @@ public:
 		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
 
 		opcode_table[0x18] = &run_instruction<Mode_Implied, Op_CLC>;
+		opcode_table[0xD8] = &run_instruction<Mode_Implied, Op_CLD>;
+		opcode_table[0x58] = &run_instruction<Mode_Implied, Op_CLI>;
+		opcode_table[0xB8] = &run_instruction<Mode_Implied, Op_CLV>;
 
 		opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
 		opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
@@ -353,6 +357,18 @@ public:
 		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
 		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
 		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+
+		opcode_table[0xA2] = &run_instruction<Mode_Immediate, Op_LDX>;
+		opcode_table[0xA6] = &run_instruction<Mode_ZeroPage, Op_LDX>;
+		opcode_table[0xB6] = &run_instruction<Mode_ZeroPageY, Op_LDX>;
+		opcode_table[0xAE] = &run_instruction<Mode_Absolute, Op_LDX>;
+		opcode_table[0xBE] = &run_instruction<Mode_AbsoluteY<Op_LDX::is_rmw>, Op_LDX>;
+
+		opcode_table[0xA0] = &run_instruction<Mode_Immediate, Op_LDY>;
+		opcode_table[0xA4] = &run_instruction<Mode_ZeroPage, Op_LDY>;
+		opcode_table[0xB4] = &run_instruction<Mode_ZeroPageX, Op_LDY>;
+		opcode_table[0xAC] = &run_instruction<Mode_Absolute, Op_LDY>;
+		opcode_table[0xBC] = &run_instruction<Mode_AbsoluteX<Op_LDY::is_rmw>, Op_LDY>;
 
 		opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
 		opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
@@ -1291,6 +1307,58 @@ private:
 		}
 	};
 
+	struct Op_BVS {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1:
+			{
+				// T1: Fetch the relative offset (signed 8-bit)
+				// This ALWAYS happens, regardless of whether we take the branch.
+				int8_t offset = (int8_t)cpu.ReadByte(cpu.m_pc++);
+
+				// Check the condition: Branch if Overflow flag is not set
+				bool condition_met = cpu.GetFlag(FLAG_OVERFLOW);
+
+				if (!condition_met) {
+					// Condition failed: 2 cycles total. We are done right now.
+					return true;
+				}
+
+				// If we reach here, the condition is met. 
+				// We need at least one more cycle to calculate and apply the branch.
+				cpu.offset = offset; // Store offset for next cycle
+				cpu.cycle_state = 2;
+				return false;
+			}
+			case 2: // T2: Apply the low byte and check for page cross
+			{
+				uint16_t old_pc = cpu.m_pc;
+				// Add the signed offset to the PC
+				cpu.m_pc += cpu.offset;
+
+				// Page crossing occurs if the High Byte of the PC changes
+				bool page_crossed = (old_pc & 0xFF00) != (cpu.m_pc & 0xFF00);
+
+				if (page_crossed) {
+					// 6502 hardware performs a dummy read here
+					cpu.ReadByte((old_pc & 0xFF00) | (cpu.m_pc & 0x00FF));
+					cpu.cycle_state = 3;
+					return false; // Need one more cycle to fix high byte
+				}
+
+				// No page cross: 3 cycles total. Done.
+				return true;
+			}
+
+			case 3: // T3: Final cycle for page-crossing branch
+				// Hardware performs a read at the new, fixed PC
+				cpu.ReadByte(cpu.m_pc);
+				return true;
+			}
+			return false;
+		}
+	};
+
 	struct Op_CLC {
 		static bool step(CPU& cpu) {
 			// Dummy read
@@ -1298,6 +1366,33 @@ private:
 			// T1: Clear the Carry Flag
 			cpu.ClearFlag(FLAG_CARRY);
 			// Instruction complete
+			return true;
+		}
+	};
+
+	struct Op_CLD {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			cpu.ClearFlag(FLAG_DECIMAL);
+			return true;
+		}
+	};
+
+	struct Op_CLI {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			cpu.ClearFlag(FLAG_INTERRUPT);
+			return true;
+		}
+	};
+
+	struct Op_CLV {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			cpu.ClearFlag(FLAG_OVERFLOW);
 			return true;
 		}
 	};
@@ -1590,6 +1685,24 @@ private:
 		static bool step(CPU& cpu) {
 			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_a);
+			return true;
+		}
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_LDX {
+		static bool step(CPU& cpu) {
+			cpu.m_x = cpu.ReadByte(cpu.effective_addr);
+			cpu.update_ZN_flags(cpu.m_x);
+			return true;
+		}
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_LDY {
+		static bool step(CPU& cpu) {
+			cpu.m_y = cpu.ReadByte(cpu.effective_addr);
+			cpu.update_ZN_flags(cpu.m_y);
 			return true;
 		}
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
