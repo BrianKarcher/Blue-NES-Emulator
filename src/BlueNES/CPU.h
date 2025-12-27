@@ -266,11 +266,11 @@ public:
 		// Mode_AbsoluteX takes <false> because LDA::is_write is false
 		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
 
-		opcode_table[0x06] = &run_instruction<Mode_ZeroPage, Op_ASL>;
+		opcode_table[0x06] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ASL>>;
 		opcode_table[0x0A] = &run_accumulator_instruction<Op_ASL>;
-		opcode_table[0x0E] = &run_instruction<Mode_Absolute, Op_ASL>;
-		opcode_table[0x16] = &run_instruction<Mode_ZeroPageX, Op_ASL>;
-		opcode_table[0x1E] = &run_instruction<Mode_AbsoluteX<Op_ASL::is_rmw>, Op_ASL>;
+		opcode_table[0x0E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ASL>>;
+		opcode_table[0x16] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ASL>>;
+		opcode_table[0x1E] = &run_instruction<Mode_AbsoluteX<Op_ASL::is_rmw>, Op_RMW<Logic_ASL>>;
 
 		opcode_table[0x21] = &run_instruction<Mode_IndirectX, Op_AND>;
 		opcode_table[0x25] = &run_instruction<Mode_ZeroPage, Op_AND>;
@@ -327,10 +327,10 @@ public:
 		opcode_table[0xC4] = &run_instruction<Mode_ZeroPage, Op_CPY>;
 		opcode_table[0xCC] = &run_instruction<Mode_Absolute, Op_CPY>;
 
-		opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_DEC>;
-		opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_DEC>;
-		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_DEC>;
-		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<Op_DEC::is_rmw>, Op_DEC>;
+		opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_DEC>>;
+		opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_DEC>>;
+		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_DEC>>;
+		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_DEC>>;
 
 		opcode_table[0xCA] = &run_instruction<Mode_Implied, Op_DEX>;
 		opcode_table[0x88] = &run_instruction<Mode_Implied, Op_DEY>;
@@ -344,12 +344,14 @@ public:
 		opcode_table[0x41] = &run_instruction<Mode_IndirectX, Op_EOR>;
 		opcode_table[0x51] = &run_instruction<Mode_IndirectY<Op_EOR::is_write>, Op_EOR>;
 
-		opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_INC>;
-		opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_INC>;
-		opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_INC>;
+		opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_INC>>;
+		opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_INC>>;
+		opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_INC>>;
 		// $FE: INC Absolute, X
 		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
-		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<Op_INC::is_rmw>, Op_INC>;
+		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_INC>>;
+		opcode_table[0xE8] = &run_instruction<Mode_Implied, Op_INX>;
+		opcode_table[0xC8] = &run_instruction<Mode_Implied, Op_INY>;
 
 		opcode_table[0x4C] = &run_standalone_instruction<Op_JMP_Absolute>;
 		opcode_table[0x6C] = &run_standalone_instruction<Op_JMP_Indirect>;
@@ -783,6 +785,9 @@ private:
 		}
 	};
 
+	// Policy: Read-Modify-Write Operation
+	// This policy is used for instructions like INC, DEC, ASL, LSR, etc.
+	// RMW instructions benefit from a common state machine since they share the same cycle structure.
 	template <typename LogicOp>
 	struct Op_RMW {
 		static constexpr bool is_write = true;
@@ -888,29 +893,15 @@ private:
 			cpu.update_ZN_flags(cpu.m_a);
 			return true; // Complete in 2 cycles total
 		}
+	};
 
-		// This version is called for ASL Absolute, ZeroPage, etc. (Memory Mode)
-		static bool step(CPU& cpu) {
-			switch (cpu.cycle_state) {
-			case 0: // Read
-				cpu._operand = cpu.ReadByte(cpu.effective_addr);
-				cpu.cycle_state = 1;
-				return false;
-			case 1: // Dummy Write
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				cpu.cycle_state = 2;
-				return false;
-			case 2: // Shift and Write
-				if (cpu._operand & 0x80) cpu.SetFlag(FLAG_CARRY);
-				else cpu.ClearFlag(FLAG_CARRY);
+	struct Logic_ASL {
+		static void execute(CPU& cpu, uint8_t& val) {
+			if (val & 0x80) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
 
-				cpu._operand <<= 1;
-				cpu.update_ZN_flags(cpu._operand);
-
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				return true;
-			}
-			return false;
+			val <<= 1;
+			cpu.update_ZN_flags(val);
 		}
 	};
 
@@ -1481,27 +1472,10 @@ private:
 		}
 	};
 
-	// 3 Cycle RMW Execution (Reuses logic structure of INC!)
-	struct Op_DEC {
-		static constexpr bool is_rmw = true;
-
-		static bool step(CPU& cpu) {
-			switch (cpu.cycle_state) {
-			case 0: // Read
-				cpu._operand = cpu.ReadByte(cpu.effective_addr);
-				cpu.cycle_state = 1;
-				return false;
-			case 1: // Dummy Write
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				cpu.cycle_state = 2;
-				return false;
-			case 2: // Modify & Write
-				cpu._operand--; // DECREMENT
-				cpu.update_ZN_flags(cpu._operand);
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				return true;
-			}
-			return false;
+	struct Logic_DEC {
+		static void execute(CPU& cpu, uint8_t& val) {
+			val--;
+			cpu.update_ZN_flags(val);
 		}
 	};
 
@@ -1633,31 +1607,32 @@ private:
 		}
 	};
 
-	struct Op_INC {
-		// Defines that this Op requires the "Always Penalty" path in addressing
-		static constexpr bool is_rmw = true;
+	struct Logic_INC {
+		static void execute(CPU& cpu, uint8_t& val) {
+			val++;
+			cpu.update_ZN_flags(val);
+		}
+	};
 
+	struct Op_INX {
 		static bool step(CPU& cpu) {
-			// cycle_state continues incrementing from where Mode left off
-			switch (cpu.cycle_state) {
-			case 0: // T4: Read Real Value
-				cpu._operand = cpu.ReadByte(cpu.effective_addr);
-				cpu.cycle_state = 1;
-				return false;
+			// Cycle T1: Internal Operation
+			// Dummy pc fetch
+			cpu.ReadByte(cpu.m_pc);
+			cpu.m_x++;
+			cpu.update_ZN_flags(cpu.m_x);
 
-			case 1: // T5: Dummy Write (Write original value back)
-				// 6502 quirk: It writes the unmodified value while ALU works
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				cpu.cycle_state = 2;
-				return false;
+			return true; // Complete in T1 (Total 2 cycles including T0 fetch)
+		}
+	};
 
-			case 2: // T6: Final Write (Write modified value)
-				cpu._operand++; // The actual increment
-				cpu.update_ZN_flags(cpu._operand);
-				cpu.WriteByte(cpu.effective_addr, cpu._operand);
-				return true; // Instruction Complete
-			}
-			return false;
+	struct Op_INY {
+		static bool step(CPU& cpu) {
+			// Dummy pc fetch
+			cpu.ReadByte(cpu.m_pc);
+			cpu.m_y++;
+			cpu.update_ZN_flags(cpu.m_y);
+			return true;
 		}
 	};
 

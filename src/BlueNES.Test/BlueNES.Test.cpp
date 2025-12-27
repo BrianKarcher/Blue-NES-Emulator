@@ -1072,6 +1072,29 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
+		TEST_METHOD(TestINXImplied)
+		{
+			uint8_t rom[] = { INX_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x01);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x02, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestINYImplied)
+		{
+			uint8_t rom[] = { INY_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x01);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x02, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
 		TEST_METHOD(TestJMPAbsolute)
 		{
 			uint8_t rom[] = { JMP_ABSOLUTE, 0x00, 0x90 }; // Jump to 0x9000
@@ -1886,26 +1909,6 @@ namespace BlueNESTest
 		}
 
 		
-		//TEST_METHOD(TestINXImplied)
-		//{
-		//	uint8_t rom[] = { INX_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x01);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x02, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestINYImplied)
-		//{
-		//	uint8_t rom[] = { INY_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x01);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x02, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
 		//TEST_METHOD(TestROLAccumulator)
 		//{
 		//	uint8_t rom[] = { ROL_ACCUMULATOR };
