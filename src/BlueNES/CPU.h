@@ -398,6 +398,13 @@ public:
 		opcode_table[0x08] = &run_standalone_instruction<Op_PHP>;
 		opcode_table[0x68] = &run_standalone_instruction<Op_PLA>;
 		opcode_table[0x28] = &run_standalone_instruction<Op_PLP>;
+
+		opcode_table[0x2A] = &run_instruction<Mode_Implied, Op_ROL_Accumulator>;
+		opcode_table[0x26] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ROL>>;
+		opcode_table[0x36] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ROL>>;
+		opcode_table[0x2E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ROL>>;
+		opcode_table[0x3E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_ROL>>;
+		
 		
 		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
 		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
@@ -1897,6 +1904,40 @@ private:
 			}
 			}
 			return false;
+		}
+	};
+
+	struct Op_ROL_Accumulator {
+		static bool step(CPU& cpu) {
+			// 1. Capture the OLD Carry bit (0 or 1)
+			uint8_t old_carry = cpu.GetFlag(FLAG_CARRY) ? 1 : 0;
+
+			// 2. Set NEW Carry based on Bit 7 of A
+			if (cpu.m_a & 0x80) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+
+			// 3. Perform the shift and merge in old carry
+			cpu.m_a = (cpu.m_a << 1) | old_carry;
+
+			// 4. Update Z and N
+			cpu.update_ZN_flags(cpu.m_a);
+
+			return true;
+		}
+	};
+
+	struct Logic_ROL {
+		static void execute(CPU& cpu, uint8_t& val) {
+			uint8_t old_carry = cpu.GetFlag(FLAG_CARRY) ? 1 : 0;
+
+			// Set new Carry from old Bit 7
+			if (val & 0x80) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+
+			// Shift and insert old carry
+			val = (val << 1) | old_carry;
+
+			cpu.update_ZN_flags(val);
 		}
 	};
 
