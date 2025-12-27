@@ -58,6 +58,9 @@ Nes::~Nes() {
     }
 }
 
+/// <summary>
+/// Performs a single clock cycle for the NES, handling DMA if active.
+/// </summary>
 void Nes::clock() {
     if (dmaActive) {
         // CPU stalled
@@ -87,21 +90,18 @@ void Nes::clock() {
         }
     }
     else {
-        uint64_t cyclesElapsed = cpu_->Clock();
+        cpu_->cpu_tick();
 
-        // Clock APU for each CPU cycle
-        for (uint64_t i = 0; i < cyclesElapsed; ++i) {
-            ppu_->Clock();
-            ppu_->Clock();
-            ppu_->Clock();
-            apu_->step();
+        ppu_->Clock();
+        ppu_->Clock();
+        ppu_->Clock();
+        apu_->step();
 
-            // Generate audio sample based on cycle timing
-            audioFraction += 1.0;
-            while (audioFraction >= CYCLES_PER_SAMPLE) {
-                audioBuffer.push_back(apu_->get_output());
-                audioFraction -= CYCLES_PER_SAMPLE;
-            }
+        // Generate audio sample based on cycle timing
+        audioFraction += 1.0;
+        while (audioFraction >= CYCLES_PER_SAMPLE) {
+            audioBuffer.push_back(apu_->get_output());
+            audioFraction -= CYCLES_PER_SAMPLE;
         }
     }
 }

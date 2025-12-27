@@ -7,7 +7,8 @@
 #include "Serializer.h"
 
 CPU::CPU(OpenBusMapper& openBus) : openBus(openBus) {
-	buildMap();
+	//buildMap();
+	init_cpu();
 }
 
 void CPU::connectBus(Bus* bus) {
@@ -15,6 +16,7 @@ void CPU::connectBus(Bus* bus) {
 }
 
 void CPU::cpu_tick() {
+	if (!isActive) return;
 	if (inst_complete) {
 		// Priority 1: NMI
 		if (nmi_line) {
@@ -107,10 +109,8 @@ inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
 
 void CPU::PowerOn()
 {
-	m_pc = 0xFFFC;
-	uint8_t resetLo = ReadNextByte();
-	m_pc = 0xFFFD;
-	uint8_t resHi = ReadNextByte();
+	uint8_t resetLo = ReadByte(0xFFFC);
+	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
 	m_p = 0;
 	m_a = 0;
@@ -158,43 +158,6 @@ uint64_t CPU::GetCycleCount()
 	return m_cycle_count;
 }
 
-void CPU::handleNMI() {
-	if (isFrozen) {
-		return;
-	}
-	// Push PC and P to stack
-	nmiCount++;
-	if (nmiCount == 6) {
-		int i = 0;
-	}
-	dbgNmi(L"\nTaking NMI (%d) (cycle %d)\n", nmiCount, m_cycle_count);
-	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", (m_pc >> 8) & 0xFF, m_sp);
-	bus->write(0x0100 + m_sp--, (m_pc >> 8) & 0xFF); // Push high byte of PC
-	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_pc & 0xFF, m_sp);
-	bus->write(0x0100 + m_sp--, m_pc & 0xFF);        // Push low byte of PC
-	//dbgNmi(L"Writing 0x%02X to stack 0x%02X\n", m_p, m_sp);
-	bus->write(0x0100 + m_sp--, m_p);                 // Push processor status
-	// THIS MUST BE DONE AFTER PUSHING P TO STACK. OTHERWISE WILL BREAK MMC3 FOREVER!
-	// Technically it is because RTI pulls its state from the stack, and that state needs
-	// to have the interrupt flag set to whatever it was PRIOR to the NMI occurring.
-	// Since, you know, that is where you are RETURNING TO.
-	// Yes, this bug pissed me off.
-	m_p |= FLAG_INTERRUPT;
-	// Set PC to NMI vector
-	m_pc = (static_cast<uint16_t>(bus->read(0xFFFB) << 8)) | bus->read(0xFFFA);
-	//dbgNmi(L"pc set to 0x%04X\n", m_pc);
-	//dbgNmi(L"Stack set to ");
-	//for (uint8_t i = m_sp + 1; i != 0; i++) {
-	//	dbgNmi(L"0x%02X ", bus->read(0x100 + i));
-	//}
-	// NMI takes 7 cycles
-	m_cycle_count += 7;
-	count += 1;
-	//if (count == 2) {
-	//	isFrozen = true;
-	//}
-}
-
 // Called by mappers/devices to set interrupt lines
 void CPU::setNMI(bool state) {
 	nmi_line = state;
@@ -214,202 +177,12 @@ uint8_t CPU::pull() {
 	return bus->read(0x0100 + m_sp);
 }
 
-void CPU::handleIRQ() {
-	// IRQ takes 7 cycles
-
-	// Push PC (high byte first)
-	push((m_pc >> 8) & 0xFF);
-	push(m_pc & 0xFF);
-
-	// Push status register
-	// Bit 5 (unused) is always set
-	// Bit 4 (B flag) is clear for interrupts
-	push((m_p & ~FLAG_BREAK) | FLAG_UNUSED);
-
-	// Set interrupt disable flag
-	m_p |= FLAG_INTERRUPT;
-
-	// Load IRQ vector from $FFFE-$FFFF
-	uint8_t low = ReadByte(0xFFFE);
-	uint8_t high = ReadByte(0xFFFF);
-	m_pc = (high << 8) | low;
-
-	m_cycle_count += 7;
-}
-
-int CPU::checkInterrupts() {
-	// NMI - Edge-triggered (detects 0->1 transition)
-	if (nmi_line && !nmi_previous) {
-		nmi_pending = true;
-	}
-	nmi_previous = nmi_line;
-
-	// Handle NMI (higher priority than IRQ)
-	if (nmi_pending) {
-		handleNMI();
-		nmi_pending = false;
-		return 7;  // Don't check IRQ if NMI occurred
-	}
-
-	// IRQ - Level-triggered, maskable by I flag
-	// Check if IRQ line is active AND hardware interrupts are enabled
-	if (irq_line && !(m_p & FLAG_INTERRUPT)) {
-	//if (irq_line) {
-		handleIRQ();
-		irq_line = false; // Clear IRQ line after handling
-		return 7;
-	}
-	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
-	//irq_line = bus->IrqPending();
-	prev_irq_line = irq_line;
-
-	return 0;
-}
-
-/// <summary>
-/// Speed is paramount so we try to reduce function hops as much as feasible while keeping the code readable.
-/// </summary>
-uint8_t CPU::Clock()
-{
-	if (!isActive) return 0;
-
-	uint16_t current_pc = m_pc;
-	uint8_t op = ReadNextByte();
-	uint64_t cyclesBefore = m_cycle_count;
-	dbg(L"\n(%d) 0x%04X %S ", cyclesBefore, current_pc, instructionMap[op].c_str());
-	if (m_cycle_count > 1102773) { // Zelda Palette issue.
-		int i = 0;
-		//isFrozen = true;
-		//return 5;
-	}
-	if (current_pc == 0x8030) {
-		int i = 0;
-	}
-	if (current_pc == 0x30) {
-		int i = 0;
-	}
-	if (isFrozen) {
-		return 5;
-	}
-
-	// Mario 3 toad house scroll
-	if (m_pc == 0xF795) {
-		int scanline = bus->ppu.renderer->m_scanline;
-		int i = 0;
-	}
-
-	//(this->*_opcodeTable[op])();
-	// Check for interrupts before fetching next instruction
-	// This must be placed AFTER the clock above. The reason is vblank related.
-	// Some games, namely Dragon Warrior 3, wait for vblank in a dumb way. It loops on 2002 high bit while
-	// interrupts are enabled and gets into a race condition.
-	// If we check for interrupts before the clock, the interrupt will be serviced
-	// immediately, which is incorrect behavior. The CPU should only check for interrupts after the current
-	// instruction has fully executed.
-
-	// NOTE TO NES developers: When interrupts are enabled, you should avoid reading $2002 in a tight loop like that.
-	// You might miss the NMI entirely if it happens between your read and the interrupt check!
-	// Have NMI set a variable that your loop waits for. Thank you!
-	int cycles = checkInterrupts();
-	cyclesThisFrame += cycles;
-	uint8_t cyclesPassed =  m_cycle_count - cyclesBefore;
-	cyclesThisFrame += cyclesPassed;
-	return cyclesPassed;
-}
-
-uint8_t CPU::GetSP()
-{
+uint8_t CPU::GetSP() {
 	return m_sp;
 }
 
-void CPU::SetSP(uint8_t sp)
-{
+void CPU::SetSP(uint8_t sp) {
 	m_sp = sp;
-}
-
-inline uint8_t CPU::ReadNextByte()
-{
-	//dbg(L"0x%02X ", bus->read(m_pc));
-	return bus->read(m_pc++);
-}
-
-inline uint8_t CPU::ReadNextByte(uint8_t offset)
-{
-	uint8_t base = ReadNextByte();
-	uint8_t byte = (base + offset) & 0xFF; // Wraparound
-	return byte;
-}
-
-inline uint16_t CPU::ReadNextWord()
-{
-	uint8_t loByte = ReadNextByte();
-	uint8_t hiByte = ReadNextByte();
-	return (static_cast<uint16_t>(hiByte << 8) | loByte);
-}
-
-inline uint16_t CPU::ReadNextWord(uint8_t offset)
-{
-	uint8_t loByte = ReadNextByte();
-	uint8_t hiByte = ReadNextByte();
-	loByte += offset;
-	// Carryover?
-	if (loByte < offset)
-	{
-		hiByte += 1;
-		// One more cycle if a page is crossed.
-		m_cycle_count++;
-	}
-	return (static_cast<uint16_t>(hiByte << 8) | loByte);
-}
-
-inline uint16_t CPU::ReadNextWordNoCycle(uint8_t offset)
-{
-	uint8_t loByte = ReadNextByte();
-	uint8_t hiByte = ReadNextByte();
-	loByte += offset;
-	// Carryover?
-	if (loByte < offset)
-	{
-		hiByte += 1;
-	}
-	return (static_cast<uint16_t>(hiByte << 8) | loByte);
-}
-
-inline uint16_t CPU::ReadIndexedIndirect()
-{
-	uint8_t zp_base = ReadNextByte();
-	// Add X register to base (with zp wraparound)
-	uint8_t zp_addr = (zp_base + m_x) & 0xFF;
-	uint8_t addr_lo = bus->read(zp_addr);
-	uint8_t addr_hi = bus->read((zp_addr + 1) & 0xFF); // Wraparound for the high byte
-	return (addr_hi << 8) | addr_lo;
-}
-
-inline uint16_t CPU::ReadIndirectIndexed()
-{
-	uint8_t zp_base = ReadNextByte();
-	uint8_t addr_lo = bus->read(zp_base);
-	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-	// Add Y register to the low byte of the address
-	addr_lo += m_y;
-	if (addr_lo < m_y) {
-		addr_hi += 1; // Carryover
-		m_cycle_count++; // Extra cycle for page crossing
-	}
-	return (addr_hi << 8) | addr_lo;
-}
-
-inline uint16_t CPU::ReadIndirectIndexedNoCycle()
-{
-	uint8_t zp_base = ReadNextByte();
-	uint8_t addr_lo = bus->read(zp_base);
-	uint8_t addr_hi = bus->read((zp_base + 1) & 0xFF); // Wraparound for the high byte
-	// Add Y register to the low byte of the address
-	addr_lo += m_y;
-	if (addr_lo < m_y) {
-		addr_hi += 1; // Carryover
-	}
-	return (addr_hi << 8) | addr_lo;
 }
 
 inline uint8_t CPU::ReadByte(uint16_t addr) {

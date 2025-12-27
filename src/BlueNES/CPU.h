@@ -179,14 +179,7 @@ public:
 	CPU(OpenBusMapper& openBus);
 	void connectBus(Bus* bus);
 
-	inline uint8_t ReadNextByte();
-	inline uint8_t ReadNextByte(uint8_t offset);
-	inline uint16_t ReadNextWord();
-	inline uint16_t ReadNextWord(uint8_t offset);
-	inline uint16_t ReadNextWordNoCycle(uint8_t offset);
 	inline uint8_t ReadByte(uint16_t addr);
-	inline uint16_t ReadIndexedIndirect();
-	inline uint16_t ReadIndirectIndexedNoCycle();
 	void WriteByte(uint16_t addr, uint8_t value);
 
 	void setNMI(bool state);
@@ -298,7 +291,6 @@ public:
 		opcode_table[0x10] = &run_standalone_instruction<Op_BPL>;
 		opcode_table[0x50] = &run_standalone_instruction<Op_BVC>;
 		opcode_table[0x70] = &run_standalone_instruction<Op_BVS>;
-		
 
 		opcode_table[0x00] = &run_standalone_instruction<Op_BRK>;
 
@@ -2384,6 +2376,3 @@ private:
 	bool isFrozen = false;
 	int count = 0;
 };
-
-
-
