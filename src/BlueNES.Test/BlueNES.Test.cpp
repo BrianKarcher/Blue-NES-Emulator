@@ -895,6 +895,30 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
+		TEST_METHOD(TestDEXImplied)
+		{
+			uint8_t rom[] = { DEX_IMPLIED  };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x01);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x00, cpu->GetX());
+			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestDEYImplied)
+		{
+			uint8_t rom[] = { DEY_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x01);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x00, cpu->GetY());
+			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+
+
 		TEST_METHOD(TestEORImmediate)
 		{
 			uint8_t rom[] = { EOR_IMMEDIATE, 0xAA }; // 1010 1010
@@ -1321,6 +1345,70 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
+
+		TEST_METHOD(TestLSRAccumulator)
+		{
+			uint8_t rom[] = { LSR_ACCUMULATOR };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x02); // 0000 0010
+			RunInst();
+			Assert::AreEqual((uint8_t)0x01, cpu->GetA()); // 0000 0001
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestLSRZeroPage)
+		{
+			uint8_t rom[] = { LSR_ZEROPAGE, 0x15 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x02); // 0000 0010
+			RunInst();
+			Assert::AreEqual((uint8_t)0x01, bus->read(0x0015)); // 0000 0001
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 5);
+		}
+		TEST_METHOD(TestLSRZeroPageX)
+		{
+			uint8_t rom[] = { LSR_ZEROPAGE_X, 0x14 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x0015, 0x02); // 0000 0010
+			cpu->SetX(0x1);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x01, bus->read(0x0015)); // 0000 0001
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestLSRAbsolute)
+		{
+			uint8_t rom[] = { LSR_ABSOLUTE, 0x15, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x02); // 0000 0010
+			RunInst();
+			Assert::AreEqual((uint8_t)0x01, bus->read(0x1215)); // 0000 0001
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 6);
+		}
+		TEST_METHOD(TestLSRAbsoluteX)
+		{
+			uint8_t rom[] = { LSR_ABSOLUTE_X, 0x14, 0x12 };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			bus->write(0x1215, 0x02); // 0000 0010
+			cpu->SetX(0x1);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x01, bus->read(0x1215)); // 0000 0001
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
+			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
+
 
 		TEST_METHOD(TestORAImmediate)
 		{
@@ -1798,26 +1886,6 @@ namespace BlueNESTest
 		}
 
 		
-		//TEST_METHOD(TestDEXImplied)
-		//{
-		//	uint8_t rom[] = { DEX_IMPLIED  };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x01);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x00, cpu->GetX());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestDEYImplied)
-		//{
-		//	uint8_t rom[] = { DEY_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x01);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x00, cpu->GetY());
-		//	Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
 		//TEST_METHOD(TestINXImplied)
 		//{
 		//	uint8_t rom[] = { INX_IMPLIED };
@@ -1837,63 +1905,6 @@ namespace BlueNESTest
 		//	Assert::AreEqual((uint8_t)0x02, cpu->GetY());
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
 		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestLSRAccumulator)
-		//{
-		//	uint8_t rom[] = { LSR_ACCUMULATOR };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x02); // 0000 0010
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x01, cpu->GetA()); // 0000 0001
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestLSRZeroPage)
-		//{
-		//	uint8_t rom[] = { LSR_ZEROPAGE, 0x15 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x02); // 0000 0010
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x01, bus->read(0x0015)); // 0000 0001
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestLSRZeroPageX)
-		//{
-		//	uint8_t rom[] = { LSR_ZEROPAGE_X, 0x14 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x0015, 0x02); // 0000 0010
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x01, bus->read(0x0015)); // 0000 0001
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestLSRAbsolute)
-		//{
-		//	uint8_t rom[] = { LSR_ABSOLUTE, 0x15, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x02); // 0000 0010
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x01, bus->read(0x1215)); // 0000 0001
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-		//}
-		//TEST_METHOD(TestLSRAbsoluteX)
-		//{
-		//	uint8_t rom[] = { LSR_ABSOLUTE_X, 0x14, 0x12 };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	bus->write(0x1215, 0x02); // 0000 0010
-		//	cpu->SetX(0x1);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x01, bus->read(0x1215)); // 0000 0001
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 		//}
 		//TEST_METHOD(TestROLAccumulator)
 		//{

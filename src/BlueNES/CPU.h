@@ -224,7 +224,7 @@ public:
 	uint8_t m_a;
 	uint8_t m_x;
 	uint8_t m_y;
-	uint16_t _operand;
+	uint8_t _operand;
 
 	// Internal Latch Registers (to hold state between cycles)
 	// We widen this to 16-bit to hold 0x100 (NMI) and 0x101 (IRQ)
@@ -332,6 +332,9 @@ public:
 		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_DEC>;
 		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<Op_DEC::is_rmw>, Op_DEC>;
 
+		opcode_table[0xCA] = &run_instruction<Mode_Implied, Op_DEX>;
+		opcode_table[0x88] = &run_instruction<Mode_Implied, Op_DEY>;
+
 		opcode_table[0x49] = &run_instruction<Mode_Immediate, Op_EOR>;
 		opcode_table[0x45] = &run_instruction<Mode_ZeroPage, Op_EOR>;
 		opcode_table[0x55] = &run_instruction<Mode_ZeroPageX, Op_EOR>;
@@ -373,6 +376,12 @@ public:
 		opcode_table[0xB4] = &run_instruction<Mode_ZeroPageX, Op_LDY>;
 		opcode_table[0xAC] = &run_instruction<Mode_Absolute, Op_LDY>;
 		opcode_table[0xBC] = &run_instruction<Mode_AbsoluteX<Op_LDY::is_rmw>, Op_LDY>;
+
+		opcode_table[0x4A] = &run_instruction<Mode_Implied, Op_LSR_Accumulator>;
+		opcode_table[0x46] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_LSR>>;
+		opcode_table[0x56] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_LSR>>;
+		opcode_table[0x4E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_LSR>>;
+		opcode_table[0x5E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_LSR>>;
 
 		opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
 		opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
@@ -768,6 +777,34 @@ private:
 
 			case 5:
 				// Address is fixed. Ready to execute (T5).
+				return true;
+			}
+			return false;
+		}
+	};
+
+	template <typename LogicOp>
+	struct Op_RMW {
+		static constexpr bool is_write = true;
+
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 0: // Read
+				cpu._operand = cpu.ReadByte(cpu.effective_addr);
+				cpu.cycle_state = 1;
+				return false;
+
+			case 1: // Dummy Write + Execute Logic
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
+
+				// Execute the specific math (LSR, INC, etc.)
+				LogicOp::execute(cpu, cpu._operand);
+
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // Write Result
+				cpu.WriteByte(cpu.effective_addr, cpu._operand);
 				return true;
 			}
 			return false;
@@ -1468,6 +1505,34 @@ private:
 		}
 	};
 
+	struct Op_DEX {
+		static bool step(CPU& cpu) {
+			// T1: Internal Operation
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			cpu.m_x--;
+			// Update Zero and Negative flags based on new X value
+			cpu.update_ZN_flags(cpu.m_x);
+
+			// Instruction complete (2 cycles total: T0, T1)
+			return true;
+		}
+	};
+
+	struct Op_DEY {
+		static bool step(CPU& cpu) {
+			// T1: Internal Operation
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			cpu.m_y--;
+			// Update Zero and Negative flags based on new X value
+			cpu.update_ZN_flags(cpu.m_y);
+
+			// Instruction complete (2 cycles total: T0, T1)
+			return true;
+		}
+	};
+
 	struct Op_EOR {
 		// Allows page-cross optimization (Read operation)
 		static constexpr bool is_write = false;
@@ -1722,6 +1787,29 @@ private:
 			return true;
 		}
 		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
+	struct Op_LSR_Accumulator {
+		static bool step(CPU& cpu) {
+			// Carry gets the bit being shifted out (Bit 0)
+			if (cpu.m_a & 0x01) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+
+			cpu.m_a >>= 1;      // Shift right
+			cpu.m_a &= 0x7F;    // Ensure Bit 7 is 0 (though >>= does this for uint8_t)
+
+			cpu.update_ZN_flags(cpu.m_a);
+			return true;
+		}
+	};
+
+	struct Logic_LSR {
+		static void execute(CPU& cpu, uint8_t& val) {
+			if (val & 0x01) cpu.SetFlag(FLAG_CARRY);
+			else cpu.ClearFlag(FLAG_CARRY);
+			val >>= 1;
+			cpu.update_ZN_flags(val);
+		}
 	};
 
 	struct Op_ORA {
@@ -2067,26 +2155,26 @@ private:
   //      //};  
   //  }
 
-	typedef void (CPU::* OpFunc)(void);
-	OpFunc _opcodeTable[256] = {
-		//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
-		&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
-		&CPU::BPL,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::CLC,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP, // 1
-		&CPU::JSR,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::PLP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP, // 2
-		&CPU::BMI,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::SEC,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP, // 3
-		&CPU::RTI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::PHA,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::JMP_ABS,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 4
-		&CPU::BVC,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::CLI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 5
-		&CPU::RTS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::PLA,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::JMP_IND,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 6
-		&CPU::BVS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::SEI,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 7
-		&CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::DEY,& CPU::DMP,& CPU::TXA,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP, // 8
-		&CPU::BCC,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::TYA,& CPU::STA,& CPU::TXS,& CPU::DMP,& CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP, // 9
-		&CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::TAY,& CPU::LDA,& CPU::TAX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // A
-		&CPU::BCS,& CPU::LDA,& CPU::DMP,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::CLV,& CPU::LDA,& CPU::TSX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // B
-		&CPU::CPY,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::INY,& CPU::CMP,& CPU::DEX,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP, // C
-		&CPU::BNE,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::CLD,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP, // D
-		&CPU::CPX,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::INX,& CPU::SBC,& CPU::NOP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP, // E
-		&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
-	};
+	//typedef void (CPU::* OpFunc)(void);
+	//OpFunc _opcodeTable[256] = {
+	//	//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
+	//	&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
+	//	&CPU::BPL,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::CLC,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP, // 1
+	//	&CPU::JSR,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::PLP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP, // 2
+	//	&CPU::BMI,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::SEC,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP, // 3
+	//	&CPU::RTI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::PHA,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::JMP_ABS,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 4
+	//	&CPU::BVC,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::CLI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 5
+	//	&CPU::RTS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::PLA,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::JMP_IND,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 6
+	//	&CPU::BVS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::SEI,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 7
+	//	&CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::DEY,& CPU::DMP,& CPU::TXA,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP, // 8
+	//	&CPU::BCC,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::TYA,& CPU::STA,& CPU::TXS,& CPU::DMP,& CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP, // 9
+	//	&CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::TAY,& CPU::LDA,& CPU::TAX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // A
+	//	&CPU::BCS,& CPU::LDA,& CPU::DMP,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::CLV,& CPU::LDA,& CPU::TSX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // B
+	//	&CPU::CPY,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::INY,& CPU::CMP,& CPU::DEX,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP, // C
+	//	&CPU::BNE,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::CLD,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP, // D
+	//	&CPU::CPX,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::INX,& CPU::SBC,& CPU::NOP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP, // E
+	//	&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
+	//};
 
 	enum AddressingMode {
 		ACC,
@@ -2157,53 +2245,10 @@ private:
 	void ADC();
 	void AND();
 	void ASL();
-	void BCC();
-	void BCS();
-	void BEQ();
 	void BMI();
 	void BRK();
 	bool NearBranch(uint8_t value);
-	void BIT();
-	void BNE();
-	void BPL();
-	void BVC();
-	void BVS();
-	void CLC();
-	void CLD();
-	void CLI();
-	void CLV();
-	void CMP();
-	void cp(uint8_t value, uint8_t operand);
-	void CPX();
-	void CPY();
-	void DEC();
-	void DEX();
-	void DEY();
-	void DMP();
-	void EOR();
-	void INC();
-	void INX();
-	void INY();
-	void JMP_ABS() {
-		JMP(ReadNextWord());
-		dbg(L"0x%04X", m_pc);
-		m_cycle_count += 3;
-	}
-	void JMP_IND() {
-		uint16_t addr = ReadNextWord();
-		uint8_t loByte = ReadByte(addr);
-		// Simulate page boundary hardware bug
-		uint8_t hiByte = ReadByte((addr & 0xFF00) | ((addr + 1) & 0x00FF));
-		JMP((hiByte << 8) | loByte);
-		dbg(L"0x%04X", m_pc);
-		dbg(L"0x%04X 0x%02X 0x%02X", addr, loByte, hiByte);
-		m_cycle_count += 5;
-	}
-	void JMP(uint16_t addr);
 	void JSR();
-	void LDA();
-	void LDX();
-	void LDY();
 	void LSR();
 	void NOP();
 	void ORA();
