@@ -385,6 +385,8 @@ public:
 		opcode_table[0x4E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_LSR>>;
 		opcode_table[0x5E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_LSR>>;
 
+		opcode_table[0xEA] = &run_instruction<Mode_Implied, Op_NOP>;
+
 		opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
 		opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
 		opcode_table[0x15] = &run_instruction<Mode_ZeroPageX, Op_ORA>;
@@ -1791,6 +1793,16 @@ private:
 		}
 	};
 
+	struct Op_NOP {
+		static bool step(CPU& cpu) {
+			// T1: Internal Operation
+			// The 6502 performs a dummy read of the next byte after the opcode 
+			// and ignores it. No registers or flags are modified.
+			cpu.ReadByte(cpu.m_pc);
+			return true; // Complete (2 cycles total)
+		}
+	};
+
 	struct Op_ORA {
 		// Allows page-cross optimization (Read operation)
 		static constexpr bool is_rmw = false;
@@ -2354,37 +2366,6 @@ private:
 
 	// flags
 	uint8_t m_p;
-	void ADC();
-	void AND();
-	void ASL();
-	void BMI();
-	void BRK();
-	bool NearBranch(uint8_t value);
-	void JSR();
-	void LSR();
-	void NOP();
-	void ORA();
-	void PHA();
-	void PHP();
-	void PLA();
-	void PLP();
-	void ROL();
-	void ROR();
-	void RTI();
-	void RTS();
-	void SBC();
-	void SEC();
-	void SED();
-	void SEI();
-	void STA();
-	void STX();
-	void STY();
-	void TAX();
-	void TAY();
-	void TSX();
-	void TXA();
-	void TXS();
-	void TYA();
 
 	bool isActive = false;
 

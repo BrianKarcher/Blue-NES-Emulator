@@ -1432,6 +1432,15 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
 
+		TEST_METHOD(TestNOPImmediate)
+		{
+			uint8_t rom[] = { NOP_IMPLIED, 0x00 }; // 0000 1111
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			RunInst();
+			// A (0xF0) | M (0x0F) = 0xFF
+			Assert::AreEqual((uint16_t)0x8001, cpu->GetPC()); // 1111 1111
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
 
 		TEST_METHOD(TestORAImmediate)
 		{
