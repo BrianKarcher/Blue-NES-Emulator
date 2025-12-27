@@ -444,6 +444,13 @@ public:
 		opcode_table[0x94] = &run_instruction<Mode_ZeroPageX, Op_STY>;
 		opcode_table[0x8C] = &run_instruction<Mode_Absolute, Op_STY>;
 
+		opcode_table[0xAA] = &run_instruction<Mode_Implied, Op_TAX>;
+		opcode_table[0xA8] = &run_instruction<Mode_Implied, Op_TAY>;
+		opcode_table[0xBA] = &run_instruction<Mode_Implied, Op_TSX>;
+		opcode_table[0x8A] = &run_instruction<Mode_Implied, Op_TXA>;
+		opcode_table[0x9A] = &run_instruction<Mode_Implied, Op_TXS>;
+		opcode_table[0x98] = &run_instruction<Mode_Implied, Op_TYA>;
+
 		// Phantom op codes
 		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
 		opcode_table[0x101] = &run_standalone_instruction<Op_HardwareInterrupt_BRK>;
@@ -2089,6 +2096,93 @@ private:
 			return true;
 		}
 		static constexpr bool is_rmw = true;
+	};
+
+	struct Op_TAX {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_x = cpu.m_a;
+
+			// Update flags based on the NEW value in X
+			cpu.update_ZN_flags(cpu.m_x);
+
+			return true; // Complete (2 cycles total)
+		}
+	};
+
+	struct Op_TAY {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_y = cpu.m_a;
+
+			// Update flags based on the NEW value in X
+			cpu.update_ZN_flags(cpu.m_y);
+
+			return true; // Complete (2 cycles total)
+		}
+	};
+
+	struct Op_TSX {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_x = cpu.m_sp;
+
+			// Update flags based on the NEW value in X
+			cpu.update_ZN_flags(cpu.m_x);
+
+			return true; // Complete (2 cycles total)
+		}
+	};
+
+	struct Op_TXA {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_a = cpu.m_x;
+
+			// Update flags based on the NEW value in X
+			cpu.update_ZN_flags(cpu.m_a);
+
+			return true; // Complete (2 cycles total)
+		}
+	};
+
+	struct Op_TXS {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_sp = cpu.m_x;
+
+			return true; // Complete (2 cycles total)
+		}
+	};
+
+	struct Op_TYA {
+		static bool step(CPU& cpu) {
+			// Dummy read
+			cpu.ReadByte(cpu.m_pc);
+			// T1: Internal Operation
+			// Copy the value
+			cpu.m_a = cpu.m_y;
+
+			// Update flags based on the NEW value in X
+			cpu.update_ZN_flags(cpu.m_a);
+
+			return true; // Complete (2 cycles total)
+		}
 	};
 
 	template <typename Op>

@@ -2044,64 +2044,69 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetCycleCount() == 4);
 		}
 
-
-		//TEST_METHOD(TestTAXImplied)
-		//{
-		//	uint8_t rom[] = { TAX_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestTAYImplied)
-		//{
-		//	uint8_t rom[] = { TAY_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetA(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetY());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestTSXImplied)
-		//{
-		//	uint8_t rom[] = { TSX_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetSP(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetX());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestTXAImplied)
-		//{
-		//	uint8_t rom[] = { TXA_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
-		//TEST_METHOD(TestTXSImplied)
-		//{
-		//	uint8_t rom[] = { TXS_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetX(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetSP());
-		//}
-		//TEST_METHOD(TestTYAImplied)
-		//{
-		//	uint8_t rom[] = { TYA_IMPLIED };
-		//	cart->mapper->SetPRGRom(rom, sizeof(rom));
-		//	cpu->SetY(0x77);
-		//	RunInst();
-		//	Assert::AreEqual((uint8_t)0x77, cpu->GetA());
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-		//	Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-		//}
+		TEST_METHOD(TestTAXImplied)
+		{
+			uint8_t rom[] = { TAX_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestTAYImplied)
+		{
+			uint8_t rom[] = { TAY_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetA(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetY());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestTSXImplied)
+		{
+			uint8_t rom[] = { TSX_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetSP(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetX());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestTXAImplied)
+		{
+			uint8_t rom[] = { TXA_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestTXSImplied)
+		{
+			uint8_t rom[] = { TXS_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetX(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetSP());
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
+		TEST_METHOD(TestTYAImplied)
+		{
+			uint8_t rom[] = { TYA_IMPLIED };
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->SetY(0x77);
+			RunInst();
+			Assert::AreEqual((uint8_t)0x77, cpu->GetA());
+			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
+			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
+			Assert::IsTrue(cpu->GetCycleCount() == 2);
+		}
 	};
 }
