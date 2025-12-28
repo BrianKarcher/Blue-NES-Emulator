@@ -11,6 +11,7 @@
 #include "InputMappers.h"
 #include "OpenBusMapper.h"
 #include "Serializer.h"
+#include "DebuggerContext.h"
 
 #define PPU_CYCLES_PER_CPU_CYCLE 3
 
@@ -19,7 +20,7 @@ Nes::Nes(SharedContext& ctx) {
 	apu_ = new APU();
     input_ = new Input();
     openBus_ = new OpenBusMapper();
-    cpu_ = new CPU(*openBus_);
+    cpu_ = new CPU(*openBus_, *_debuggerContext);
     cart_ = new Cartridge(ctx, *cpu_);
     ppu_ = new PPU(ctx, *this);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);

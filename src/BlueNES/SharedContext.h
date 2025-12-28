@@ -7,6 +7,10 @@
 #define WIDTH 256
 #define HEIGHT 240
 
+class DebuggerContext;
+
+// Synchronization context shared between the Core and UI threads.
+// Prevents multi-threading issues when accessing shared resources like video buffer and debugger state.
 class SharedContext {
 private:
     std::mutex video_mutex;
@@ -37,14 +41,7 @@ public:
     std::atomic<uint8_t> current_fps{ 0 };
     std::atomic<uint8_t> mirrorMode;
 
-    SharedContext() {
-        buffer_1.resize(WIDTH * HEIGHT, 0xFF000000); // Fill Black
-        buffer_2.resize(WIDTH * HEIGHT, 0xFF000000);
-
-        // Assign initial pointers
-        p_front_buffer = buffer_1.data();
-        p_back_buffer = buffer_2.data();
-    }
+    SharedContext();
 
     // --- CORE calls this ---
     // Returns a pointer to the memory where the Core should draw the NEXT frame.
@@ -94,4 +91,5 @@ public:
     }
 
 	CommandQueue command_queue;
+	DebuggerContext* debugger_context;
 };

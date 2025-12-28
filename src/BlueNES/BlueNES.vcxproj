@@ -166,6 +166,7 @@
     <ClCompile Include="RendererSlow.cpp" />
     <ClCompile Include="RendererWithReg.cpp" />
     <ClCompile Include="Serializer.cpp" />
+    <ClCompile Include="SharedContext.cpp" />
     <ClCompile Include="UxROMMapper.cpp" />
   </ItemGroup>
   <ItemGroup>

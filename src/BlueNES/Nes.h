@@ -21,6 +21,7 @@ class ReadController1Mapper;
 class ReadController2Mapper;
 class OpenBusMapper;
 class Serializer;
+class DebuggerContext;
 
 class Nes
 {
@@ -64,6 +65,7 @@ public:
 	ReadController1Mapper* readController1Mapper_;
 	ReadController2Mapper* readController2Mapper_;
 	OpenBusMapper* openBus_;
+	DebuggerContext* _debuggerContext;
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
