@@ -4,8 +4,10 @@
 #include <string>
 #include <functional>
 
+class DebuggerContext;
+
 //#define CPUDEBUG
-//#define NMIDEBUG
+#define NMIDEBUG
 
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
@@ -176,9 +178,10 @@ class Serializer;
 class CPU
 {
 public:
-	CPU(OpenBusMapper& openBus);
+	CPU(OpenBusMapper& openBus, DebuggerContext& dbg);
 	void connectBus(Bus* bus);
 
+	bool ShouldPause();
 	inline uint8_t ReadByte(uint16_t addr);
 	void WriteByte(uint16_t addr, uint8_t value);
 
@@ -2292,6 +2295,26 @@ private:
 	//	&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
 	//};
 
+	uint8_t _opcodeBytes[256] = {
+		// 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 0, 3, 3, 0, // 0
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0, // 1
+		   3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // 2
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0, // 3
+		   1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // 4
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0, // 5
+		   1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // 6
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0, // 7
+		   0, 2, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 3, 3, 3, 0, // 8
+		   2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0, // 9
+		   2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // A
+		   2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0, // B
+		   2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // C
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0, // D
+		   2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0, // E
+		   2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0  // F
+	}
+
 	enum AddressingMode {
 		ACC,
 		IMP,
@@ -2330,15 +2353,18 @@ private:
 	};
 
 	OpenBusMapper& openBus;
+	DebuggerContext& dbgCtx;
 	void push(uint8_t value);
 	uint8_t pull();
 
 	// Interrupt lines
 	bool nmi_line;
 	bool nmi_previous;
-	bool nmi_pending;
+	bool nmi_previous_need;
+	bool nmi_need;
 
-	bool prev_irq_line;
+	bool prev_run_irq;
+	bool run_irq;
 	bool irq_line;
 
 	int checkInterrupts();

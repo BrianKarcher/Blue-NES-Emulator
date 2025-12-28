@@ -1,17 +1,21 @@
 #include "DebuggerContext.h"
 #include <string>
 
-void DebuggerContext::RequestStep() {
-
+bool DebuggerContext::HasBreakpoint(uint16_t addr) {
+    return breakpoints[addr].load(std::memory_order_relaxed) != 0;
 }
 
-void DebuggerContext::RequestPause() {
-
-}
-
-void DebuggerContext::RequestContinue() {
-
-}
+//void DebuggerContext::RequestStep() {
+//
+//}
+//
+//void DebuggerContext::RequestPause() {
+//
+//}
+//
+//void DebuggerContext::RequestContinue() {
+//
+//}
 
 bool DebuggerContext::ShouldPause(uint16_t pc) {
     std::lock_guard<std::mutex> lock(mutex);
@@ -31,13 +35,13 @@ bool DebuggerContext::ShouldPause(uint16_t pc) {
     return false;
 }
 
-DebuggerContext::CpuState DebuggerContext::GetCurrentState() {
-	return lastState;
-}
+//DebuggerContext::CpuState DebuggerContext::GetCurrentState() {
+//	return lastState;
+//}
 
-void DebuggerContext::OnInstructionExecuted(const DebuggerContext::CpuState& state,
-    const std::string& disasm) {
-    std::lock_guard<std::mutex> lock(mutex);
-    log[state.pc] = disasm;
-    lastState = state;
-}
+//void DebuggerContext::OnInstructionExecuted(const DebuggerContext::CpuState& state,
+//    const std::string& disasm) {
+//    std::lock_guard<std::mutex> lock(mutex);
+//    log[state.pc] = disasm;
+//    lastState = state;
+//}

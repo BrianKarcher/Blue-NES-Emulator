@@ -213,6 +213,7 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 				irq_reload = false;
 			}
 			else {
+				//dbg(L"IRQ counter decrement %d\n", irq_counter);
 				irq_counter--;
 			}
 

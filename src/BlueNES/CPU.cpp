@@ -5,8 +5,12 @@
 #include "RendererLoopy.h"
 #include "OpenBusMapper.h"
 #include "Serializer.h"
+#include "DebuggerContext.h"
 
-CPU::CPU(OpenBusMapper& openBus) : openBus(openBus) {
+#include <thread>
+#include <chrono>
+
+CPU::CPU(OpenBusMapper& openBus, DebuggerContext& dbg) : openBus(openBus), dbgCtx(dbg) {
 	//buildMap();
 	init_cpu();
 }
@@ -15,21 +19,44 @@ void CPU::connectBus(Bus* bus) {
 	this->bus = bus;
 }
 
+bool CPU::ShouldPause() {
+	if (dbgCtx.HasBreakpoint(m_pc)) {
+		dbgCtx.is_paused.store(true);
+	}
+
+	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {
+		if (dbgCtx.step_requested.load(std::memory_order_relaxed)) {
+			dbgCtx.step_requested.store(false); // Consume the request
+			return false; // allow ONE instruction
+		}
+		return true;
+	}
+
+	return false;
+}
+
 void CPU::cpu_tick() {
 	if (!isActive) return;
 	if (inst_complete) {
+		while (ShouldPause()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 		// Priority 1: NMI
-		if (nmi_line) {
+		if (nmi_previous_need) {
 			// Hardware puts PC on address bus but ignores the data returned,
 			// then prepares the NMI sequence.
+			dbgNmi(L"NMI triggered at cycle %llu\n", m_cycle_count);
 			ReadByte(m_pc);
 			current_opcode = OP_NMI;
-			nmi_line = false;
+			nmi_previous_need = false;
+			nmi_need = false;
 		}
 		// Priority 2: IRQ
-		else if (irq_line && GetFlag(FLAG_INTERRUPT) == 0) {
+		else if (prev_run_irq) {
+			// Dummy read
 			ReadByte(m_pc);
 			current_opcode = OP_IRQ;
+			irq_line = false;
 		}
 		// Priority 3: Normal Fetch
 		else {
@@ -43,6 +70,20 @@ void CPU::cpu_tick() {
 		// Execute the micro-op for the current instruction
 		opcode_table[current_opcode](*this);
 	}
+
+	//"This edge detector polls the status of the NMI line during o2 of each CPU cycle (i.e., during the 
+	//second half of each cycle) and raises an internal signal if the input goes from being high during 
+	//one cycle to being low during the next"
+	nmi_previous_need = nmi_need;
+
+	if (!nmi_previous && nmi_line) {
+		nmi_need = true;
+	}
+	nmi_previous = nmi_line;
+
+	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
+	prev_run_irq = run_irq;
+	run_irq = irq_line && GetFlag(FLAG_INTERRUPT) == 0;
 	m_cycle_count++;
 }
 
@@ -62,8 +103,26 @@ void CPU::Serialize(Serializer& serializer) {
 	cpu.m_p = m_p;
 	cpu.nmi_line = nmi_line;
 	cpu.nmi_previous = nmi_previous;
-	cpu.nmi_pending = nmi_pending;
+	cpu.nmi_previous_need = nmi_previous_need;
 	cpu.irq_line = irq_line;
+
+	cpu.m_cycle_count = m_cycle_count;
+	cpu.nmi_need = nmi_need;
+	cpu.current_opcode = current_opcode;
+
+	cpu.addr_low = addr_low;
+	cpu.addr_high = cpu.addr_high;
+	cpu.m_temp_low = m_temp_low;
+	cpu.effective_addr = effective_addr;
+	cpu.offset = offset;
+	cpu.inst_complete = inst_complete;
+	cpu.addr_complete = addr_complete;
+	cpu._operand = _operand;
+	cpu.cycle_state = cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	cpu.page_crossed = page_crossed;
+
+	cpu.prev_run_irq = prev_run_irq;
+	cpu.run_irq = run_irq;
 	serializer.Write(cpu);
 }
 
@@ -78,8 +137,26 @@ void CPU::Deserialize(Serializer& serializer) {
 	m_p = cpu.m_p;
 	nmi_line = cpu.nmi_line;
 	nmi_previous = cpu.nmi_previous;
-	nmi_pending = cpu.nmi_pending;
+	nmi_previous_need = cpu.nmi_previous_need;
 	irq_line = cpu.irq_line;
+
+	m_cycle_count = cpu.m_cycle_count;
+	nmi_need = cpu.nmi_need;
+	current_opcode = cpu.current_opcode;
+
+	addr_low = cpu.addr_low;
+	addr_high = cpu.addr_high;
+	m_temp_low = cpu.m_temp_low;
+	effective_addr = cpu.effective_addr;
+	offset = cpu.offset;
+	inst_complete = cpu.inst_complete;
+	addr_complete = cpu.addr_complete;
+	_operand = cpu._operand;
+	cycle_state = cpu.cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	page_crossed = cpu.page_crossed;
+
+	prev_run_irq = cpu.prev_run_irq;
+	run_irq = cpu.run_irq;
 }
 
 // ---------------- Debug helper ----------------
@@ -107,8 +184,7 @@ inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
 #endif
 }
 
-void CPU::PowerOn()
-{
+void CPU::PowerOn() {
 	uint8_t resetLo = ReadByte(0xFFFC);
 	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
@@ -122,8 +198,24 @@ void CPU::PowerOn()
 	nmi_line = false;
 	nmi_previous = false;
 	irq_line = false;
-	nmi_pending = false;
+	nmi_previous_need = false;
+	nmi_need = false;
 	isFrozen = false;
+	current_opcode = 0x00;
+
+	addr_low = 0;
+	addr_high = 0;
+	m_temp_low = 0;
+	effective_addr = 0;
+	offset = 0;
+	inst_complete = true;
+	addr_complete = false;
+	_operand = 0;
+	cycle_state = 0;  // Tracks the current micro-op (0, 1, 2...)
+	page_crossed = 0;
+
+	prev_run_irq = false;
+	run_irq = false;
 }
 
 void CPU::Activate(bool active)
@@ -131,21 +223,39 @@ void CPU::Activate(bool active)
 	isActive = active;
 }
 
-void CPU::Reset()
-{
+void CPU::Reset() {
 	// TODO : Add the reset vector read from the bus
-	m_pc = (static_cast<uint16_t>(bus->read(0xFFFD) << 8)) | bus->read(0xFFFC);
+	uint8_t resetLo = ReadByte(0xFFFC);
+	uint8_t resHi = ReadByte(0xFFFD);
+	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
+	m_p = 0;
 	m_a = 0;
 	m_x = 0;
 	m_y = 0;
-	m_p = 0x24; // Set unused flag bit to 1, others to 0
 	m_sp = 0xFD;
 	m_cycle_count = 0;
+	isActive = true;
 	nmi_line = false;
 	nmi_previous = false;
 	irq_line = false;
-	nmi_pending = false;
+	nmi_previous_need = false;
+	nmi_need = false;
 	isFrozen = false;
+	current_opcode = 0x00;
+
+	addr_low = 0;
+	addr_high = 0;
+	m_temp_low = 0;
+	effective_addr = 0;
+	offset = 0;
+	inst_complete = true;
+	addr_complete = false;
+	_operand = 0;
+	cycle_state = 0;  // Tracks the current micro-op (0, 1, 2...)
+	page_crossed = 0;
+
+	prev_run_irq = false;
+	run_irq = false;
 }
 
 void CPU::AddCycles(int count)

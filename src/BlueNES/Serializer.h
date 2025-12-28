@@ -15,10 +15,28 @@ struct CPUState {
 	int m_pc;
 	uint8_t m_sp;
 	uint8_t m_p;
+	uint64_t m_cycle_count;
+
+	uint16_t  current_opcode;
+	uint8_t  addr_low;
+	uint8_t  addr_high;
+	uint8_t  m_temp_low;
+	uint16_t effective_addr;
+	int8_t offset;
+	bool inst_complete = true;
+	bool addr_complete = false;
+	uint8_t _operand;
+	int cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	bool page_crossed;
+
 	// Interrupt lines
 	bool nmi_line;
 	bool nmi_previous;
-	bool nmi_pending;
+	bool nmi_previous_need;
+	bool nmi_need;
+
+	bool prev_run_irq;
+	bool run_irq;
 	bool irq_line;
 };
 
