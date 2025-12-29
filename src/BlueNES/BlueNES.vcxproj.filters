@@ -245,4 +245,12 @@
   <ItemGroup>
     <None Include="..\..\readme.md" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\..\Downloads\icons8-play-50.png" />
+    <Image Include="Images\empty-circle.png" />
+    <Image Include="Images\filled-circle.png" />
+    <Image Include="Images\pause.png" />
+    <Image Include="Images\play.png" />
+    <Image Include="toolbar1.bmp" />
+  </ItemGroup>
 </Project>

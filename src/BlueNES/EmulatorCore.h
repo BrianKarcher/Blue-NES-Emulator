@@ -8,6 +8,8 @@
 //#define EMULATORCORE_DEBUG
 #define FPS_CAP
 
+class DebuggerContext;
+
 class EmulatorCore
 {
 public:
@@ -37,4 +39,5 @@ private:
 	void UpdateNextFrameTime();
 	void CreateSaveState();
 	void LoadState();
+	DebuggerContext* dbgCtx;
 };

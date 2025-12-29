@@ -48,8 +48,8 @@ class Core
 {
 public:
 	Core();
-	EmulatorCore emulator;
 	SharedContext context;
+	EmulatorCore emulator;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();

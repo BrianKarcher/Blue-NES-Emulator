@@ -4,6 +4,7 @@
 #include <string>
 
 class Core;
+class DebuggerContext;
 
 class DebuggerUI
 {
@@ -41,4 +42,5 @@ private:
 		LPARAM lParam
 	);
 	Core& _core;
+	DebuggerContext* dbgCtx;
 };

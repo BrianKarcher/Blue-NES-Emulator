@@ -6,6 +6,19 @@
 
 class DebuggerContext {
 public:
+	uint8_t memory_snapshot[65536];
+
+	void UpdateSnapshot(const uint8_t* ram, const uint8_t* rom) {
+		// Use memcpy to grab a point-in-time state
+		// This is done once per frame at the end of the VBlank/Loop
+		std::memcpy(memory_snapshot, ram, 2048);
+		// ... copy other relevant banks ...
+	}
+
+	uint8_t SafeRead(uint16_t addr) {
+		return memory_snapshot[addr]; // UI thread only reads this
+	}
+
     struct CpuState {
         uint16_t pc;
         uint8_t  a, x, y;
@@ -37,6 +50,8 @@ public:
 
     CpuState lastState{};
 
+	// The op code info are organized as a struct of lists because it makes it more likely to be
+	// added into L1/2 cache.
 	std::string _opcodeNames[256] = {
 //  0     1		2     3     4     5     6     7     8	  9     A     B     C     D     E     F
 	"BRK","ORA","DMP","DMP","DMP","ORA","ASL","DMP","PHP","ORA","ASL","DMP","DMP","ORA","ASL","DMP", // 0

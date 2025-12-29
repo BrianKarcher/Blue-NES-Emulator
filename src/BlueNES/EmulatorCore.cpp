@@ -11,8 +11,10 @@
 #include <vector>
 #include "Serializer.h"
 #include <fstream>
+#include "DebuggerContext.h"
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
+    dbgCtx = ctx.debugger_context;
     // Initialize audio backend
     if (!audioBackend.Initialize(44100, 1)) {  // 44.1kHz, mono
         // Handle error - audio failed to initialize
@@ -88,6 +90,8 @@ void EmulatorCore::run() {
         audioCycleCounter += runFrame();
         context.SwapBuffers();
         frameCount++;
+
+		dbgCtx->UpdateSnapshot(nes.bus_->ramMapper.cpuRAM.data(), nullptr);
 
         // 1. Advance the target time *before* checking the difference
         //    This maintains the fixed-time step clock.

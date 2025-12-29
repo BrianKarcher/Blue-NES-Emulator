@@ -3,8 +3,13 @@
 #include <commctrl.h>
 #include "Core.h"
 #include <string>
+#include "resource.h"
+#include "DebuggerContext.h"
+
+#pragma comment(lib, "comctl32.lib")
 
 DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) {
+    dbgCtx = _core.context.debugger_context;
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc = DebuggerUI::WndProc;
@@ -38,6 +43,36 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
     {
         LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
         DebuggerUI* pMain = (DebuggerUI*)pcs->lpCreateParams;
+
+        INITCOMMONCONTROLSEX icex;
+        icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+        icex.dwICC = ICC_BAR_CLASSES;
+        InitCommonControlsEx(&icex);
+        HWND hWndToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+            WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_WRAPABLE,
+            0, 0, 0, 0, hwnd, (HMENU)IDR_TOOLBAR1, pMain->hInst, NULL);
+
+        // Essential: Tell the toolbar how big the TBBUTTON structure is
+        SendMessage(hWndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
+        // iBitmap: The index of the icon in your bitmap strip (0, 1, 2...)
+        // idCommand: The ID we defined in resource.h
+        // fsState: TBSTATE_ENABLED makes it clickable
+        // fsStyle: BTNS_BUTTON for standard, BTNS_SEP for a space between buttons
+
+        TBBUTTON tbButtons[] = {
+            { 0, IDB_PLAY,    TBSTATE_ENABLED, BTNS_BUTTON, {0}, 0, (INT_PTR)L"Play" },
+            { 1, IDB_PAUSE,   TBSTATE_ENABLED, BTNS_BUTTON, {0}, 0, (INT_PTR)L"Pause" },
+            //{ 2, ID_STOP,    TBSTATE_ENABLED, BTNS_BUTTON, {0}, 0, (INT_PTR)L"Stop" },
+            { 0, 0,          TBSTATE_ENABLED, BTNS_SEP,    {0}, 0, 0 }, // Separator gap
+            { 3, IDB_FILLED_CIRCLE, TBSTATE_ENABLED, BTNS_BUTTON, {0}, 0, (INT_PTR)L"Breakpoint" }
+        };
+        int numButtons = sizeof(tbButtons) / sizeof(TBBUTTON);
+        SendMessage(hWndToolbar, TB_ADDBUTTONS, (WPARAM)numButtons, (LPARAM)&tbButtons);
+        SendMessage(hWndToolbar, TB_AUTOSIZE, 0, 0);
+
+        
+        
         HWND hList = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
@@ -87,6 +122,17 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         {
             switch (message)
             {
+            case WM_COMMAND:
+                switch (LOWORD(wParam))
+                {
+                    case IDB_PLAY:
+                        pMain->dbgCtx->is_paused.store(false);
+					break;
+                    case IDB_PAUSE:
+                        pMain->dbgCtx->is_paused.store(true);
+                        break;
+                }
+				break;
             case WM_KEYDOWN:
             {
                 switch (wParam)
@@ -97,7 +143,7 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                 }
                 break;
             }
-
+            break;
             case WM_DISPLAYCHANGE:
             {
                 InvalidateRect(hwnd, NULL, FALSE);
