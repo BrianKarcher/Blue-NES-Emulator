@@ -9,6 +9,7 @@
 #pragma comment(lib, "comctl32.lib")
 
 DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) {
+	log = (uint8_t*)malloc(0x10000); // 64KB log buffer
     dbgCtx = _core.context.debugger_context;
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -77,10 +78,13 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             nullptr,
-            WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL,
+            WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_NOSORTHEADER | LVS_SINGLESEL,
             10, 120, 860, 520,
             hwnd, (HMENU)1001, pMain->hInst, nullptr
         );
+
+        // Set the virtual count to the 64KB address space
+        ListView_SetItemCountEx(hList, 65536, LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
 
         LVCOLUMN col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH;
@@ -120,19 +124,54 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 
         if (pMain)
         {
-            switch (message)
-            {
-            case WM_COMMAND:
+            switch (message) {
+            case WM_NOTIFY: {
+                LPNMHDR lpnmh = (LPNMHDR)lParam;
+                if (lpnmh->idFrom == 1001) // Our ListView control
+                {
+                    if (lpnmh->code == LVN_GETDISPINFO)
+                    {
+                        NMLVDISPINFO* pDispInfo = (NMLVDISPINFO*)lParam;
+                        int index = pDispInfo->item.iItem;
+                        int subItem = pDispInfo->item.iSubItem;
+                        // Fill in the item text based on index and subItem
+                        wchar_t buffer[256];
+                        switch (subItem)
+                        {
+                        case 0: // BP column
+                            swprintf_s(buffer, L""); // Placeholder for breakpoint indicator
+                            break;
+                        case 1: // Line column
+                            swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
+                            break;
+                        case 2: // Addr column
+                            swprintf_s(buffer, L"%04X", index); // Address in hex
+                            break;
+                        case 3: // Instruction column
+                            // Placeholder instruction text
+                            swprintf_s(buffer, L"NOP"); 
+                            break;
+                        default:
+                            buffer[0] = L'\0';
+                            break;
+                        }
+                        pDispInfo->item.pszText = buffer;
+                    }
+				}
+            } break;
+            case WM_COMMAND: {
                 switch (LOWORD(wParam))
                 {
                     case IDB_PLAY:
                         pMain->dbgCtx->is_paused.store(false);
-					break;
+                    break;
                     case IDB_PAUSE:
                         pMain->dbgCtx->is_paused.store(true);
+                        // TODO Improve by using a conditional variable or event
+                        Sleep(5);
                         break;
                 }
-				break;
+            } break;
             case WM_KEYDOWN:
             {
                 switch (wParam)

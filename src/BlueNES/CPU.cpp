@@ -61,6 +61,7 @@ void CPU::cpu_tick() {
 		// Priority 3: Normal Fetch
 		else {
 			// This is the actual T0 Read.
+			dbgCtx.LogInstructionFetch(m_pc);
 			current_opcode = ReadByte(m_pc++);
 		}
 		cycle_state = 1;
