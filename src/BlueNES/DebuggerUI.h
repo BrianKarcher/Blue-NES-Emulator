@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+class Bus;
 class Core;
 class DebuggerContext;
 
@@ -134,6 +135,7 @@ private:
 		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // F
 	};
 
+	Bus* _bus;
 	HINSTANCE hInst;
 	HWND hDebuggerWnd = NULL;
 	HWND hList = nullptr;
@@ -145,4 +147,6 @@ private:
 	);
 	Core& _core;
 	DebuggerContext* dbgCtx;
+	void RedrawVisibleRange();
+	std::wstring StringToWstring(const std::string& str);
 };

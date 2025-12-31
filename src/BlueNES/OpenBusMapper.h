@@ -24,6 +24,10 @@ public:
 		return openBus;
 	}
 
+	uint8_t peek(uint16_t address) {
+		return openBus;
+	}
+
 	inline void write(uint16_t address, uint8_t value) {
 		
 	}

@@ -221,6 +221,25 @@ public:
         return 0;
     }
 
+    uint8_t peek_register(uint16_t address) {
+        if (address == 0x4015) {
+            // Status register (read)
+            uint8_t status = 0;
+
+            if (pulse1.length_counter > 0) status |= 0x01;
+            if (pulse2.length_counter > 0) status |= 0x02;
+            if (triangle.length_counter > 0) status |= 0x04;
+            if (noise.length_counter > 0) status |= 0x08;
+            if (dmc.get_bytes_remaining() > 0) status |= 0x10;
+            if (frame_counter_irq_flag) status |= 0x40;
+            if (dmc.get_irq_flag()) status |= 0x80;
+
+            return status;
+        }
+
+        return 0;
+    }
+
     float get_output() {
         return mix_output();
     }

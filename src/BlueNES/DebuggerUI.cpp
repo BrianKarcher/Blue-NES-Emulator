@@ -5,10 +5,12 @@
 #include <string>
 #include "resource.h"
 #include "DebuggerContext.h"
+#include "Bus.h"
 
 #pragma comment(lib, "comctl32.lib")
 
 DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) {
+	_bus = _core.emulator.GetBus();
 	log = (uint8_t*)malloc(0x10000); // 64KB log buffer
     dbgCtx = _core.context.debugger_context;
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
@@ -34,6 +36,29 @@ DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) 
     );
 
     ShowWindow(hDebuggerWnd, SW_SHOW);
+}
+
+void DebuggerUI::RedrawVisibleRange() {
+    // 1. Get the index of the first visible item
+    int topIndex = ListView_GetTopIndex(hList);
+
+    // 2. Get how many items fit in the current window height
+    int countPerPage = ListView_GetCountPerPage(hList);
+
+    // 3. Calculate the bottom index (plus a small buffer of 1 or 2 for safety)
+    int bottomIndex = topIndex + countPerPage + 1;
+
+    // 4. Tell Windows to invalidate only this specific range
+    // This triggers LVN_GETDISPINFO for only these items.
+    ListView_RedrawItems(hList, topIndex, bottomIndex);
+}
+
+std::wstring DebuggerUI::StringToWstring(const std::string& str) {
+    if (str.empty()) return L"";
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
+    std::wstring wstr(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], size_needed);
+    return wstr;
 }
 
 LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -74,7 +99,7 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 
         
         
-        HWND hList = CreateWindowEx(
+        pMain->hList = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             nullptr,
@@ -84,26 +109,26 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         );
 
         // Set the virtual count to the 64KB address space
-        ListView_SetItemCountEx(hList, 65536, LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
+        ListView_SetItemCountEx(pMain->hList, 65536, LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
 
         LVCOLUMN col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH;
 
         wchar_t bpText[] = L"BP";
         col.cx = 40; col.pszText = bpText;
-        ListView_InsertColumn(hList, 0, &col);
+        ListView_InsertColumn(pMain->hList, 0, &col);
 
         wchar_t lineText[] = L"Line";
         col.cx = 70; col.pszText = lineText;
-        ListView_InsertColumn(hList, 1, &col);
+        ListView_InsertColumn(pMain->hList, 1, &col);
 
         wchar_t addrText[] = L"Addr";
         col.cx = 80; col.pszText = addrText;
-        ListView_InsertColumn(hList, 2, &col);
+        ListView_InsertColumn(pMain->hList, 2, &col);
 
         wchar_t instText[] = L"Instruction";
         col.cx = 600; col.pszText = instText;
-        ListView_InsertColumn(hList, 3, &col);
+        ListView_InsertColumn(pMain->hList, 3, &col);
 
         ::SetWindowLongPtrW(
             hwnd,
@@ -126,6 +151,10 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         {
             switch (message) {
             case WM_NOTIFY: {
+				// Only handle if paused so we don't slow down emulation
+                if (!pMain->_core.isPlaying || !pMain->dbgCtx->is_paused) {
+                    return 1;
+                }
                 LPNMHDR lpnmh = (LPNMHDR)lParam;
                 if (lpnmh->idFrom == 1001) // Our ListView control
                 {
@@ -149,12 +178,18 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                             break;
                         case 3: // Instruction column
                             // Placeholder instruction text
-                            swprintf_s(buffer, L"NOP"); 
+                            if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
+                                swprintf_s(buffer, L"%S", pMain->_opcodeNames[pMain->_bus->peek(index)].c_str()); // Address in hex
+                            }
+                            else {
+                                swprintf_s(buffer, L""); // Address in hex
+                            }
                             break;
                         default:
                             buffer[0] = L'\0';
                             break;
                         }
+                        
                         pDispInfo->item.pszText = buffer;
                     }
 				}
@@ -167,6 +202,7 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     break;
                     case IDB_PAUSE:
                         pMain->dbgCtx->is_paused.store(true);
+                        pMain->RedrawVisibleRange();
                         // TODO Improve by using a conditional variable or event
                         Sleep(5);
                         break;

@@ -44,6 +44,10 @@ uint8_t Bus::read(uint16_t addr) {
 	return val;
 }
 
+uint8_t Bus::peek(uint16_t addr) {
+	return memoryMap[addr]->peek(addr);
+}
+
 void Bus::write(uint16_t addr, uint8_t data) {
 	openBus.setOpenBus(data);
 	memoryMap[addr]->write(addr, data);

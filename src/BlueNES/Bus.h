@@ -25,6 +25,7 @@ public:
 	// Access functions
 	void registerAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
 	uint8_t read(uint16_t addr);
+	uint8_t peek(uint16_t addr);
 	void write(uint16_t addr, uint8_t data);
 
 	void initialize();

@@ -9,6 +9,7 @@
 #define FPS_CAP
 
 class DebuggerContext;
+class Bus;
 
 class EmulatorCore
 {
@@ -22,6 +23,9 @@ public:
 	int runFrame();
 	void start();
 	void stop();
+	Bus* GetBus() {
+		return nes.bus_;
+	}
 	
 private:
 	inline void dbg(const wchar_t* fmt, ...);

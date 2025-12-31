@@ -61,10 +61,12 @@ public:
 	void reset();
 	void step();
 	uint8_t read(uint16_t address);
+	uint8_t peek(uint16_t address);
 	void write(uint16_t address, uint8_t value);
 	inline void write_register(uint16_t addr, uint8_t value);
 	void writeOAM(uint16_t addr, uint8_t val);
 	inline uint8_t read_register(uint16_t addr);
+	uint8_t peek_register(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
 	uint8_t GetScrollX() const;
 	uint8_t GetScrollY() const;

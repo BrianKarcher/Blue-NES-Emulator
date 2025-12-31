@@ -70,6 +70,10 @@ uint8_t PPU::read(uint16_t address) {
 	return read_register(0x2000 + (address & 0x7));
 }
 
+uint8_t PPU::peek(uint16_t address) {
+	return peek_register(0x2000 + (address & 0x7));
+}
+
 void PPU::register_memory(Bus& bus) {
 	bus.registerAdd(0x2000, 0x3FFF, this);
 	bus.registerAdd(0x4014, 0x4014, this);
@@ -241,6 +245,48 @@ inline uint8_t PPU::read_register(uint16_t addr)
 		//vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
 		dbg(L"(%d) 0x%04X PPUDATA Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		return value;
+	}
+	}
+
+	return 0;
+}
+
+uint8_t PPU::peek_register(uint16_t addr)
+{
+	switch (addr)
+	{
+	case PPUCTRL:
+	{
+		return m_ppuCtrl;
+	}
+	case PPUMASK:
+	{
+		// not typically readable, return 0
+		return 0;
+	}
+	case PPUSTATUS:
+	{
+		return m_ppuStatus;
+	}
+	case OAMADDR:
+	{
+		return oamAddr;
+	}
+	case OAMDATA:
+	{
+		return oam[oamAddr];
+	}
+	case PPUSCROLL:
+	{
+		return 0;
+	}
+	case PPUADDR:
+	{
+		return 0;
+	}
+	case PPUDATA:
+	{
+		return ppuDataBuffer;
 	}
 	}
 

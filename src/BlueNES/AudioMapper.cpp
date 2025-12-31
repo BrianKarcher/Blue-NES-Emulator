@@ -12,6 +12,10 @@ uint8_t AudioMapper::read(uint16_t address) {
 	return apu.read_register(address);
 }
 
+uint8_t AudioMapper::peek(uint16_t address) {
+	return apu.peek_register(address);
+}
+
 void AudioMapper::write(uint16_t address, uint8_t value) {
 	apu.write_register(address, value);
 }

@@ -11,6 +11,9 @@ public:
 	~ReadController1Mapper() = default;
 
 	inline uint8_t read(uint16_t address);
+	uint8_t peek(uint16_t address) {
+		return 0;
+	}
 	inline void write(uint16_t address, uint8_t value);
 	void register_memory(Bus& bus);
 private:
@@ -24,6 +27,9 @@ public:
 	~ReadController2Mapper() = default;
 
 	inline uint8_t read(uint16_t address);
+	uint8_t peek(uint16_t address) {
+		return 0;
+	}
 	inline void write(uint16_t address, uint8_t value);
 	void register_memory(Bus& bus);
 private:

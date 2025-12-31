@@ -8,6 +8,10 @@ inline uint8_t ReadController1Mapper::read(uint16_t address) {
 	return m_input.ReadController1();
 }
 
+uint8_t peek(uint16_t address) {
+	return 0;
+}
+
 inline void ReadController1Mapper::write(uint16_t address, uint8_t value) {
 	m_input.Poll();
 }
