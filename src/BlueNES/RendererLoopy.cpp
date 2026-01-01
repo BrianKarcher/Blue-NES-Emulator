@@ -301,137 +301,103 @@ void RendererLoopy::shift_registers() {
     m_shifts.attr_hi_shift <<= 1;
 }
 
+/// <summary>
+/// Simulates the clock cycle of a PPU (Picture Processing Unit) renderer, handling pixel rendering,
+/// background tile fetching, sprite evaluation, and other PPU operations.
+/// This function is called once per PPU clock cycle (5.3M/sec) and updates the internal state of the
+/// renderer accordingly.
+/// This gets called 3 times per CPU cycle. Meaning, I need to make some speed improvements!
+/// </summary>
+/// <param name="buffer">A pointer to the buffer where rendered pixel data will be written.</param>
 void RendererLoopy::clock(uint32_t* buffer) {
     bool rendering = renderingEnabled();
-    bool visibleScanline = (m_scanline >= 0 && m_scanline <= 239);
+    bool visibleScanline = (m_scanline < 240);
     bool preRenderLine = (m_scanline == 261);
 
-    if (dot == 0) {
-        dot++;
-        // Idle dot, do nothing
-		return;
+    // 1. Handle VBlank/Idle scanlines first for an early exit
+    // Most scanlines in a frame are either visible or VBlank.
+    if (m_scanline >= 240 && m_scanline < 261) {
+        // NMI and such has to happen for the CPU to function.
+        if (m_scanline == 241 && dot == 1) {
+            m_ppu->m_ppuStatus |= PPUSTATUS_VBLANK;
+            m_frameComplete = true;
+            if (m_ppu->m_ppuCtrl & NMI_ENABLE) {
+                m_bus->cpu.setNMI(true);
+            }
+        }
+        // This path is HOT. We need every cycle we can get. An else branch is costlier.
+		// A bit taboo but sometimes you have to break the rules for performance.
+        goto end_of_clock; // Skip all rendering logic
     }
 
-    // Pixel rendering (visible)
-    if (visibleScanline && dot >= 1 && dot <= 256) {
-        if (rendering) {
-            renderPixel(buffer);
-            // Shift registers every cycle
-            shift_registers();
-        }
-        else {
-            renderPixelBlack(buffer);
-        }
-    }
-    else if (rendering && (preRenderLine || visibleScanline) && dot >= 321 && dot <= 336) {
-        // While in 321..336 we still load shifters and such for the next scanline,
-        // but don't render pixels (this is part of the fetch window).
-        // shift each dot as well to keep pipeline in sync.
-        // This ensures that when we start rendering, we have the correct data in the shifters.
-        // With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
-        shift_registers();
-    }
+    if (dot == 0) goto end_of_clock;
 
+    // 3. Rendering Hot Path
     if (rendering) {
-        if ((visibleScanline || preRenderLine) && ((dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336))) {
-            // Background tile and attribute fetches
-            // These occur every 8 dots
+        // Visible Pixel area
+        if (dot <= 256) {
+            if (visibleScanline) renderPixel(buffer);
+            shift_registers();
+
+            // Combined dot checks.
             if (((dot) & 7) == 0) {
-                // Load previous fetch into shift registers
-                //if (dot > 1) {
-                //}
                 fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000 ? 1 : 0);
-                // OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", Dot: " + std::to_wstring(dot) + L", Nametable Byte: " + std::to_wstring(tile.nametable_byte) + L", Attr Byte: " + std::to_wstring(tile.attribute_byte) + L", Pattern Low: " + std::to_wstring(tile.pattern_low) + L", Pattern High: " + std::to_wstring(tile.pattern_high) + L"\n").c_str());
                 load_shift_registers();
-                // Increment coarse X after fetching
+                ppuIncrementX();
+            }
+
+            if (dot == 256) ppuIncrementFineY();
+        }
+        // Post-render / Fetch area
+        else if (dot >= 321 && dot <= 336) {
+            // While in 321..336 we still load shifters and such for the next scanline,
+            // but don't render pixels (this is part of the fetch window).
+            // shift each dot as well to keep pipeline in sync.
+            // This ensures that when we start rendering, we have the correct data in the shifters.
+            // With two tiles fetched ahead, we can render the first pixel of the next scanline correctly.
+            shift_registers();
+            if ((dot & 7) == 0) {
+                fetch_tile_data(&tile, m_ppu->GetBackgroundPatternTableBase() == 0x1000);
+                load_shift_registers();
                 ppuIncrementX();
             }
         }
-    }
-
-
-
-    // On dot 256: increment Y
-    if (rendering && dot == 256 && (visibleScanline || preRenderLine)) {
-        ppuIncrementFineY();
-    }
-
-    // On dot 257: copy horizontal bits from t to v and start sprite evaluation
-    if (rendering && dot == 257 && (visibleScanline || preRenderLine)) {
-        ppuCopyX();
-    }
-
-    if (rendering && (visibleScanline || preRenderLine) && dot == 257) {
-        evaluateSprites(m_scanline, secondaryOAM);
-		prepareSpriteLine(m_scanline);
-    }
-
-    // Pre-render only: dots 280..304 copy vertical bits from t to v
-    if (rendering && preRenderLine && dot >= 280 && dot <= 304) {
-        ppuCopyY();
-    }
-
-    if (m_scanline == 50 && dot == 1) {
-        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
-    }
-
-    // NMI and such has to happen for the CPU to function.
-    // VBlank scanlines (241-260)
-    if (m_scanline == 241 && dot == 1) {
-        m_ppu->m_ppuStatus |= PPUSTATUS_VBLANK; // Set VBlank flag
-        m_frameComplete = true;
-        if (m_ppu->m_ppuCtrl & NMI_ENABLE) {
-            // Trigger NMI if enabled
-            //OutputDebugStringW((L"Triggering NMI at CPU cycle "
-            //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
-            m_bus->cpu.setNMI(true);
+        // Sprite Eval / Housekeeping area
+        else if (dot == 257) {
+            ppuCopyX();
+            evaluateSprites(m_scanline, secondaryOAM);
+            prepareSpriteLine(m_scanline);
         }
+        else if (preRenderLine && dot >= 280 && dot <= 304) {
+            // Pre-render only: dots 280..304 copy vertical bits from t to v
+            ppuCopyY();
+        }
+	}
+    else {
+        // Rendering is OFF
+        if (visibleScanline && dot <= 256) renderPixelBlack(buffer);
     }
 
-    // Pre-render scanline (261)
+    
+    // 4. Pre-render Line specific state clear
     if (preRenderLine && dot == 1) {
-        //OutputDebugStringW((L"Scanline: " + std::to_wstring(m_scanline) + L", nametable: " + std::to_wstring(ppu->m_ppuCtrl & 3) + L", PPU Scroll X: " + std::to_wstring(GetScrollX()) + L"\n").c_str());
-
-        //OutputDebugStringW((L"PPU Scroll X: " + std::to_wstring(m_scrollX) + L"\n").c_str());
-
-        //OutputDebugStringW((L"Pre-render scanline hit at CPU cycle "
-        //	+ std::to_wstring(bus->cpu->cyclesThisFrame) + L"\n").c_str());
         hasOverflowBeenSet = false;
         hasSprite0HitBeenSet = false;
         m_ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
         m_frameComplete = false;
         m_bus->cpu.setNMI(false);
-        //m_backBuffer.fill(0xFF000000); // Clear back buffer to opaque black
-        //OutputDebugStringW((L"PPUCTRL at render: " + std::to_wstring(ppu->m_ppuCtrl) + L"\n").c_str());
     }
 
-    // Clock IRQ counter once per scanline at dot 260
-    //if (rendering && (visibleScanline || preRenderLine) && dot == 260) {
-    //    if (m_mapper) {
-    //        // Simplified: just clock the counter once per scanline
-    //        // This creates a rising edge from nametable (A12=0) to pattern (A12=1)
-    //        m_mapper->ClockIRQCounter(0x0000);  // Nametable access
-    //        m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
-    //    }
-    //}
-
-    //if (rendering && (visibleScanline || preRenderLine) && dot == 261) {
-    //    if (m_mapper) {
-    //        // Clock the IRQ counter on A12 rising edge
-    //        m_mapper->ClockIRQCounter(0x1000);  // Pattern table access (triggers A12 rise)
-    //    }
-    //}
-
-    if (preRenderLine && dot == 339 && _frameCount & 0x01) {
+    // 5. Odd frame skip
+    if (preRenderLine && dot == 339 && (_frameCount & 0x01) && rendering) {
         // We skip a dot every other frame on the pre-render scanline.
         dot = 340;
     }
 
-    dot++;
-    if (dot > DOTS_PER_SCANLINE) {
+    end_of_clock:
+    if (++dot > DOTS_PER_SCANLINE) {
         dot = 0;
-        m_scanline++;
-        if (m_scanline > SCANLINES_PER_FRAME) {
+        if (++m_scanline > SCANLINES_PER_FRAME) {
             m_scanline = 0;
             _frameCount++;
         }

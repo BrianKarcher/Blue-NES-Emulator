@@ -35,6 +35,15 @@ bool CPU::ShouldPause() {
 	return false;
 }
 
+/// <summary>
+/// As long as the game is not paused, execute one and only one CPU cycle.
+/// This may involve fetching a new instruction or executing a micro-op of the current instruction.
+/// "Always run once" keeps the CPU, APU and PPU in sync.
+/// Note the difference between instructions and cycles.
+/// This function gets called 1.79 million times per second.
+/// The state machines are designed to run on a per-cycle basis. On each cycle, a bus access MUST occur.
+/// Although some are dummy reads/writes, they must happen to keep the timing correct.
+/// </summary>
 void CPU::cpu_tick() {
 	if (!isActive) return;
 	if (inst_complete) {
