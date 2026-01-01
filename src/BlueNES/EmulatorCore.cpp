@@ -137,7 +137,7 @@ void EmulatorCore::run() {
 
         if (currentTime >= nextFpsUpdateTime) {
 			// Update FPS once per second
-			dbg(L"FPS: %d, cycles: %d\n", frameCount, audioCycleCounter);
+			LOG(L"FPS: %d, cycles: %d\n", frameCount, audioCycleCounter);
             context.current_fps = frameCount;
             frameCount = 0;
             audioCycleCounter = 0;
@@ -185,7 +185,7 @@ int EmulatorCore::runFrame() {
         // Not enough samples generated - pad with last value
 		nes.audioBuffer.push_back(nes.audioBuffer[nes.audioBuffer.size() - 1]);
     }
-    dbg(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu_->cyclesThisFrame, nes.audioBuffer.size());
+    LOG(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu_->cyclesThisFrame, nes.audioBuffer.size());
     int cycleCount = nes.audioBuffer.size();
     if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
@@ -279,10 +279,10 @@ void EmulatorCore::CreateSaveState() {
 	serializer.StartSerialization(os);
     nes.Serialize(serializer);
     if (!os) {
-        dbg(L"Failed to open save state file for writing: %s\n", stateFilePath.c_str());
+        LOG(L"Failed to open save state file for writing: %s\n", stateFilePath.c_str());
         return;
 	}
-    //dbg(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
+    //LOG(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
 }
 
 void EmulatorCore::LoadState() {
@@ -290,11 +290,11 @@ void EmulatorCore::LoadState() {
     std::filesystem::path stateFilePath = appFolder / (nes.cart_->fileName + L".000");
     std::ifstream is(stateFilePath, std::ios::binary);
     if (!is) {
-        dbg(L"Failed to open save state file for reading: %s\n", stateFilePath.c_str());
+        LOG(L"Failed to open save state file for reading: %s\n", stateFilePath.c_str());
         return;
     }
     Serializer serializer;
     serializer.StartDeserialization(is);
     nes.Deserialize(serializer);
-	//dbg(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
+	//LOG(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
 }

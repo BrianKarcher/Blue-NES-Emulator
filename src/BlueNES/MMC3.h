@@ -9,6 +9,12 @@ class Cartridge;
 class CPU;
 class RendererLoopy;
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
 #define MMC3DEBUG
 
 class MMC3 : public Mapper, public A12Mapper

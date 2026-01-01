@@ -37,7 +37,7 @@ MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize)
 }
 
 // ---------------- Debug helper ----------------
-void MMC1::dbg(const wchar_t* fmt, ...) const {
+inline void MMC1::dbg(const wchar_t* fmt, ...) const {
 #ifdef MMC1DEBUG
 	if (!debug) return;
 	wchar_t buf[512];
@@ -52,14 +52,14 @@ void MMC1::dbg(const wchar_t* fmt, ...) const {
 void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	// Ignore writes that happen too close together (within 2 CPU cycles)
 	//if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
-	//	dbg(L"MMC1: Ignoring consecutive-cycle write\n");
+	//	LOG(L"MMC1: Ignoring consecutive-cycle write\n");
 	//	return;
 	//}
 	//lastWriteCycle = currentCycle;
 	// Debug print
 	//std::string bits = std::bitset<8>(shiftRegister).to_string();
 	//std::wstring wbits(bits.begin(), bits.end());
-	//dbg(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
+	//LOG(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
 	//	addr, val, wbits.c_str());
 	wchar_t buffer[60];
 	//std::wstring bits = std::to_wstring(std::bitset<8>(shiftRegister).to_string());
@@ -71,7 +71,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 		shiftRegister = 0b10000;
 		//prgBankReg = 2; // MMC1 starts Bank 0 at $8000
 		controlReg |= 0x0C; // set PRG mode bits to 11 (mode 3) as hardware typically does on reset
-		dbg(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
+		LOG(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
 		recomputeMappings();
 		return;
 	}
@@ -110,7 +110,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// Control register
 	std::string bits = std::bitset<8>(val).to_string();
 	std::wstring wbits(bits.begin(), bits.end());
-	dbg(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
+	LOG(L"MMC1 shift full for 0x%04X -> data=0b%s (0x%02X)\n",
 		addr, wbits.c_str(), val);
 	if (addr >= 0x8000 && addr <= 0x9FFF) {
 		// Control register (mirroring + PRG mode + CHR mode)
@@ -165,10 +165,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	// PRG Bank
 	else if (addr >= 0xE000 && addr <= 0xFFFF) {
 		// PRG bank register
-		if ((val & 0x0F) > 4) {
-			int i = 0;
-		}
-		//dbg(L"\nChanging prg bank to %d\n", val & 0x0F);
+		//LOG(L"\nChanging prg bank to %d\n", val & 0x0F);
 		cartridge->SetPrgRamEnabled((val & 0b10000) == 0 ? true : false);
 		prgBankReg = val & 0x0F; // only low 4 bits used for PRG bank
 	}
@@ -252,9 +249,9 @@ void MMC1::recomputeMappings()
 		break;
 	}
 
-	dbg(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
-	dbg(L"  PRG addrs: prg0=0x%06X(0x%02X) prg1=0x%06X(0x%02X) (prgBankCount=%d)\n", prg0Addr, prg0Addr / 0x4000, prg1Addr, prg1Addr / 0x4000, prgBank16kCount);
-	dbg(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
+	LOG(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
+	LOG(L"  PRG addrs: prg0=0x%06X(0x%02X) prg1=0x%06X(0x%02X) (prgBankCount=%d)\n", prg0Addr, prg0Addr / 0x4000, prg1Addr, prg1Addr / 0x4000, prgBank16kCount);
+	LOG(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
 inline uint8_t MMC1::readPRGROM(uint16_t addr) const {

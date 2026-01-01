@@ -183,7 +183,7 @@ void Cartridge::WritePRGRAM(uint16_t address, uint8_t data) {
 }
 
 // ---------------- Debug helper ----------------
-void dbg2(const wchar_t* fmt, ...) {
+inline void Cartridge::dbg(const wchar_t* fmt, ...) {
     //if (!debug) return;
     wchar_t buf[512];
     va_list args;
@@ -194,7 +194,7 @@ void dbg2(const wchar_t* fmt, ...) {
 }
 
 void Cartridge::SetPrgRamEnabled(bool enable) {
-    dbg2(L"Setting PrgRamEnabled to %d\n", enable);
+    LOG(L"Setting PrgRamEnabled to %d\n", enable);
     isPrgRamEnabled = enable;
 }
 

@@ -8,6 +8,12 @@
 #include "INESLoader.h"
 #include <filesystem>
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
 class CPU;
 class Bus;
 class SharedContext;
@@ -49,4 +55,5 @@ private:
 	void saveSRAM();
 	bool isBatteryBacked = false;
 	bool m_isLoaded;
+	inline void dbg(const wchar_t* fmt, ...);
 };

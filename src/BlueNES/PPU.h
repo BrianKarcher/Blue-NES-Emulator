@@ -6,6 +6,12 @@
 #include "SharedContext.h"
 #include "MemoryMapper.h"
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
 #define NMI_ENABLE 0x80
 
 #define NAMETABLE_WIDTH 32

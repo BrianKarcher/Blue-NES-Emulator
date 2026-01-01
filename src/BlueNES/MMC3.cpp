@@ -120,14 +120,14 @@ void MMC3::updatePrgMapping() {
 }
 
 void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
-	dbg(L"(%d) 0x%04X 0x%02X (%d) \n", currentCycle, addr, val, val);
+	LOG(L"(%d) 0x%04X 0x%02X (%d) \n", currentCycle, addr, val, val);
 	switch (addr & 0xE001) {
 		case 0x8000:
 			// Control register
 			prgMode = val & 0x40;
 			chrMode = val & 0x80;
 			m_regSelect = val & 0x7; // 3 LSB
-			//dbg(L"prg: %d chr: %d reg: %d\n", prgMode, chrMode, m_regSelect);
+			//LOG(L"prg: %d chr: %d reg: %d\n", prgMode, chrMode, m_regSelect);
 			updatePrgMapping();
 			updateChrMapping();
 			break;
@@ -205,7 +205,7 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 		// Detect rising edge of A12 (0 -> 1 transition)
 		if (!last_a12 && a12LowTime >= A12_LOW_THRESHOLD && current_a12) {
 		//if (!last_a12 && current_a12) {
-			//dbg(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
+			//LOG(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
 			//if (a12_filter == 0) {
 				// Clock the counter on rising edge
 			if (irq_counter == 0 || irq_reload) {
@@ -213,13 +213,13 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 				irq_reload = false;
 			}
 			else {
-				//dbg(L"IRQ counter decrement %d\n", irq_counter);
+				//LOG(L"IRQ counter decrement %d\n", irq_counter);
 				irq_counter--;
 			}
 
 			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
-				dbg(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
+				LOG(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
 				triggerIRQ();
 			}
 

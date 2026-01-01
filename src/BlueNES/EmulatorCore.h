@@ -5,8 +5,14 @@
 #include "SharedContext.h"
 #include <thread>
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
 //#define EMULATORCORE_DEBUG
-#define FPS_CAP
+//#define FPS_CAP
 
 class DebuggerContext;
 class Bus;

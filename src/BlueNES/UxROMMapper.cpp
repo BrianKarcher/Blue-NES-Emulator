@@ -34,7 +34,7 @@ void UxROMMapper::initialize(ines_file_t& data) {
 }
 
 void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
-	dbg(L"(%d) 0x%04X 0x%02X (%d) \n", currentCycle, addr, val, val);
+	LOG(L"(%d) 0x%04X 0x%02X (%d) \n", currentCycle, addr, val, val);
 	// This boards uses only the lower 3 bits to select the bank
 	// The bank to load is stored in ROM. The address just points to the ROM location to pull.
 	//uint8_t data = cart->m_prgRomData[addr];

@@ -45,7 +45,7 @@ void CPU::cpu_tick() {
 		if (nmi_previous_need) {
 			// Hardware puts PC on address bus but ignores the data returned,
 			// then prepares the NMI sequence.
-			dbgNmi(L"NMI triggered at cycle %llu\n", m_cycle_count);
+			LOG_NMI(L"NMI triggered at cycle %llu\n", m_cycle_count);
 			ReadByte(m_pc);
 			current_opcode = OP_NMI;
 			nmi_previous_need = false;

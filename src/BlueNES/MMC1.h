@@ -3,6 +3,12 @@
 #include "Mapper.h"
 #include "INESLoader.h"
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
 #define CHR_BANK_SIZE 0x1000 // 4k
 #define PRG_BANK_SIZE 0x4000 // 16k
 
@@ -26,7 +32,7 @@ public:
 	inline uint8_t readCHR(uint16_t addr) const;
 	void writeCHR(uint16_t addr, uint8_t data);
 
-	void dbg(const wchar_t* fmt, ...) const;
+	inline void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;
 	void shutdown() { }
 	void Serialize(Serializer& serializer) override;

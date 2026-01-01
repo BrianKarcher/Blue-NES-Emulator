@@ -6,6 +6,18 @@
 
 class DebuggerContext;
 
+#ifdef _DEBUG
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
+
+#ifdef _DEBUG
+#define LOG_NMI(...) dbgNmi(__VA_ARGS__)
+#else
+#define LOG_NMI(...) do {} while(0) // completely removed by compiler
+#endif
+
 //#define CPUDEBUG
 #define NMIDEBUG
 
