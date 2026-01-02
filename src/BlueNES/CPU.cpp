@@ -72,6 +72,12 @@ void CPU::cpu_tick() {
 		else {
 			// This is the actual T0 Read.
 			dbgCtx.LogInstructionFetch(m_pc);
+			dbgCtx.lastState.a = m_a;
+			dbgCtx.lastState.x = m_x;
+			dbgCtx.lastState.y = m_y;
+			dbgCtx.lastState.sp = m_sp;
+			dbgCtx.lastState.p = m_p;
+			dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
 			current_opcode = ReadByte(m_pc++);
 		}
 		cycle_state = 1;
@@ -79,12 +85,6 @@ void CPU::cpu_tick() {
 	}
 	else {
 		// Execute the micro-op for the current instruction
-		dbgCtx.lastState.a = m_a;
-		dbgCtx.lastState.x = m_x;
-		dbgCtx.lastState.y = m_y;
-		dbgCtx.lastState.sp = m_sp;
-		dbgCtx.lastState.p = m_p;
-		dbgCtx.lastState.pc = m_pc - 1; // Pointing to the opcode just executed/fetched
 		opcode_table[current_opcode](*this);
 	}
 

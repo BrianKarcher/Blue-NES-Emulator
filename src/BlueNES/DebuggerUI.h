@@ -1,12 +1,16 @@
 #pragma once
 #include <Windows.h>
+#include <commctrl.h>
 #include <array>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class Bus;
 class Core;
 class DebuggerContext;
+class CPU;
+class SharedContext;
 
 class DebuggerUI
 {
@@ -137,7 +141,9 @@ private:
 		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // F
 	};
 
-	std::vector<uint16_t> displayMap;
+	std::vector<uint16_t> displayList;
+	// addr to index in displayList
+	std::unordered_map<int, int> displayMap;
 	Bus* _bus;
 	HINSTANCE hInst;
 	HWND hDebuggerWnd = NULL;
@@ -150,6 +156,8 @@ private:
 	);
 	Core& _core;
 	DebuggerContext* dbgCtx;
+	SharedContext* sharedCtx;
 	void RedrawVisibleRange();
+	LRESULT HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<uint16_t>& displayMap);
 	std::wstring StringToWstring(const std::string& str);
 };

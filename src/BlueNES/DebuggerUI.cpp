@@ -6,6 +6,7 @@
 #include "resource.h"
 #include "DebuggerContext.h"
 #include "Bus.h"
+#include "SharedContext.h"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -13,6 +14,7 @@ DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) 
 	_bus = _core.emulator.GetBus();
 	log = (uint8_t*)malloc(0x10000); // 64KB log buffer
     dbgCtx = _core.context.debugger_context;
+	sharedCtx = &_core.context;
     WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc = DebuggerUI::WndProc;
@@ -62,22 +64,24 @@ std::wstring DebuggerUI::StringToWstring(const std::string& str) {
 }
 
 void DebuggerUI::ComputeDisplayMap() {
+    displayList.clear();
     displayMap.clear();
 
     for (int i = 0; i < 0x10000; ++i) {
         if (dbgCtx->memory_metadata[i] == META_CODE) {
-            displayMap.push_back(i);
+            displayList.push_back(i);
+			displayMap[i] = displayList.size() - 1;
         }
 	}
     // Set the virtual count to the display map.
-    ListView_SetItemCountEx(hList, displayMap.size(), LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
+    ListView_SetItemCountEx(hList, displayList.size(), LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
 }
 
 void DebuggerUI::FocusPC(uint16_t pc) {
     // Find which index in our map corresponds to the current PC
-    auto it = std::find(displayMap.begin(), displayMap.end(), pc);
-    if (it != displayMap.end()) {
-        int index = std::distance(displayMap.begin(), it);
+    auto it = std::find(displayList.begin(), displayList.end(), pc);
+    if (it != displayList.end()) {
+        int index = std::distance(displayList.begin(), it);
 
         // Ensure the item is visible (scrolls if necessary)
         ListView_EnsureVisible(hList, index, FALSE);
@@ -85,6 +89,32 @@ void DebuggerUI::FocusPC(uint16_t pc) {
         // Optionally redraw just this area
         RedrawVisibleRange();
     }
+}
+
+LRESULT DebuggerUI::HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<uint16_t>& displayMap) {
+    switch (lplvcd->nmcd.dwDrawStage) {
+    case CDDS_PREPAINT:
+        return CDRF_NOTIFYITEMDRAW; // We want to be notified per item
+
+    case CDDS_ITEMPREPAINT: {
+  //      uint16_t itemIdx = displayMap[lplvcd->nmcd.dwItemSpec];
+		//uint16_t itemAddr = displayList[itemIdx];
+        uint16_t itemAddr = displayList[lplvcd->nmcd.dwItemSpec];
+
+        // If this is the current Program Counter, highlight it!
+        if (itemAddr == dbgCtx->lastState.pc) {
+            lplvcd->clrTextBk = RGB(255, 255, 0); // Yellow background
+            lplvcd->clrText = RGB(0, 0, 0);       // Black text
+        }
+        // If there is a breakpoint here, color it red
+        else if (dbgCtx->HasBreakpoint(itemAddr)) {
+            lplvcd->clrTextBk = RGB(200, 0, 0);   // Dark Red background
+            lplvcd->clrText = RGB(255, 255, 255); // White text
+        }
+        return CDRF_NEWFONT;
+    }
+    }
+    return CDRF_DODEFAULT;
 }
 
 LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -173,13 +203,44 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         if (pMain)
         {
             switch (message) {
+            case WM_SYSKEYDOWN:
+                switch (wParam)
+                {
+                    case VK_F10: {
+                        pMain->dbgCtx->step_requested.store(true);
+                        // TODO Improve by using a conditional variable or event
+                        //Sleep(.1);
+                        pMain->FocusPC(pMain->dbgCtx->lastState.pc);
+                        pMain->RedrawVisibleRange();
+
+                        //CommandQueue::Command cmd;
+                        //cmd.type = CommandQueue::CommandType::STEP_OVER;
+                        //pMain->sharedCtx->command_queue.Push(cmd);
+                        return 0; // Return 0 to tell Windows we handled it. Otherwise we never get it again.
+                    } break;
+                }
+                return DefWindowProc(hwnd, message, wParam, lParam);
+                break;
+            case WM_KEYDOWN:
+            {
+                return DefWindowProc(hwnd, message, wParam, lParam);
+            }
+            break;
             case WM_NOTIFY: {
 				// Only handle if paused so we don't slow down emulation
                 if (!pMain->_core.isPlaying || !pMain->dbgCtx->is_paused) {
                     return 1;
                 }
                 LPNMHDR lpnmh = (LPNMHDR)lParam;
-                if (lpnmh->idFrom == 1001) // Our ListView control
+                if (lpnmh->code == NM_CUSTOMDRAW) {
+
+                    // 3. Cast to the specific CustomDraw structure
+                    LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
+
+                    // 4. Call your handler and return its result directly to Windows
+                    return pMain->HandleCustomDraw(lplvcd, pMain->displayList);
+                }
+                else if (lpnmh->idFrom == 1001) // Our ListView control
                 {
                     if (lpnmh->code == LVN_GETDISPINFO)
                     {
@@ -200,14 +261,14 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                             //buffer[0] = L'\0';
                             break;
                         case 2: { // Addr column
-                            uint16_t displayAddr = pMain->displayMap[index];
+                            uint16_t displayAddr = pMain->displayList[index];
                             swprintf_s(buffer, L"%04X", displayAddr); // Address in hex
                             //swprintf_s(buffer, L""); // Address in hex
                         } break;
                         case 3: { // Instruction column
                             // Placeholder instruction text
                             //if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
-                            uint16_t displayAddr = pMain->displayMap[index];
+                            uint16_t displayAddr = pMain->displayList[index];
                             swprintf_s(buffer, L"%S", pMain->_opcodeNames[pMain->_bus->peek(displayAddr)].c_str()); // Address in hex
                             //}
                             //else {
@@ -241,17 +302,6 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                         break;
                 }
             } break;
-            case WM_KEYDOWN:
-            {
-                switch (wParam)
-                {
-                case VK_F10:
-                    
-                    break;
-                }
-                break;
-            }
-            break;
             case WM_DISPLAYCHANGE:
             {
                 InvalidateRect(hwnd, NULL, FALSE);
