@@ -135,6 +135,7 @@ private:
 		   REL,  INDY, NONE, NONE,  NONE,  ZPX,  ZPX, NONE, IMP,  ABSY,   NONE, NONE,  NONE,  ABSX, ABSX, NONE, // F
 	};
 
+	std::vector<uint16_t> displayMap;
 	Bus* _bus;
 	HINSTANCE hInst;
 	HWND hDebuggerWnd = NULL;
@@ -147,6 +148,8 @@ private:
 	);
 	Core& _core;
 	DebuggerContext* dbgCtx;
+	void ComputeDisplayMap();
 	void RedrawVisibleRange();
+	void FocusPC(uint16_t pc);
 	std::wstring StringToWstring(const std::string& str);
 };

@@ -12,7 +12,7 @@
 #endif
 
 //#define EMULATORCORE_DEBUG
-//#define FPS_CAP
+#define FPS_CAP
 
 class DebuggerContext;
 class Bus;

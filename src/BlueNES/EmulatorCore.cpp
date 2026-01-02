@@ -104,12 +104,11 @@ void EmulatorCore::run() {
         QueryPerformanceCounter(&currentFrame_li);
         long long currentTime = currentFrame_li.QuadPart;
 
+#ifdef FPS_CAP
         // 3. Calculate remaining time (Wait time = Target Time - Current Time)
         //    If positive: we finished early, so wait.
         //    If zero/negative: we finished on time or late, so don't wait.
         long long time_to_wait_ticks = targetTime - currentTime;
-
-#ifdef FPS_CAP
         //std::this_thread::sleep_for(milliseconds(500));
         if (time_to_wait_ticks > 0) { // If more than 1ms to wait
 
@@ -127,7 +126,7 @@ void EmulatorCore::run() {
             while (true) {
                 LARGE_INTEGER now_li;
                 QueryPerformanceCounter(&now_li);
-                if ((now_li.QuadPart - nextFrameUpdateTime) >= ticksPerFrame) break;
+                if (now_li.QuadPart >= nextFrameUpdateTime) break;
                 // Optionally call YieldProcessor() or std::this_thread::yield()
                 // to avoid hammering the CPU too hard:
                 YieldProcessor(); // on x86 this is a PAUSE; on MSVC resolves to intrinsic

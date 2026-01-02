@@ -39,9 +39,6 @@ void PPU::set_hwnd(HWND hwnd) {
 
 void PPU::reset()
 {
-	if (m_mapper) {
-		m_mapper = nullptr;
-	}
 	m_ppuMask = 0;
 	m_ppuCtrl = 0;
 	m_ppuStatus = 0;

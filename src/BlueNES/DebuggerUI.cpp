@@ -61,6 +61,28 @@ std::wstring DebuggerUI::StringToWstring(const std::string& str) {
     return wstr;
 }
 
+void DebuggerUI::ComputeDisplayMap() {
+    displayMap.clear();
+
+
+    // Set the virtual count to the display map.
+    ListView_SetItemCountEx(hList, displayMap.size(), LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
+}
+
+void DebuggerUI::FocusPC(uint16_t pc) {
+    // Find which index in our map corresponds to the current PC
+    auto it = std::find(displayMap.begin(), displayMap.end(), pc);
+    if (it != displayMap.end()) {
+        int index = std::distance(displayMap.begin(), it);
+
+        // Ensure the item is visible (scrolls if necessary)
+        ListView_EnsureVisible(hList, index, FALSE);
+
+        // Optionally redraw just this area
+        RedrawVisibleRange();
+    }
+}
+
 LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
@@ -107,9 +129,6 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             10, 120, 860, 520,
             hwnd, (HMENU)1001, pMain->hInst, nullptr
         );
-
-        // Set the virtual count to the 64KB address space
-        ListView_SetItemCountEx(pMain->hList, 65536, LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
 
         LVCOLUMN col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH;
