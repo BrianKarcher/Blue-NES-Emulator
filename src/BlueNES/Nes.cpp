@@ -21,7 +21,7 @@ Nes::Nes(SharedContext& ctx) {
     input_ = new Input();
     openBus_ = new OpenBusMapper();
     _debuggerContext = ctx.debugger_context;
-    cpu_ = new CPU(*openBus_, *_debuggerContext);
+    cpu_ = new CPU(*openBus_, ctx, *_debuggerContext);
     cart_ = new Cartridge(ctx, *cpu_);
     ppu_ = new PPU(ctx, *this);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);

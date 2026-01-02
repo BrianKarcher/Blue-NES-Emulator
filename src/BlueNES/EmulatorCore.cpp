@@ -169,9 +169,10 @@ int EmulatorCore::runFrame() {
 	nes.cpu_->cyclesThisFrame = 0;
     nes.ppu_->setBuffer(context.GetBackBuffer());
     // Run PPU until frame complete (89342 cycles per frame)
-	while (!nes.frameReady()) {
+	while (!nes.frameReady() && context.is_running) {
         nes.clock();
 	}
+	if (!context.is_running) return 0;
     
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
     nes.ppu_->setFrameComplete(false);

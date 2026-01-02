@@ -12,6 +12,8 @@ class DebuggerUI
 {
 public:
 	DebuggerUI(HINSTANCE hInst, Core& core);
+	void ComputeDisplayMap();
+	void FocusPC(uint16_t pc);
 private:
 	uint8_t *log;
 	//const char* instSt[256] = {
@@ -148,8 +150,6 @@ private:
 	);
 	Core& _core;
 	DebuggerContext* dbgCtx;
-	void ComputeDisplayMap();
 	void RedrawVisibleRange();
-	void FocusPC(uint16_t pc);
 	std::wstring StringToWstring(const std::string& str);
 };

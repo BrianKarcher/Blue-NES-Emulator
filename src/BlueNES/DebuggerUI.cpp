@@ -64,7 +64,11 @@ std::wstring DebuggerUI::StringToWstring(const std::string& str) {
 void DebuggerUI::ComputeDisplayMap() {
     displayMap.clear();
 
-
+    for (int i = 0; i < 0x10000; ++i) {
+        if (dbgCtx->memory_metadata[i] == META_CODE) {
+            displayMap.push_back(i);
+        }
+	}
     // Set the virtual count to the display map.
     ListView_SetItemCountEx(hList, displayMap.size(), LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
 }
@@ -188,24 +192,32 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                         {
                         case 0: // BP column
                             swprintf_s(buffer, L""); // Placeholder for breakpoint indicator
+                            //buffer[0] = L'\0';
                             break;
                         case 1: // Line column
-                            swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
+                            //swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
+                            swprintf_s(buffer, L""); // Address in hex
+                            //buffer[0] = L'\0';
                             break;
-                        case 2: // Addr column
-                            swprintf_s(buffer, L"%04X", index); // Address in hex
-                            break;
-                        case 3: // Instruction column
+                        case 2: { // Addr column
+                            uint16_t displayAddr = pMain->displayMap[index];
+                            swprintf_s(buffer, L"%04X", displayAddr); // Address in hex
+                            //swprintf_s(buffer, L""); // Address in hex
+                        } break;
+                        case 3: { // Instruction column
                             // Placeholder instruction text
-                            if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
-                                swprintf_s(buffer, L"%S", pMain->_opcodeNames[pMain->_bus->peek(index)].c_str()); // Address in hex
-                            }
-                            else {
-                                swprintf_s(buffer, L""); // Address in hex
-                            }
-                            break;
+                            //if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
+                            uint16_t displayAddr = pMain->displayMap[index];
+                            swprintf_s(buffer, L"%S", pMain->_opcodeNames[pMain->_bus->peek(displayAddr)].c_str()); // Address in hex
+                            //}
+                            //else {
+                                //swprintf_s(buffer, L""); // Address in hex
+                                //buffer[0] = L'\0';
+                            //}
+                        } break;
                         default:
-                            buffer[0] = L'\0';
+                            //buffer[0] = L'\0';
+                            swprintf_s(buffer, L"");
                             break;
                         }
                         
@@ -221,6 +233,8 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     break;
                     case IDB_PAUSE:
                         pMain->dbgCtx->is_paused.store(true);
+                        pMain->ComputeDisplayMap();
+                        pMain->FocusPC(pMain->dbgCtx->lastState.pc);
                         pMain->RedrawVisibleRange();
                         // TODO Improve by using a conditional variable or event
                         Sleep(5);

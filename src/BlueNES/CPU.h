@@ -186,11 +186,12 @@ const uint8_t TYA_IMPLIED = 0x98;
 class Bus;
 class OpenBusMapper;
 class Serializer;
+class SharedContext;
 
 class CPU
 {
 public:
-	CPU(OpenBusMapper& openBus, DebuggerContext& dbg);
+	CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg);
 	void connectBus(Bus* bus);
 
 	bool ShouldPause();
@@ -2288,6 +2289,7 @@ private:
 
 	OpenBusMapper& openBus;
 	DebuggerContext& dbgCtx;
+	SharedContext& sharedCtx;
 	void push(uint8_t value);
 	uint8_t pull();
 

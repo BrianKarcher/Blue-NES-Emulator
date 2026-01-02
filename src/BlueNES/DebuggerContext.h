@@ -42,7 +42,7 @@ public:
         uint16_t pc;
         uint8_t  a, x, y;
         uint8_t  sp;
-        uint8_t  status;
+        uint8_t  p;
         uint64_t cycle;
     };
 

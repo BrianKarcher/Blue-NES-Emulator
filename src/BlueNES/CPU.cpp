@@ -6,11 +6,12 @@
 #include "OpenBusMapper.h"
 #include "Serializer.h"
 #include "DebuggerContext.h"
+#include "SharedContext.h"
 
 #include <thread>
 #include <chrono>
 
-CPU::CPU(OpenBusMapper& openBus, DebuggerContext& dbg) : openBus(openBus), dbgCtx(dbg) {
+CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg) {
 	//buildMap();
 	init_cpu();
 }
@@ -47,7 +48,7 @@ bool CPU::ShouldPause() {
 void CPU::cpu_tick() {
 	if (!isActive) return;
 	if (inst_complete) {
-		while (ShouldPause()) {
+		while (ShouldPause() && sharedCtx.is_running) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 		// Priority 1: NMI
@@ -78,6 +79,12 @@ void CPU::cpu_tick() {
 	}
 	else {
 		// Execute the micro-op for the current instruction
+		dbgCtx.lastState.a = m_a;
+		dbgCtx.lastState.x = m_x;
+		dbgCtx.lastState.y = m_y;
+		dbgCtx.lastState.sp = m_sp;
+		dbgCtx.lastState.p = m_p;
+		dbgCtx.lastState.pc = m_pc - 1; // Pointing to the opcode just executed/fetched
 		opcode_table[current_opcode](*this);
 	}
 
