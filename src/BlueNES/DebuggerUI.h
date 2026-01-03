@@ -18,7 +18,7 @@ public:
 	DebuggerUI(HINSTANCE hInst, Core& core);
 	void ComputeDisplayMap();
 	void FocusPC(uint16_t pc);
-	void Stepped();
+	void StepInto();
 private:
 	uint8_t *log;
 	//const char* instSt[256] = {
@@ -162,4 +162,5 @@ private:
 	void RedrawItem(int idx);
 	LRESULT HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<uint16_t>& displayMap);
 	std::wstring StringToWstring(const std::string& str);
+	std::string Disassemble(uint16_t address);
 };

@@ -7,6 +7,7 @@
 #include "DebuggerContext.h"
 #include "Bus.h"
 #include "SharedContext.h"
+#include <sstream>
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -125,18 +126,16 @@ LRESULT DebuggerUI::HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<
     return CDRF_DODEFAULT;
 }
 
-void DebuggerUI::Stepped() {
+void DebuggerUI::StepInto() {
 	if (!dbgCtx->is_paused.load(std::memory_order_relaxed)) return;
 	uint16_t oldpc = dbgCtx->lastState.pc;
     dbgCtx->step_requested.store(true);
     // 1. Wait for the CPU to actually move
     int timeout = 1000;
     while (dbgCtx->lastState.pc == oldpc && timeout-- > 0) {
-        //std::this_thread::yield();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     FocusPC(dbgCtx->lastState.pc);
-    //RedrawVisibleRange();
 	RedrawItem(displayMap[oldpc]);
 	RedrawItem(displayMap[dbgCtx->lastState.pc]);
 
@@ -144,6 +143,63 @@ void DebuggerUI::Stepped() {
     //cmd.type = CommandQueue::CommandType::STEP_OVER;
     //pMain->sharedCtx->command_queue.Push(cmd);
     // return 0; // Return 0 to tell Windows we handled it. Otherwise we never get it again.
+}
+
+std::string DebuggerUI::Disassemble(uint16_t address) {
+    uint8_t opcode = _bus->peek(address);
+	std::stringstream ss;
+	ss << _opcodeNames[opcode];
+    switch (instMode[opcode]) {
+    case IMM: {
+        uint8_t value = _bus->peek(address + 1);
+        ss << " #$" << std::hex << (int)value;
+    } break;
+    case ZP: {
+        uint8_t addr = _bus->peek(address + 1);
+		ss << " $" << std::hex << (int)addr;
+	} break;
+    case ZPX: {
+        uint8_t addr = _bus->peek(address + 1);
+		ss << " $" << std::hex << (int)addr << ",X (" << dbgCtx->lastState.x << ")";
+	} break;
+    case ZPY: {
+		uint8_t addr = _bus->peek(address + 1);
+		ss << " $" << std::hex << (int)addr << ",Y (" << dbgCtx->lastState.y << ")";
+	} break;
+	case ABS: {
+		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+		ss << " $" << std::hex << addr;
+	} break;
+	case ABSX: {
+		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+		ss << " $" << std::hex << addr << ",X (" << dbgCtx->lastState.x << ")";
+	} break;
+	case ABSY: {
+		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+		ss << " $" << std::hex << addr << ",Y (" << dbgCtx->lastState.y << ")";
+	} break;
+	case IND: {
+		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+		ss << " ($" << std::hex << addr << ")";
+	} break;
+	case INDX: {
+		uint8_t addr = _bus->peek(address + 1);
+		ss << " ($" << std::hex << (int)addr << ",X)";
+	} break;
+	case INDY: {
+		uint8_t addr = _bus->peek(address + 1);
+		ss << " ($" << std::hex << (int)addr << "),Y";
+	} break;
+	case REL: {
+		int8_t offset = (int8_t)_bus->peek(address + 1);
+		uint16_t target = address + 2 + offset;
+		ss << " $" << std::hex << target;
+	} break;
+    case ACC:
+        ss << " A (" << dbgCtx->lastState.a << ")";
+		break;
+    }
+    return ss.str();
 }
 
 LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -243,7 +299,6 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     // 3. Cast to the specific CustomDraw structure
                     LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
 
-                    // 4. Call your handler and return its result directly to Windows
                     return pMain->HandleCustomDraw(lplvcd, pMain->displayList);
                 }
                 else if (lpnmh->idFrom == 1001) // Our ListView control
@@ -253,42 +308,46 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                         NMLVDISPINFO* pDispInfo = (NMLVDISPINFO*)lParam;
                         int index = pDispInfo->item.iItem;
                         int subItem = pDispInfo->item.iSubItem;
-                        // Fill in the item text based on index and subItem
-                        wchar_t buffer[256];
-                        switch (subItem)
-                        {
-                        case 0: // BP column
-                            swprintf_s(buffer, L" "); // Placeholder for breakpoint indicator
-                            //buffer[0] = L'\0';
-                            break;
-                        case 1: // Line column
-                            //swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
-                            swprintf_s(buffer, L" "); // Address in hex
-                            //buffer[0] = L'\0';
-                            break;
-                        case 2: { // Addr column
-                            uint16_t displayAddr = pMain->displayList[index];
-                            swprintf_s(buffer, L"%04X", displayAddr); // Address in hex
-                            //swprintf_s(buffer, L""); // Address in hex
-                        } break;
-                        case 3: { // Instruction column
-                            // Placeholder instruction text
-                            //if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
-                            uint16_t displayAddr = pMain->displayList[index];
-                            swprintf_s(buffer, L"%S", pMain->_opcodeNames[pMain->_bus->peek(displayAddr)].c_str()); // Address in hex
-                            //}
-                            //else {
-                                //swprintf_s(buffer, L""); // Address in hex
+                        if (pDispInfo->item.mask & LVIF_TEXT) {
+
+                            // Fill in the item text based on index and subItem
+                            switch (subItem)
+                            {
+                            case 0: { // BP column
+                                uint16_t addr = pMain->displayList[index];
+                                if (pMain->dbgCtx->HasBreakpoint(addr))
+                                    wcscpy_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L"*");
+                                else
+                                    wcscpy_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L" ");
+                            } break;
+                            case 1: { // Line column
+                                //swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
+                                swprintf_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L" "); // Address in hex
                                 //buffer[0] = L'\0';
-                            //}
-                        } break;
-                        default:
-                            //buffer[0] = L'\0';
-                            swprintf_s(buffer, L"");
-                            break;
+                            } break;
+                            case 2: { // Addr column
+                                uint16_t displayAddr = pMain->displayList[index];
+                                swprintf_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L"%04X", displayAddr); // Address in hex
+                                //swprintf_s(buffer, L""); // Address in hex
+                            } break;
+                            case 3: { // Instruction column
+                                // Placeholder instruction text
+                                //if (pMain->dbgCtx->memory_metadata[index] == META_CODE) {
+                                uint16_t displayAddr = pMain->displayList[index];
+                                std::string inst = pMain->Disassemble(displayAddr);
+                                swprintf_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L"%S", inst.c_str()); // Address in hex
+                                //}
+                                //else {
+                                    //swprintf_s(buffer, L""); // Address in hex
+                                    //buffer[0] = L'\0';
+                                //}
+                            } break;
+                            default: {
+                                //buffer[0] = L'\0';
+                                swprintf_s(pDispInfo->item.pszText, pDispInfo->item.cchTextMax, L" ");
+                            } break;
+                            }
                         }
-                        
-                        pDispInfo->item.pszText = buffer;
                     }
 				}
             } break;
