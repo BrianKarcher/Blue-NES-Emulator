@@ -160,35 +160,42 @@ std::string DebuggerUI::Disassemble(uint16_t address) {
 	} break;
     case ZPX: {
         uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::hex << (int)addr << ",X (" << dbgCtx->lastState.x << ")";
+		ss << " $" << std::hex << (int)addr << ",X ($" << std::hex << (int)dbgCtx->lastState.x << ")";
 	} break;
     case ZPY: {
 		uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::hex << (int)addr << ",Y (" << dbgCtx->lastState.y << ")";
+		ss << " $" << std::hex << (int)addr << ",Y ($" << std::hex << (int)dbgCtx->lastState.y << ")";
 	} break;
 	case ABS: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		ss << " $" << std::hex << addr;
+		uint8_t value = _bus->peek(addr);
+		ss << " $" << std::hex << (int)addr << " = ($" << std::hex << (int)value << ")";
 	} break;
 	case ABSX: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		ss << " $" << std::hex << addr << ",X (" << dbgCtx->lastState.x << ")";
+		uint8_t value = _bus->peek(addr + dbgCtx->lastState.x);
+		ss << " $" << std::hex << (int)addr << ",X ($" << std::hex << (int)dbgCtx->lastState.x << ")" << " = ($" << std::hex << (int)value << ")";
 	} break;
 	case ABSY: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		ss << " $" << std::hex << addr << ",Y (" << dbgCtx->lastState.y << ")";
+		uint8_t value = _bus->peek(addr + dbgCtx->lastState.y);
+		ss << " $" << std::hex << (int)addr << ",Y ($" << std::hex << (int)dbgCtx->lastState.y << ")" << " = ($" << std::hex << (int)value << ")";
 	} break;
 	case IND: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		ss << " ($" << std::hex << addr << ")";
+		uint16_t ptr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
+		ss << " ($" << std::hex << (int)addr << ")" << " = ($" << std::hex << (int)ptr << ")";
 	} break;
 	case INDX: {
 		uint8_t addr = _bus->peek(address + 1);
-		ss << " ($" << std::hex << (int)addr << ",X)";
+		uint8_t ptr = (uint8_t)(addr + dbgCtx->lastState.x);
+		uint8_t ptrAddr = (_bus->peek((ptr & 0xFF00) | ((ptr + 1) & 0x00FF)) << 8);
+		ss << " ($" << std::hex << (int)addr << ",X $" << std::hex << (int)dbgCtx->lastState.x << ") $" << std::hex << (int)ptr << " = (" << (int)ptrAddr << ")";
 	} break;
 	case INDY: {
 		uint8_t addr = _bus->peek(address + 1);
-		ss << " ($" << std::hex << (int)addr << "),Y";
+		uint8_t ptrAddr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
+		ss << " ($" << std::hex << (int)addr << "),Y( $" << std::hex << (int)dbgCtx->lastState.y << ") = $" << std::hex << (int)ptrAddr;
 	} break;
 	case REL: {
 		int8_t offset = (int8_t)_bus->peek(address + 1);
@@ -196,7 +203,7 @@ std::string DebuggerUI::Disassemble(uint16_t address) {
 		ss << " $" << std::hex << target;
 	} break;
     case ACC:
-        ss << " A (" << dbgCtx->lastState.a << ")";
+        ss << " A ($" << std::hex << (int)dbgCtx->lastState.a << ")";
 		break;
     }
     return ss.str();
