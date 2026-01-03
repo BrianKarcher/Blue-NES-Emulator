@@ -55,6 +55,10 @@ void DebuggerUI::RedrawVisibleRange() {
     ListView_RedrawItems(hList, topIndex, bottomIndex);
 }
 
+void DebuggerUI::RedrawItem(int idx) {
+    ListView_RedrawItems(hList, idx, idx);
+}
+
 std::wstring DebuggerUI::StringToWstring(const std::string& str) {
     if (str.empty()) return L"";
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
@@ -79,16 +83,20 @@ void DebuggerUI::ComputeDisplayMap() {
 
 void DebuggerUI::FocusPC(uint16_t pc) {
     // Find which index in our map corresponds to the current PC
-    auto it = std::find(displayList.begin(), displayList.end(), pc);
-    if (it != displayList.end()) {
-        int index = std::distance(displayList.begin(), it);
+    //auto it = std::find(displayList.begin(), displayList.end(), pc);
+	//auto it = displayMap.find(pc);
+    auto it = displayMap[pc];
+    
+    //if (it != displayList.end()) {
+        //int index = std::distance(displayList.begin(), it);
 
         // Ensure the item is visible (scrolls if necessary)
-        ListView_EnsureVisible(hList, index, FALSE);
+        //ListView_EnsureVisible(hList, index, FALSE);
+        ListView_EnsureVisible(hList, it, FALSE);
 
         // Optionally redraw just this area
-        RedrawVisibleRange();
-    }
+        
+    //}
 }
 
 LRESULT DebuggerUI::HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<uint16_t>& displayMap) {
@@ -115,6 +123,27 @@ LRESULT DebuggerUI::HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<
     }
     }
     return CDRF_DODEFAULT;
+}
+
+void DebuggerUI::Stepped() {
+	if (!dbgCtx->is_paused.load(std::memory_order_relaxed)) return;
+	uint16_t oldpc = dbgCtx->lastState.pc;
+    dbgCtx->step_requested.store(true);
+    // 1. Wait for the CPU to actually move
+    int timeout = 1000;
+    while (dbgCtx->lastState.pc == oldpc && timeout-- > 0) {
+        //std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    FocusPC(dbgCtx->lastState.pc);
+    //RedrawVisibleRange();
+	RedrawItem(displayMap[oldpc]);
+	RedrawItem(displayMap[dbgCtx->lastState.pc]);
+
+    //CommandQueue::Command cmd;
+    //cmd.type = CommandQueue::CommandType::STEP_OVER;
+    //pMain->sharedCtx->command_queue.Push(cmd);
+    // return 0; // Return 0 to tell Windows we handled it. Otherwise we never get it again.
 }
 
 LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -203,29 +232,6 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         if (pMain)
         {
             switch (message) {
-            case WM_SYSKEYDOWN:
-                switch (wParam)
-                {
-                    case VK_F10: {
-                        pMain->dbgCtx->step_requested.store(true);
-                        // TODO Improve by using a conditional variable or event
-                        //Sleep(.1);
-                        pMain->FocusPC(pMain->dbgCtx->lastState.pc);
-                        pMain->RedrawVisibleRange();
-
-                        //CommandQueue::Command cmd;
-                        //cmd.type = CommandQueue::CommandType::STEP_OVER;
-                        //pMain->sharedCtx->command_queue.Push(cmd);
-                        return 0; // Return 0 to tell Windows we handled it. Otherwise we never get it again.
-                    } break;
-                }
-                return DefWindowProc(hwnd, message, wParam, lParam);
-                break;
-            case WM_KEYDOWN:
-            {
-                return DefWindowProc(hwnd, message, wParam, lParam);
-            }
-            break;
             case WM_NOTIFY: {
 				// Only handle if paused so we don't slow down emulation
                 if (!pMain->_core.isPlaying || !pMain->dbgCtx->is_paused) {
@@ -252,12 +258,12 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                         switch (subItem)
                         {
                         case 0: // BP column
-                            swprintf_s(buffer, L""); // Placeholder for breakpoint indicator
+                            swprintf_s(buffer, L" "); // Placeholder for breakpoint indicator
                             //buffer[0] = L'\0';
                             break;
                         case 1: // Line column
                             //swprintf_s(buffer, L"%d", index + 1); // Line number (1-based)
-                            swprintf_s(buffer, L""); // Address in hex
+                            swprintf_s(buffer, L" "); // Address in hex
                             //buffer[0] = L'\0';
                             break;
                         case 2: { // Addr column
@@ -291,12 +297,14 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                 {
                     case IDB_PLAY:
                         pMain->dbgCtx->is_paused.store(false);
+                        SetFocus(pMain->hDebuggerWnd);
                     break;
                     case IDB_PAUSE:
                         pMain->dbgCtx->is_paused.store(true);
                         pMain->ComputeDisplayMap();
                         pMain->FocusPC(pMain->dbgCtx->lastState.pc);
                         pMain->RedrawVisibleRange();
+                        SetFocus(pMain->hDebuggerWnd);
                         // TODO Improve by using a conditional variable or event
                         Sleep(5);
                         break;

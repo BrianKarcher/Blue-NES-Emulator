@@ -681,6 +681,13 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             case WM_COMMAND:
                 switch (LOWORD(wParam))
                 {
+                case ID_DEBUG_STEPOVER: {
+                    pMain->debuggerUI.Stepped();
+                    // F10 pressed
+                    //CommandQueue::Command cmd;
+                    //cmd.type = CommandQueue::CommandType::SAVE_STATE;
+                    //pMain->context.command_queue.Push(cmd);
+                } break;
                 case ID_FILE_OPEN:
                 {
                     std::wstring filePath;
@@ -966,6 +973,7 @@ void Core::RunMessageLoop()
     int cpuCycleDebt = 0;
     const int RENDER_TIMEOUT_MS = 16;
     static int titleUpdateDelay = 60;
+    HACCEL hAccel = LoadAccelerators(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_ACCELERATOR1));
     
     while (running) {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -974,8 +982,11 @@ void Core::RunMessageLoop()
                 running = false;
                 break;
             }
+            // TranslateAccelerator checks if the key matches our F10/F11 table
+            if (!TranslateAccelerator(m_hwnd, hAccel, &msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+        }
         }
         if (!running) {
             break;
