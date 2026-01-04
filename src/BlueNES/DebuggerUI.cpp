@@ -109,11 +109,17 @@ LRESULT DebuggerUI::HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<
   //      uint16_t itemIdx = displayMap[lplvcd->nmcd.dwItemSpec];
 		//uint16_t itemAddr = displayList[itemIdx];
         uint16_t itemAddr = displayList[lplvcd->nmcd.dwItemSpec];
+        bool isSelected = (lplvcd->nmcd.uItemState & CDIS_SELECTED);
 
         // If this is the current Program Counter, highlight it!
         if (itemAddr == dbgCtx->lastState.pc) {
             lplvcd->clrTextBk = RGB(255, 255, 0); // Yellow background
             lplvcd->clrText = RGB(0, 0, 0);       // Black text
+        }
+        else if (isSelected) {
+            // If you don't set these, Windows uses the default Blue
+            lplvcd->clrTextBk = GetSysColor(COLOR_HIGHLIGHT);
+            lplvcd->clrText = GetSysColor(COLOR_HIGHLIGHTTEXT);
         }
         // If there is a breakpoint here, color it red
         else if (dbgCtx->HasBreakpoint(itemAddr)) {
@@ -322,6 +328,14 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     TrackPopupMenu(hPopupMenu, TPM_RIGHTBUTTON | TPM_TOPALIGN | TPM_LEFTALIGN,
                         pt.x, pt.y, 0, hwnd, NULL);
 
+                    int iItem = lpnmia->iItem; // Index of the row clicked
+                    if (iItem != -1) {
+                        uint16_t addr = pMain->displayList[iItem];
+                        // You can store this 'addr' in a temporary variable to use
+                        // when the WM_COMMAND for the menu item eventually fires.
+                        pMain->contextMenuAddr = addr;
+                    }
+
                     DestroyMenu(hMenuLoad);
                     return 0;
                 }
@@ -385,6 +399,11 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             case WM_COMMAND: {
                 switch (LOWORD(wParam))
                 {
+                case ID_POPUP_TOGGLEBREAKPOINT: {
+                    uint16_t addr = pMain->contextMenuAddr;
+                    pMain->dbgCtx->ToggleBreakpoint(addr);
+					pMain->RedrawItem(pMain->displayMap[addr]);
+                } break;
                     case IDB_PLAY:
                         pMain->dbgCtx->is_paused.store(false);
                         SetFocus(pMain->hDebuggerWnd);

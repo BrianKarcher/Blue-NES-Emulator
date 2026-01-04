@@ -47,6 +47,7 @@ public:
     };
 
     bool HasBreakpoint(uint16_t addr);
+	void ToggleBreakpoint(uint16_t addr);
 
     //void RequestStep();
     //void RequestPause();

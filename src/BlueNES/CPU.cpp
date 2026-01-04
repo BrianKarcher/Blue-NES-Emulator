@@ -23,6 +23,7 @@ void CPU::connectBus(Bus* bus) {
 bool CPU::ShouldPause() {
 	if (dbgCtx.HasBreakpoint(m_pc)) {
 		dbgCtx.is_paused.store(true);
+		// TODO : Notify debugger of breakpoint hit
 	}
 
 	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {
