@@ -33,7 +33,8 @@ bool init_sdl(HWND wnd)
         return false;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	// Removed SDL_RENDERER_PRESENTVSYNC to allow uncapped framerate for better timing control
     if (!renderer)
     {
         SDL_Log("Renderer Error: %s", SDL_GetError());
@@ -682,7 +683,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 switch (LOWORD(wParam))
                 {
                 case ID_DEBUG_STEPOVER: {
-                    pMain->debuggerUI.Stepped();
+                    pMain->debuggerUI.StepInto();
                     // F10 pressed
                     //CommandQueue::Command cmd;
                     //cmd.type = CommandQueue::CommandType::SAVE_STATE;
@@ -984,9 +985,9 @@ void Core::RunMessageLoop()
             }
             // TranslateAccelerator checks if the key matches our F10/F11 table
             if (!TranslateAccelerator(m_hwnd, hAccel, &msg)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
         if (!running) {
             break;

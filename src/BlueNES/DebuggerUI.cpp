@@ -152,58 +152,58 @@ std::string DebuggerUI::Disassemble(uint16_t address) {
     switch (instMode[opcode]) {
     case IMM: {
         uint8_t value = _bus->peek(address + 1);
-        ss << " #$" << std::hex << (int)value;
+        ss << " #$" << std::uppercase << std::hex << (int)value;
     } break;
     case ZP: {
         uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::hex << (int)addr;
+		ss << " $" << std::uppercase << std::hex << (int)addr;
 	} break;
     case ZPX: {
         uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::hex << (int)addr << ",X ($" << std::hex << (int)dbgCtx->lastState.x << ")";
+		ss << " $" << std::uppercase << std::hex << (int)addr << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")";
 	} break;
     case ZPY: {
 		uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::hex << (int)addr << ",Y ($" << std::hex << (int)dbgCtx->lastState.y << ")";
+		ss << " $" << std::uppercase << std::hex << (int)addr << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")";
 	} break;
 	case ABS: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
 		uint8_t value = _bus->peek(addr);
-		ss << " $" << std::hex << (int)addr << " = ($" << std::hex << (int)value << ")";
+		ss << " $" << std::uppercase << std::hex << (int)addr << " = ($" << std::uppercase << std::hex << (int)value << ")";
 	} break;
 	case ABSX: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
 		uint8_t value = _bus->peek(addr + dbgCtx->lastState.x);
-		ss << " $" << std::hex << (int)addr << ",X ($" << std::hex << (int)dbgCtx->lastState.x << ")" << " = ($" << std::hex << (int)value << ")";
+		ss << " $" << std::uppercase << std::hex << (int)addr << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")" << " = ($" << std::uppercase << std::hex << (int)value << ")";
 	} break;
 	case ABSY: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
 		uint8_t value = _bus->peek(addr + dbgCtx->lastState.y);
-		ss << " $" << std::hex << (int)addr << ",Y ($" << std::hex << (int)dbgCtx->lastState.y << ")" << " = ($" << std::hex << (int)value << ")";
+		ss << " $" << std::uppercase << std::hex << (int)addr << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")" << " = ($" << std::uppercase << std::hex << (int)value << ")";
 	} break;
 	case IND: {
 		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
 		uint16_t ptr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::hex << (int)addr << ")" << " = ($" << std::hex << (int)ptr << ")";
+		ss << " ($" << std::uppercase << std::hex << (int)addr << ")" << " = ($" << std::uppercase << std::hex << (int)ptr << ")";
 	} break;
 	case INDX: {
 		uint8_t addr = _bus->peek(address + 1);
 		uint8_t ptr = (uint8_t)(addr + dbgCtx->lastState.x);
 		uint8_t ptrAddr = (_bus->peek((ptr & 0xFF00) | ((ptr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::hex << (int)addr << ",X $" << std::hex << (int)dbgCtx->lastState.x << ") $" << std::hex << (int)ptr << " = (" << (int)ptrAddr << ")";
+		ss << " ($" << std::uppercase << std::hex << (int)addr << ",X $" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ") $" << std::uppercase << std::hex << (int)ptr << " = (" << (int)ptrAddr << ")";
 	} break;
 	case INDY: {
 		uint8_t addr = _bus->peek(address + 1);
 		uint8_t ptrAddr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::hex << (int)addr << "),Y( $" << std::hex << (int)dbgCtx->lastState.y << ") = $" << std::hex << (int)ptrAddr;
+		ss << " ($" << std::uppercase << std::hex << (int)addr << "),Y( $" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ") = $" << std::uppercase << std::hex << (int)ptrAddr;
 	} break;
 	case REL: {
 		int8_t offset = (int8_t)_bus->peek(address + 1);
 		uint16_t target = address + 2 + offset;
-		ss << " $" << std::hex << target;
+		ss << " $" << std::uppercase << std::hex << target;
 	} break;
     case ACC:
-        ss << " A ($" << std::hex << (int)dbgCtx->lastState.a << ")";
+        ss << " A ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.a << ")";
 		break;
     }
     return ss.str();
@@ -256,6 +256,10 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             hwnd, (HMENU)1001, pMain->hInst, nullptr
         );
 
+        // LVS_EX_FULLROWSELECT ensures the highlight spans all columns
+        // LVS_EX_GRIDLINES is also nice for debuggers if you want visible borders
+        ListView_SetExtendedListViewStyle(pMain->hList, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+
         LVCOLUMN col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH;
 
@@ -301,7 +305,27 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     return 1;
                 }
                 LPNMHDR lpnmh = (LPNMHDR)lParam;
-                if (lpnmh->code == NM_CUSTOMDRAW) {
+                if (lpnmh->code == NM_RCLICK) {
+                    LPNMITEMACTIVATE lpnmia = (LPNMITEMACTIVATE)lParam;
+
+                    // 1. Load the menu resource
+                    HMENU hMenuLoad = LoadMenu(pMain->hInst, MAKEINTRESOURCE(IDR_DBG_CONTEXT_MENU));
+                    HMENU hPopupMenu = GetSubMenu(hMenuLoad, 0); // Get the "Dummy" popup
+
+                    // 2. Get mouse position
+                    POINT pt;
+                    GetCursorPos(&pt); // Gets absolute screen coordinates
+
+                    // 3. Show the menu
+                    // TPM_RETURNCMD makes the function return the ID of the clicked item
+                    // TPM_RIGHTBUTTON allows right-click selection
+                    TrackPopupMenu(hPopupMenu, TPM_RIGHTBUTTON | TPM_TOPALIGN | TPM_LEFTALIGN,
+                        pt.x, pt.y, 0, hwnd, NULL);
+
+                    DestroyMenu(hMenuLoad);
+                    return 0;
+                }
+                else if (lpnmh->code == NM_CUSTOMDRAW) {
 
                     // 3. Cast to the specific CustomDraw structure
                     LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
