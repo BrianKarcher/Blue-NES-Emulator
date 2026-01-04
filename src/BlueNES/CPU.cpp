@@ -1,4 +1,3 @@
-#include "CPU.h"
 #include "Bus.h"
 #include <Windows.h>
 #include "PPU.h"
@@ -7,6 +6,7 @@
 #include "Serializer.h"
 #include "DebuggerContext.h"
 #include "SharedContext.h"
+#include "CPU.h"
 
 #include <thread>
 #include <chrono>
@@ -21,9 +21,17 @@ void CPU::connectBus(Bus* bus) {
 }
 
 bool CPU::ShouldPause() {
-	if (dbgCtx.HasBreakpoint(m_pc)) {
+	if (dbgCtx.HasBreakpoint(m_pc) && !dbgCtx.is_paused.load(std::memory_order_relaxed)) {
 		dbgCtx.is_paused.store(true);
-		// TODO : Notify debugger of breakpoint hit
+		dbgCtx.LogInstructionFetch(m_pc);
+		dbgCtx.lastState.a = m_a;
+		dbgCtx.lastState.x = m_x;
+		dbgCtx.lastState.y = m_y;
+		dbgCtx.lastState.sp = m_sp;
+		dbgCtx.lastState.p = m_p;
+		dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
+		// Notify the Debugger UI thread
+		PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
 	}
 
 	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {

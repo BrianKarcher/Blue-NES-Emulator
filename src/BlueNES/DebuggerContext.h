@@ -3,9 +3,13 @@
 #include <mutex>
 #include <array>
 #include <string>
+#include <Windows.h>
+
+#define WM_USER_BREAKPOINT_HIT (WM_USER + 1)
 
 class DebuggerContext {
 public:
+	HWND hwndDbg = nullptr;
 	uint8_t memory_snapshot[65536];
 
     // 64KB of metadata

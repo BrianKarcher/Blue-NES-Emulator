@@ -37,6 +37,7 @@ DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) 
         100, 100, 900, 700,
         nullptr, nullptr, hInst, this
     );
+	dbgCtx->hwndDbg = hDebuggerWnd;
 
     ShowWindow(hDebuggerWnd, SW_SHOW);
 }
@@ -305,6 +306,20 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         if (pMain)
         {
             switch (message) {
+            case WM_USER_BREAKPOINT_HIT: {
+                // 1. Force the window to the foreground so the user sees the hit
+                SetForegroundWindow(hwnd);
+
+                // 2. Update the UI state
+                pMain->ComputeDisplayMap();
+                pMain->FocusPC(pMain->dbgCtx->lastState.pc);
+
+                // 3. Refresh the Listview to show the yellow highlight
+                InvalidateRect(pMain->hList, NULL, FALSE);
+
+                //LOG(L"Breakpoint Hit at %04X\n", pMain->dbgCtx->lastState.pc);
+                return 0;
+            }
             case WM_NOTIFY: {
 				// Only handle if paused so we don't slow down emulation
                 if (!pMain->_core.isPlaying || !pMain->dbgCtx->is_paused) {
