@@ -259,7 +259,7 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             WC_LISTVIEW,
             nullptr,
             WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_NOSORTHEADER | LVS_SINGLESEL,
-            10, 120, 860, 520,
+            10, 120, 300, 520,
             hwnd, (HMENU)1001, pMain->hInst, nullptr
         );
 
@@ -283,8 +283,26 @@ LRESULT CALLBACK DebuggerUI::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         ListView_InsertColumn(pMain->hList, 2, &col);
 
         wchar_t instText[] = L"Instruction";
-        col.cx = 600; col.pszText = instText;
+        col.cx = 100; col.pszText = instText;
         ListView_InsertColumn(pMain->hList, 3, &col);
+
+        RECT rect;
+		GetClientRect(hWndToolbar, &rect);
+
+        HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        HWND hLabel = CreateWindowEx(
+            0,                      // Optional styles
+            L"STATIC",              // Predefined class
+            L"A:",         // Text to display
+            WS_CHILD | WS_VISIBLE | SS_LEFT, // Styles
+            320, rect.bottom + 20, 80, 20,         // x, y, width, height
+            hwnd,                   // Parent window handle
+            NULL,                   // No menu
+            pMain->hInst,              // Instance handle
+            NULL                    // Additional data
+        );
+        //SendMessage(hEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(hLabel, WM_SETFONT, (WPARAM)hFont, TRUE);
 
         ::SetWindowLongPtrW(
             hwnd,
