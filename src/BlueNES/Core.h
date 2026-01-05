@@ -15,6 +15,12 @@
 #include "EmulatorCore.h"
 #include "SharedContext.h"
 #include "DebuggerUI.h"
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl3.h"
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include <stdio.h>
 
 template<class Interface>
 inline void SafeRelease(
@@ -48,6 +54,9 @@ class Core
 {
 public:
 	Core();
+	bool init(HWND wnd);
+	SDL_GLContext gl_context;
+	//ImGuiIO io;
 	SharedContext context;
 	EmulatorCore emulator;
 	
@@ -87,6 +96,7 @@ public:
 	DebuggerUI debuggerUI;
 	//PPUViewer ppuViewer;
 private:
+	GLuint nes_texture;
 	HMENU hMenu;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);
