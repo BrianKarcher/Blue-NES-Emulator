@@ -111,11 +111,12 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -168,6 +169,12 @@
     <ClCompile Include="RendererWithReg.cpp" />
     <ClCompile Include="Serializer.cpp" />
     <ClCompile Include="SharedContext.cpp" />
+    <ClCompile Include="thirdparty\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="thirdparty\imgui\backends\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_tables.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_widgets.cpp" />
     <ClCompile Include="UxROMMapper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -210,6 +217,15 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="Serializer.h" />
     <ClInclude Include="SharedContext.h" />
+    <ClInclude Include="thirdparty\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="thirdparty\imgui\backends\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="thirdparty\imgui\backends\imgui_impl_sdl2.h" />
+    <ClInclude Include="thirdparty\imgui\imconfig.h" />
+    <ClInclude Include="thirdparty\imgui\imgui.h" />
+    <ClInclude Include="thirdparty\imgui\imgui_internal.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_textedit.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
     <ClInclude Include="UxROMMapper.h" />
   </ItemGroup>
   <ItemGroup>
