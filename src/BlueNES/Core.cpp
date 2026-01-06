@@ -8,6 +8,7 @@
 #include "AudioBackend.h"
 #include "SharedContext.h"
 #include "DebuggerUI.h"
+#include "ImGuiFileDialog.h"
 
 Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this) {
 }
@@ -42,12 +43,12 @@ bool Core::init(HWND wnd)
 
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    //SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // 2. Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    //io = ImGui::GetIO(); (void)io;
+    io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 
     ImGui::StyleColorsDark();
@@ -64,7 +65,7 @@ bool Core::init(HWND wnd)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     // Initialize with empty data (256x240 pixels, RGBA format)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
  //   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	//// Removed SDL_RENDERER_PRESENTVSYNC to allow uncapped framerate for better timing control
@@ -625,14 +626,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 } break;
                 case ID_FILE_OPEN:
                 {
-                    std::wstring filePath;
-                    if (ShowOpenDialog(hwnd, filePath))
-                    {
-                        pMain->LoadGame(filePath);
-                        pMain->isPaused = false;
-                        pMain->updateMenu();
-                        //pMain->emulator.start();
-                    }
+
                     break;
                 }
                 case ID_FILE_SAVESTATE:
@@ -732,12 +726,10 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 }
 
 void Core::updateMenu() {
-	EnableMenuItem(hMenu, ID_FILE_CLOSE, isPlaying ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_RESET, isPlaying ? MF_ENABLED : MF_GRAYED);
-    EnableMenuItem(hMenu, ID_NES_POWER, isPlaying ? MF_ENABLED : MF_GRAYED);
+
 }
 
-void Core::LoadGame(const std::wstring& filePath)
+void Core::LoadGame(const std::string& filePath)
 {
     CommandQueue::Command cmd;
     cmd.type = CommandQueue::CommandType::LOAD_ROM;
@@ -864,7 +856,7 @@ bool Core::RenderFrame(const uint32_t* frame_data)
     // 1. Update the texture with your emulator's pixel buffer
     // Assuming 'ppu_buffer' is a uint32_t array[256 * 240] 
     glBindTexture(GL_TEXTURE_2D, nes_texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, frame_data);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, frame_data);
 
     // Update texture with NES framebuffer
     //SDL_UpdateTexture(
@@ -967,7 +959,14 @@ void Core::RunMessageLoop()
             // Main Menu Bar
             if (ImGui::BeginMainMenuBar()) {
                 if (ImGui::BeginMenu("File")) {
-                    if (ImGui::MenuItem("Load ROM...")) { /* Open file dialog */ }
+                    if (ImGui::MenuItem("Load ROM...")) {
+						IGFD::FileDialogConfig config;
+						//config.title = "Select NES ROM";
+						//config.filters = { ".nes" };
+
+                        // Arguments: Key, Title, Filter, Path
+                        ImGuiFileDialog::Instance()->OpenDialog("ChooseRomKey", "Select NES ROM", ".nes", config);
+                    }
                     if (ImGui::MenuItem("Exit")) done = true;
                     ImGui::EndMenu();
                 }
@@ -976,6 +975,22 @@ void Core::RunMessageLoop()
                     ImGui::EndMenu();
                 }
                 ImGui::EndMainMenuBar();
+            }
+
+            // Display the dialog
+            if (ImGuiFileDialog::Instance()->Display("ChooseRomKey")) {
+                if (ImGuiFileDialog::Instance()->IsOk()) {
+                    std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                    std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                    LoadGame(filePathName);
+                    isPaused = false;
+                    updateMenu();
+                    // Load the ROM into your emulator
+                    // MyEmulator.Load(filePathName);
+                }
+
+                // Close the dialog
+                ImGuiFileDialog::Instance()->Close();
             }
 
             if (isPlaying) {
@@ -1000,7 +1015,7 @@ void Core::RunMessageLoop()
 
             // NES Display Window
             ImGui::Begin("Game View");
-            //ImGui::Text("FPS: %.1f", io.Framerate);
+            ImGui::Text("FPS: %.1f", io.Framerate);
 
             // In a real emulator, you'd render your NES PPU buffer to an OpenGL texture
             // and display it here using ImGui::Image()

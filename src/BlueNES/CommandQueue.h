@@ -24,7 +24,7 @@ public:
 
     struct Command {
         CommandType type;
-        std::wstring data; // For file paths, etc.
+        std::string data; // For file paths, etc.
     };
 
     void Push(Command cmd) {

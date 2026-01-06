@@ -56,7 +56,7 @@ public:
 	Core();
 	bool init(HWND wnd);
 	SDL_GLContext gl_context;
-	//ImGuiIO io;
+	ImGuiIO io;
 	SharedContext context;
 	EmulatorCore emulator;
 	
@@ -103,7 +103,6 @@ private:
 	bool ClearFrame();
 
 	void PollControllerState();
-	void LoadGame(const std::wstring& filePath);
 	bool isPaused;
 	// The windows procedure.
 	static LRESULT CALLBACK MainWndProc(

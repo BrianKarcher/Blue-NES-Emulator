@@ -135,6 +135,9 @@
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_sdl2.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="thirdparty\imgui\file\ImGuiFileDialog.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -282,6 +285,15 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="thirdparty\imgui\backends\imgui_impl_sdl2.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\imgui\file\ImGuiFileDialog.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\imgui\file\ImGuiFileDialogConfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\imgui\file\dirent\dirent.h">
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
