@@ -45,7 +45,7 @@ typedef struct {
 class INESLoader
 {
 public:
-    void load_data_from_ines(const wchar_t* filename, ines_file_t& ines_file);
+    void load_data_from_ines(const char* filename, ines_file_t& ines_file);
 
 private:
     bool validate_ines_header(const ines_header_t* header);

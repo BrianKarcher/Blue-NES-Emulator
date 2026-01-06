@@ -77,7 +77,7 @@ void Cartridge::unload() {
     m_isLoaded = false;
 }
 
-void Cartridge::LoadROM(const std::wstring& filePath) {
+void Cartridge::LoadROM(const std::string& filePath) {
     INESLoader ines;
     std::filesystem::path filepath(filePath);
     ines_file_t inesFile;

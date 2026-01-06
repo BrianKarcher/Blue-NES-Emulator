@@ -31,7 +31,7 @@ public:
 	Cartridge(SharedContext& ctx, CPU& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
 
-	void LoadROM(const std::wstring& filePath);
+	void LoadROM(const std::string& filePath);
 	MirrorMode GetMirrorMode();
 	void SetMirrorMode(MirrorMode mirrorMode);
 	// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)

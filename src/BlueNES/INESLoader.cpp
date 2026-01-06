@@ -14,9 +14,9 @@ bool INESLoader::validate_ines_header(const ines_header_t* header) {
 }
 
 // Function to load CHR-ROM data from iNES file
-void INESLoader::load_data_from_ines(const wchar_t* filename, ines_file_t& ines_file) {
+void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_file) {
     FILE* file = nullptr;
-    errno_t err = _wfopen_s(&file, filename, L"rb");
+    errno_t err = fopen_s(&file, filename, "rb");
     
     if (err != 0 || file == nullptr) {
         MessageBoxA(NULL, "The specified iNES file does not exist or cannot be accessed.", "Error", MB_OK | MB_ICONERROR);
