@@ -618,7 +618,7 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 switch (LOWORD(wParam))
                 {
                 case ID_DEBUG_STEPOVER: {
-                    pMain->debuggerUI.StepInto();
+                    //pMain->debuggerUI.StepInto();
                     // F10 pressed
                     //CommandQueue::Command cmd;
                     //cmd.type = CommandQueue::CommandType::SAVE_STATE;
@@ -978,7 +978,9 @@ void Core::RunMessageLoop()
             }
 
             // Display the dialog
-            if (ImGuiFileDialog::Instance()->Display("ChooseRomKey")) {
+            ImVec2 minSize = ImVec2(800, 500);
+            ImVec2 maxSize = ImVec2(1200, 800);
+            if (ImGuiFileDialog::Instance()->Display("ChooseRomKey", ImGuiWindowFlags_NoCollapse, minSize, maxSize)) {
                 if (ImGuiFileDialog::Instance()->IsOk()) {
                     std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
                     std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
@@ -1039,6 +1041,7 @@ void Core::RunMessageLoop()
             //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
             ImGui::Button("Pause");
             ImGui::End();
+            debuggerUI.DrawScrollableDisassembler();
         }
 
         ImGui::Render();

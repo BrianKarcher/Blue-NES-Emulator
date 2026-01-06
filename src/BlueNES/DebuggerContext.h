@@ -9,7 +9,6 @@
 
 class DebuggerContext {
 public:
-	HWND hwndDbg = nullptr;
 	uint8_t memory_snapshot[65536];
 
     // 64KB of metadata

@@ -31,7 +31,7 @@ bool CPU::ShouldPause() {
 		dbgCtx.lastState.p = m_p;
 		dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
 		// Notify the Debugger UI thread
-		PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
+		//PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
 	}
 
 	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {

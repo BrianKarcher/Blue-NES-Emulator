@@ -16,9 +16,10 @@ class DebuggerUI
 {
 public:
 	DebuggerUI(HINSTANCE hInst, Core& core);
-	void ComputeDisplayMap();
-	void FocusPC(uint16_t pc);
-	void StepInto();
+	//void ComputeDisplayMap();
+	//void FocusPC(uint16_t pc);
+	//void StepInto();
+	void DrawScrollableDisassembler();
 private:
 	uint16_t contextMenuAddr = 0;
 	uint8_t *log;
@@ -148,20 +149,10 @@ private:
 	std::unordered_map<int, int> displayMap;
 	Bus* _bus;
 	HINSTANCE hInst;
-	HWND hDebuggerWnd = NULL;
-	HWND hList = nullptr;
-	static LRESULT CALLBACK WndProc(
-		HWND hWnd,
-		UINT message,
-		WPARAM wParam,
-		LPARAM lParam
-	);
+
 	Core& _core;
 	DebuggerContext* dbgCtx;
 	SharedContext* sharedCtx;
-	void RedrawVisibleRange();
-	void RedrawItem(int idx);
-	LRESULT HandleCustomDraw(LPNMLVCUSTOMDRAW lplvcd, const std::vector<uint16_t>& displayMap);
 	std::wstring StringToWstring(const std::string& str);
 	std::string Disassemble(uint16_t address);
 };
