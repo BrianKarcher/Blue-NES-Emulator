@@ -75,7 +75,7 @@
     <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\include;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\backends;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\file;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\file\dirent;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -131,9 +131,9 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;opengl32.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -143,6 +143,7 @@
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="CartMapper.cpp" />
     <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="CNROM.cpp" />
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="DebuggerContext.cpp" />
     <ClCompile Include="DebuggerUI.cpp" />
@@ -154,6 +155,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="Mapper.cpp" />
+    <ClCompile Include="MapperBase.cpp" />
     <ClCompile Include="MemoryMapper.cpp" />
     <ClCompile Include="MMC1.cpp" />
     <ClCompile Include="MMC3.cpp" />
@@ -187,6 +189,7 @@
     <ClInclude Include="Bus.h" />
     <ClInclude Include="CartMapper.h" />
     <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="CNROM.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="DebuggerContext.h" />
@@ -199,6 +202,7 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Mapper.h" />
+    <ClInclude Include="MapperBase.h" />
     <ClInclude Include="MemoryMapper.h" />
     <ClInclude Include="MMC1.h" />
     <ClInclude Include="MMC3.h" />

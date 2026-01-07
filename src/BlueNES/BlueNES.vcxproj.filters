@@ -138,6 +138,12 @@
     <ClCompile Include="thirdparty\imgui\file\ImGuiFileDialog.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="CNROM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MapperBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -295,6 +301,12 @@
     </ClInclude>
     <ClInclude Include="thirdparty\imgui\file\dirent\dirent.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="CNROM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MapperBase.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

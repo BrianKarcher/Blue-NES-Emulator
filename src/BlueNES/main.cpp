@@ -1,3 +1,4 @@
+#include <SDL.h>
 #include "main.h"
 #include "Core.h"
 

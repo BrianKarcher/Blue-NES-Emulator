@@ -13,6 +13,7 @@
 #include "UxROMMapper.h"
 #include "AxROMMapper.h"
 #include "SharedContext.h"
+#include "CNROM.h"
 
 Cartridge::Cartridge(SharedContext& ctx, CPU& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
@@ -112,6 +113,9 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         break;
     case 2:
 		mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        break;
+    case 3:
+		mapper = new CNROM();
         break;
     case 4:
         mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
