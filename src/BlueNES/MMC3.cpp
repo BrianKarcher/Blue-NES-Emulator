@@ -24,6 +24,8 @@ inline void MMC3::dbg(const wchar_t* fmt, ...) {
 }
 
 MMC3::MMC3(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
+	MapperBase::SetPrgPageSize(0x2000);
+	MapperBase::SetChrPageSize(0x400);
 	renderLoopy = bus.ppu.renderer;
 	// init registers to reset-like defaults
 	prgMode = 0;
@@ -52,12 +54,6 @@ MMC3::MMC3(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) 
 
 }
 
-void MMC3::initialize(ines_file_t& data) {
-	Mapper::initialize(data);
-	updatePrgMapping();
-	updateChrMapping();
-}
-
 MMC3::~MMC3() {
 
 }
@@ -78,44 +74,41 @@ void MMC3::updateChrMapping() {
 		// $1800-$1BFF: R1 (2KB split)
 		// $1C00-$1FFF: R1 + 1KB
 
-		chrMap[0] = &m_chrData[banks[2] * 0x400];
-		chrMap[1] = &m_chrData[banks[3] * 0x400];
-		chrMap[2] = &m_chrData[banks[4] * 0x400];
-		chrMap[3] = &m_chrData[banks[5] * 0x400];
-		chrMap[4] = &m_chrData[banks[0] * 0x400];           // R0 even
-		chrMap[5] = &m_chrData[banks[0] * 0x400 + 0x400];
-		chrMap[6] = &m_chrData[banks[1] * 0x400];           // R1 even
-		chrMap[7] = &m_chrData[banks[1] * 0x400 + 0x400];
+		MapperBase::SetChrPage(0, banks[2]);
+		MapperBase::SetChrPage(1, banks[3]);
+		MapperBase::SetChrPage(2, banks[4]);
+		MapperBase::SetChrPage(3, banks[5]);
+		MapperBase::SetChrPage(4, banks[0]);
+		MapperBase::SetChrPage(5, banks[0] + 1);
+		MapperBase::SetChrPage(6, banks[1]);
+		MapperBase::SetChrPage(7, banks[1] + 1);
 	}
 	else {
 		// R0 covers $0000-$0FFF (two 1KB slots)
 		// R1 covers $1000-$1FFF
-		chrMap[0] = &m_chrData[banks[0] * 0x400];
-		chrMap[1] = &m_chrData[banks[0] * 0x400 + 0x400];
-		chrMap[2] = &m_chrData[banks[1] * 0x400];
-		chrMap[3] = &m_chrData[banks[1] * 0x400 + 0x400];
-		chrMap[4] = &m_chrData[banks[2] * 0x400];
-		chrMap[5] = &m_chrData[banks[3] * 0x400];
-		chrMap[6] = &m_chrData[banks[4] * 0x400];
-		chrMap[7] = &m_chrData[banks[5] * 0x400];
+		MapperBase::SetChrPage(0, banks[0]);
+		MapperBase::SetChrPage(1, banks[0] + 1);
+		MapperBase::SetChrPage(2, banks[1]);
+		MapperBase::SetChrPage(3, banks[1] + 1);
+		MapperBase::SetChrPage(4, banks[2]);
+		MapperBase::SetChrPage(5, banks[3]);
+		MapperBase::SetChrPage(6, banks[4]);
+		MapperBase::SetChrPage(7, banks[5]);
 	}
 }
 
 void MMC3::updatePrgMapping() {
-	uint8_t* last = &m_prgRomData[(prgBank8kCount - 1) * 0x2000];
-	uint8_t* secLast = &m_prgRomData[(prgBank8kCount - 2) * 0x2000];
-
 	if (prgMode == 0) {
-		prgMap[0] = &m_prgRomData[banks[6] * 0x2000];  // 8000
-		prgMap[1] = &m_prgRomData[banks[7] * 0x2000];  // A000
-		prgMap[2] = secLast;                                 // C000
-		prgMap[3] = last;                                    // E000
+		MapperBase::SetPrgPage(0, banks[6]); // 8000
+		MapperBase::SetPrgPage(1, banks[7]); // A000
+		MapperBase::SetPrgPage(2, prgBank8kCount - 2); // C000
+		MapperBase::SetPrgPage(3, prgBank8kCount - 1); // E000
 	}
 	else {
-		prgMap[0] = secLast;                                 // 8000
-		prgMap[1] = &m_prgRomData[banks[7] * 0x2000];  // A000
-		prgMap[2] = &m_prgRomData[banks[6] * 0x2000];  // C000
-		prgMap[3] = last;                                    // E000
+		MapperBase::SetPrgPage(0, prgBank8kCount - 2); // 8000
+		MapperBase::SetPrgPage(1, banks[7]); // A000
+		MapperBase::SetPrgPage(2, banks[6]); // C000
+		MapperBase::SetPrgPage(3, prgBank8kCount - 1); // E000
 	}
 }
 
@@ -236,34 +229,9 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	//}
 }
 
-void MMC3::recomputeMappings() {
+void MMC3::RecomputeMappings() {
 	updatePrgMapping();
 	updateChrMapping();
-}
-
-inline uint8_t MMC3::readCHR(uint16_t addr) const {
-	return chrMap[(addr >> 10) & 7][addr & 0x3FF];
-	// addr >> 10 = divide by 1024 -> index 0–7
-	// addr & 0x3FF = offset within 1KB bank d;fgkl jalgkj kl jlk
-	// Hello World!
-}
-
-void MMC3::writeCHR(uint16_t addr, uint8_t data) {
-	if (!isCHRWritable) {
-		return; // Ignore writes if CHR is ROM
-	}
-	chrMap[(addr >> 10) & 7][addr & 0x3FF] = data;
-}
-
-inline uint8_t MMC3::readPRGROM(uint16_t addr) const {
-	return prgMap[(addr >> 13) & 3][addr & 0x1FFF];
-	// >>13 = divide by 8192 -> index 0–3
-}
-
-void MMC3::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
-	if (address >= 0x8000) {
-		writeRegister(address, data, currentCycle);
-	}
 }
 
 void MMC3::Serialize(Serializer& serializer) {

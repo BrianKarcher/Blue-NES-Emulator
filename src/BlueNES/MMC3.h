@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <array>
-#include "Mapper.h"
+#include "MapperBase.h"
 #include "A12Mapper.h"
 
 class Bus;
@@ -17,7 +17,7 @@ class RendererLoopy;
 
 #define MMC3DEBUG
 
-class MMC3 : public Mapper, public A12Mapper
+class MMC3 : public MapperBase, public A12Mapper
 {
 public:
 	MMC3(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
@@ -26,14 +26,7 @@ public:
 	void shutdown();
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	//uint8_t readPRGROM(uint16_t address);
-	//void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
-	inline uint8_t readCHR(uint16_t addr) const;
-	void writeCHR(uint16_t addr, uint8_t data);
-	inline uint8_t readPRGROM(uint16_t addr) const;
-	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
-	void initialize(ines_file_t& data) override;
 	bool IrqPending();
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
@@ -45,8 +38,6 @@ private:
 	RendererLoopy* renderLoopy;
 	uint8_t prgMode;
 	uint8_t chrMode;
-	std::array<uint8_t*, 8> chrMap;
-	std::array<uint8_t*, 4> prgMap;
 	uint8_t banks[8] = { 0 };          // raw bank numbers (after masking)
 	uint8_t prgBank16kCount;
 	uint8_t prgBank8kCount;
@@ -70,7 +61,7 @@ private:
 	bool last_a12;
 	int a12LowTime = 8;  // in PPU cycles
 
-	void recomputeMappings();
+	void RecomputeMappings() override;
 	void updateChrMapping();
 	void updatePrgMapping();
 };
