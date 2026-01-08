@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <array>
-#include "Mapper.h"
+#include "MapperBase.h"
 
 class Bus;
 class Cartridge;
@@ -16,21 +16,14 @@ class RendererLoopy;
 
 //#define UXROMDEBUG
 
-class UxROMMapper : public Mapper
+class UxROMMapper : public MapperBase
 {
 public:
 	UxROMMapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	//uint8_t readPRGROM(uint16_t address);
-	//void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
-	inline uint8_t readCHR(uint16_t addr) const;
-	void writeCHR(uint16_t addr, uint8_t data);
-	inline uint8_t readPRGROM(uint16_t addr) const;
-	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
 	void shutdown() {}
-	void initialize(ines_file_t& data);
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
 
@@ -44,5 +37,5 @@ private:
 	CPU& cpu;
 	Bus& bus;
 
-	void recomputeMappings();
+	void RecomputeMappings() override;
 };

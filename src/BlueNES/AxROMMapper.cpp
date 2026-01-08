@@ -3,6 +3,8 @@
 #include "PPU.h"
 
 AxROMMapper::AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize) : cartridge(cartridge) {
+	MapperBase::SetPrgPageSize(0x8000);
+	MapperBase::SetChrPageSize(0x2000);
 	prgBank32kCount = prgRom16kSize / 2;
 	//prgBankSelect = prgBank32kCount - 1; // Default to last bank
 	prgBankSelect = 0;
@@ -12,37 +14,13 @@ void AxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycl
 	prgBankSelect = val & 0x07; // Select 32KB PRG bank (3 bits)
 	prgBankSelect &= (prgBank32kCount - 1);
 	nameTable = val & 0x10;
-	recomputeMappings();
+	RecomputeMappings();
 }
 
-void AxROMMapper::initialize(ines_file_t& data) {
-	Mapper::initialize(data);
-	recomputeMappings();
-}
-
-void AxROMMapper::recomputeMappings() {
-	prgAddr = &m_prgRomData[prgBankSelect * 0x8000];
+void AxROMMapper::RecomputeMappings() {
+	MapperBase::SetPrgPage(0, prgBankSelect);
+	MapperBase::SetChrPage(0, 0); // No CHR banking, always first bank
 	cartridge->SetMirrorMode(nameTable ? Cartridge::MirrorMode::SINGLE_UPPER : Cartridge::MirrorMode::SINGLE_LOWER);
-}
-
-inline uint8_t AxROMMapper::readPRGROM(uint16_t addr) const {
-	return prgAddr[addr & 0x7FFF];
-}
-
-void AxROMMapper::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
-	writeRegister(address, data, currentCycle);
-}
-
-inline uint8_t AxROMMapper::readCHR(uint16_t addr) const {
-	// This mapper uses CHR-RAM only.
-	return m_chrData[addr];
-}
-
-void AxROMMapper::writeCHR(uint16_t address, uint8_t data) {
-	if (!isCHRWritable) {
-		return; // Ignore writes if CHR is ROM
-	}
-	m_chrData[address & 0x1FFF] = data;
 }
 
 void AxROMMapper::Serialize(Serializer& serializer) {
@@ -55,5 +33,5 @@ void AxROMMapper::Deserialize(Serializer& serializer) {
 	Mapper::Deserialize(serializer);
 	serializer.Read(nameTable);
 	serializer.Read(prgBankSelect);
-	recomputeMappings();
+	RecomputeMappings();
 }

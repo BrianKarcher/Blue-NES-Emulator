@@ -23,14 +23,12 @@ inline void UxROMMapper::dbg(const wchar_t* fmt, ...) {
 }
 
 UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
+	MapperBase::SetPrgPageSize(0x4000);
+	MapperBase::SetChrPageSize(0x2000);
 	prgBank16kCount = prgRomSize;
 	this->cart = &bus.cart;
 	// Start with bank 0 selected
 	prg_bank_select = 0;
-}
-
-void UxROMMapper::initialize(ines_file_t& data) {
-	Mapper::initialize(data);
 }
 
 void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
@@ -51,48 +49,13 @@ void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycl
 	else bank_mask = 0x1F;
 
 	prg_bank_select = val & bank_mask;
+	RecomputeMappings();
 }
 
-inline uint8_t UxROMMapper::readCHR(uint16_t addr) const {
-	return m_chrData[addr];
-}
-
-void UxROMMapper::writeCHR(uint16_t addr, uint8_t data) {
-	if (!isCHRWritable) {
-		return; // Ignore writes if CHR is ROM
-	}
-	m_chrData[addr] = data;
-}
-
-inline uint8_t UxROMMapper::readPRGROM(uint16_t addr) const {
-	if (addr >= 0x8000 && addr <= 0xBFFF) {
-		// $8000-$BFFF: Switchable 16KB bank
-		uint32_t bank_offset = prg_bank_select * 0x4000;
-		uint32_t offset = bank_offset + (addr & 0x3FFF);
-
-		// Wrap around if offset exceeds ROM size
-		//offset %= prg_rom_size;
-
-		return m_prgRomData[offset];
-	}
-	else if (addr >= 0xC000 && addr <= 0xFFFF) {
-		// $C000-$FFFF: Fixed to last 16KB bank
-		uint32_t last_bank = prgBank16kCount - 1;
-		uint32_t bank_offset = last_bank * 0x4000;
-		uint32_t offset = bank_offset + (addr & 0x3FFF);
-
-		return m_prgRomData[offset];
-	}
-
-	return 0;  // Should not happen
-	//return prgMap[(addr >> 15) & 1][addr & 0x3FFF];
-	// >>14 = divide by 16384 -> index 0–3
-}
-
-void UxROMMapper::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
-	if (address >= 0x8000) {
-		writeRegister(address, data, currentCycle);
-	}
+void UxROMMapper::RecomputeMappings() {
+	MapperBase::SetPrgPage(0, prg_bank_select);
+	MapperBase::SetPrgPage(1, prgBank16kCount - 1);
+	MapperBase::SetChrPage(0, 0); // UxROM typically has CHR RAM, so just map first page
 }
 
 void UxROMMapper::Serialize(Serializer& serializer) {
