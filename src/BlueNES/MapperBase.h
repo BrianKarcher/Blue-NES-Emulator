@@ -13,20 +13,24 @@ public:
 	uint8_t* _chrPages[0x100];
 	uint16_t _chrPageSize = 0;
 
+	virtual void RecomputeMappings() = 0;
+	void initialize(ines_file_t& data) override;
 	void SetPrgPageSize(uint16_t pageSize);
-	void SetPrgPage(uint16_t pageIndex, uint8_t* data);
-	void SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint8_t* data);
+	void SetPrgPage(uint16_t pageIndex, uint8_t bank);
+	void SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset);
+
 	void SetChrPageSize(uint16_t pageSize);
-	void SetChrPage(uint16_t pageIndex, uint8_t* data);
-	void SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uint8_t* data);
+	void SetChrPage(uint16_t pageIndex, uint8_t bank);
+	void SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset);
 
 	inline uint8_t readPRGROM(uint16_t addr) const {
-		return 0;
+		addr -= 0x8000;
+		return _prgPages[addr >> 8][addr & 0xFF];
 	}
 
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	inline uint8_t readCHR(uint16_t addr) const {
-		return 0;
+		return _chrPages[addr >> 8][addr & 0xFF];
 	}
 
 	void writeCHR(uint16_t addr, uint8_t data);
