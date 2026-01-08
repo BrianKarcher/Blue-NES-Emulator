@@ -98,9 +98,11 @@ public:
 private:
 	GLuint nes_texture;
 	HMENU hMenu;
+	Bus* _bus;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);
 	bool ClearFrame();
+	void DrawGameCentered();
 
 	void PollControllerState();
 	bool isPaused;
@@ -140,4 +142,5 @@ private:
 	// Hex Window handles
 	HWND m_hwndHex;
 	std::array<uint8_t(*)(Core*, uint16_t), 2> hexSources;
+	void DrawMemoryViewer(const char* title, size_t size);
 };

@@ -11,6 +11,7 @@
 #include "ImGuiFileDialog.h"
 
 Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this) {
+	_bus = emulator.GetBus();
 }
 
 SDL_Window* window = nullptr;
@@ -50,6 +51,7 @@ bool Core::init(HWND wnd)
     ImGui::CreateContext();
     io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     ImGui::StyleColorsDark();
 
@@ -897,6 +899,95 @@ void Core::OnResize(UINT width, UINT height)
 
 }
 
+void Core::DrawMemoryViewer(const char* title, size_t size) {
+    ImGui::Begin(title);
+
+    // Set a default size for the viewer
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+    // We use 1 column for the Address, 16 for Hex data, and 1 for ASCII
+    static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH |
+        ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
+
+    if (ImGui::BeginTable("MemTable", 18, flags, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+        // Setup columns
+        ImGui::TableSetupColumn("Addr", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        for (int i = 0; i < 16; i++) ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 25.0f);
+        ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableHeadersRow();
+
+        // Use Clipper: each row displays 16 bytes
+        ImGuiListClipper clipper;
+        clipper.Begin((int)((size + 15) / 16));
+
+        while (clipper.Step()) {
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+                ImGui::TableNextRow();
+
+                // Column 0: Address
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%04X:", row * 16);
+
+                // Columns 1-16: Hex Bytes
+                for (int n = 0; n < 16; n++) {
+                    ImGui::TableSetColumnIndex(n + 1);
+                    size_t addr = row * 16 + n;
+                    if (addr < size) {
+                        uint8_t val = _bus->peek(addr);
+
+                        // Highlight non-zero values or specific addresses (like Stack or Zero Page)
+                        if (val == 0) ImGui::TextDisabled("00");
+                        else ImGui::Text("%02X", val);
+                    }
+                }
+
+                // Column 17: ASCII representation
+                ImGui::TableSetColumnIndex(17);
+                char ascii[17];
+                for (int n = 0; n < 16; n++) {
+                    size_t addr = row * 16 + n;
+                    uint8_t c = (addr < size) ? _bus->peek(addr) : ' ';
+                    ascii[n] = (c >= 32 && c <= 126) ? c : '.';
+                }
+                ascii[16] = '\0';
+                ImGui::TextUnformatted(ascii);
+            }
+        }
+        ImGui::EndTable();
+    }
+    ImGui::End();
+}
+
+void Core::DrawGameCentered() {
+    // Get the current window (or viewport) size
+    ImVec2 windowSize = ImGui::GetContentRegionAvail();
+
+    // NES target aspect ratio (4:3)
+    float targetAR = 4.0f / 3.0f;
+    float windowAR = windowSize.x / windowSize.y;
+
+    ImVec2 displaySize;
+    if (windowAR > targetAR) {
+        // Window is too wide (Letterbox on sides)
+        displaySize.y = windowSize.y;
+        displaySize.x = windowSize.y * targetAR;
+    }
+    else {
+        // Window is too tall (Pillarbox top/bottom)
+        displaySize.x = windowSize.x;
+        displaySize.y = windowSize.x / targetAR;
+    }
+
+    // Center the image in the available space
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    pos.x += (windowSize.x - displaySize.x) * 0.5f;
+    pos.y += (windowSize.y - displaySize.y) * 0.5f;
+
+    ImGui::SetCursorScreenPos(pos);
+    ImGui::Image((void*)(intptr_t)nes_texture, displaySize);
+}
+
 void Core::RunMessageLoop()
 {
     MSG msg;
@@ -912,6 +1003,13 @@ void Core::RunMessageLoop()
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
             switch (event.type) {
+            case SDL_KEYDOWN:
+                if (event.key.keysym.sym == SDLK_F11) {
+                    // Toggle Fullscreen on Alt+Enter
+                    bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
+                    SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+                }
+                break;
             case SDL_QUIT:
                 done = true;
                 break;
@@ -1016,6 +1114,8 @@ void Core::RunMessageLoop()
             }
 
             // NES Display Window
+            ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
             ImGui::Text("FPS: %.1f", io.Framerate);
 
@@ -1027,10 +1127,11 @@ void Core::RunMessageLoop()
 
             // Display the texture (casting the GLuint to a void*)
             // We use viewportPanelSize to make the game scale with the window
-            ImGui::Image((void*)(intptr_t)nes_texture, viewportPanelSize);
+			DrawGameCentered();
             ImGui::End();
 
             // Debugger Window (CPU Registers)
+            ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
             ImGui::Begin("CPU Debugger");
             ImGui::Text("A: 0x00"); ImGui::SameLine();
             ImGui::Text("X: 0x00"); ImGui::SameLine();
@@ -1042,6 +1143,8 @@ void Core::RunMessageLoop()
             ImGui::Button("Pause");
             ImGui::End();
             debuggerUI.DrawScrollableDisassembler();
+
+			DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
         }
 
         ImGui::Render();
