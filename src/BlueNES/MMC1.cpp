@@ -6,6 +6,8 @@
 #include "CPU.h"
 
 MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize) : cpu(c) {
+	MapperBase::SetPrgPageSize(0x4000);
+	MapperBase::SetChrPageSize(0x1000);
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
 	shiftRegister = 0b10000;
 	// init registers to reset-like defaults
@@ -31,9 +33,6 @@ MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize)
 		boardType = BoardType::GenericMMC1;
 	}
 	this->cartridge = cartridge;
-	//this->inesFile = inesFile;
-	// Initial mapping.
-	recomputeMappings();
 }
 
 // ---------------- Debug helper ----------------
@@ -72,7 +71,7 @@ void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 		//prgBankReg = 2; // MMC1 starts Bank 0 at $8000
 		controlReg |= 0x0C; // set PRG mode bits to 11 (mode 3) as hardware typically does on reset
 		LOG(L"MMC1 reset: ctrl=0x%02X addr=0x%04X val=%d\n", controlReg, addr, val);
-		recomputeMappings();
+		RecomputeMappings();
 		return;
 	}
 
@@ -175,12 +174,12 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	//	chrBank0Reg &= 0x04;
 	//	chrBank1Reg &= 0x04;
 	//}
-	recomputeMappings();
+	RecomputeMappings();
 }
 
 // ---------------- recomputeMappings ----------------
 // Compute prg0Addr/prg1Addr/chr0Addr/chr1Addr in bytes based on current registers and sizes
-void MMC1::recomputeMappings()
+void MMC1::RecomputeMappings()
 {
 	const uint8_t prgMode = (controlReg >> 2) & 0x03; // bits 2-3
 	const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
@@ -189,8 +188,8 @@ void MMC1::recomputeMappings()
 	// Remove the early return - always compute banking even for CHR-RAM!
 	if (chrBankCount == 0) {
 		// CHR-RAM: always 8KB, no real banking
-		chr0Addr = 0;
-		chr1Addr = 0x1000;
+		MapperBase::SetChrPage(0, 0);
+		MapperBase::SetChrPage(1, 1);
 	}
 	else if (chrMode == 0) {
 		// 8KB mode
@@ -198,15 +197,15 @@ void MMC1::recomputeMappings()
 		//if (boardType == BoardType::SAROM)
 		//	bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
 		bank8k %= chrBankCount;
-		chr0Addr = bank8k * 0x1000;
-		chr1Addr = chr0Addr + 0x1000;
+		MapperBase::SetChrPage(0, bank8k);
+		MapperBase::SetChrPage(1, bank8k + 1);
 	}
 	else {
 		// 4KB mode
 		uint32_t bank0 = chrBank0Reg; // &(chrBankCount - 1);
 		uint32_t bank1 = chrBank1Reg; // &(chrBankCount - 1);
-		chr0Addr = bank0 * 0x1000;
-		chr1Addr = bank1 * 0x1000;
+		MapperBase::SetChrPage(0, bank0);
+		MapperBase::SetChrPage(1, bank1);
 	}
 
 	// ------------ PRG BANKING ------------
@@ -217,11 +216,11 @@ void MMC1::recomputeMappings()
 		// SUROM has 512KB PRG-ROM (32 x 16KB banks), but only 16 banks are selectable
 		prgBank &= 15;
 		prgBank |= suromPrgOuterBank; // set bit 4 from CHR bank reg bit 4
-		lastBankStart = suromPrgOuterBank ? 31 * 0x4000 : 15 * 0x4000;
+		lastBankStart = suromPrgOuterBank ? 31 : 15;
 	}
 	else {
 		prgBank %= prgMax + 1;
-		lastBankStart = (prgBank16kCount - 1) * 0x4000;
+		lastBankStart = prgBank16kCount - 1;
 	}
 
 	switch (prgMode) {
@@ -230,78 +229,29 @@ void MMC1::recomputeMappings()
 	case 1:
 		// 32 KB mode
 	{
-		prg0Addr = (prgBank & 0xFE) * 0x4000;  // even bank
-		prg1Addr = prg0Addr + 0x4000;
+		uint32_t bank32k = (prgBank & 0xFE); // even bank
+		MapperBase::SetPrgPage(0, bank32k);
+		MapperBase::SetPrgPage(1, bank32k + 1);
 	}
 	break;
 
 	case 2:
 		// First 16KB fixed at $8000
-		prg0Addr = 0;
-		prg1Addr = prgBank * 0x4000;
+		MapperBase::SetPrgPage(0, 0);
+		MapperBase::SetPrgPage(1, prgBank);
 		break;
 
 	case 3:
 	default:
 		// Last 16KB fixed at $C000
-		prg0Addr = prgBank * 0x4000;
-		prg1Addr = lastBankStart;
+		MapperBase::SetPrgPage(0, prgBank);
+		MapperBase::SetPrgPage(1, lastBankStart);
 		break;
 	}
 
 	LOG(L"MMC1 recompute: control=0x%02X prgMode=%d chrMode=%d\n", controlReg, (controlReg >> 2) & 3, (controlReg >> 4) & 1);
-	LOG(L"  PRG addrs: prg0=0x%06X(0x%02X) prg1=0x%06X(0x%02X) (prgBankCount=%d)\n", prg0Addr, prg0Addr / 0x4000, prg1Addr, prg1Addr / 0x4000, prgBank16kCount);
-	LOG(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
-}
-
-inline uint8_t MMC1::readPRGROM(uint16_t addr) const {
-	// Expect addr in 0x8000 - 0xFFFF
-	if (addr < 0x8000) return 0xFF; // open bus / not mapped by mapper
-
-	uint32_t offset;
-	if (addr < 0xC000)
-		offset = prg0Addr + (addr & 0x3FFF);
-	else
-		offset = prg1Addr + (addr & 0x3FFF);
-
-	offset %= m_prgRomData.size();
-	return m_prgRomData[offset];
-}
-
-void MMC1::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) {
-	if (address >= 0x8000) {
-		writeRegister(address, data, currentCycle);
-	}
-}
-
-inline uint8_t MMC1::readCHR(uint16_t addr) const {
-	addr &= 0x1FFF;
-	uint32_t offset = (addr < 0x1000) ? (chr0Addr + addr) : (chr1Addr + (addr - 0x1000));
-
-	if (m_chrData.empty())
-		return 0;
-
-	offset %= m_chrData.size();
-	return m_chrData[offset];
-}
-
-void MMC1::writeCHR(uint16_t address, uint8_t data) {
-	if (!isCHRWritable) {
-		return; // Ignore writes if CHR is ROM
-	}
-	const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
-	if (chrMode == 0) {
-		// 8 KB mode
-		m_chrData[chr0Addr + address] = data;
-		return;
-	}
-	else if (address < 0x1000) {
-		m_chrData[chr0Addr + address] = data;
-	}
-	else if (address < 0x2000) {
-		uint16_t addr = chr1Addr + (address - 0x1000);
-		m_chrData[addr] = data;
-	}
+	//LOG(L"  PRG addrs: prg0=0x%06X(0x%02X) prg1=0x%06X(0x%02X) (prgBankCount=%d)\n", prg0Addr, prg0Addr / 0x4000, prg1Addr, prg1Addr / 0x4000, prgBank16kCount);
+	//LOG(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
 void MMC1::Serialize(Serializer& serializer) {
@@ -323,5 +273,5 @@ void MMC1::Deserialize(Serializer& serializer) {
 	serializer.Read(chrBank1Reg);
 	serializer.Read(prgBankReg);
 	serializer.Read(suromPrgOuterBank);
-	recomputeMappings();
+	RecomputeMappings();
 }
