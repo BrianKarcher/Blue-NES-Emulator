@@ -228,345 +228,6 @@ LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     return result;
 }
 
-LRESULT CALLBACK Core::HexDrawAreaProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT result = 0;
-
-    if (msg == WM_CREATE)
-    {
-        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-        Core* pMain = (Core*)pcs->lpCreateParams;
-
-        ::SetWindowLongPtrW(
-            hwnd,
-            GWLP_USERDATA,
-            reinterpret_cast<LONG_PTR>(pMain)
-        );
-
-        // Create fixed-width font (Consolas). Adjust size as desired.
-        g_hFont = CreateFontW(
-            -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-            ANTIALIASED_QUALITY, FF_DONTCARE | FIXED_PITCH, L"Consolas"
-        );
-
-        HDC hdc = GetDC(hwnd);
-        HFONT old = (HFONT)SelectObject(hdc, g_hFont);
-        TEXTMETRIC tm;
-        GetTextMetrics(hdc, &tm);
-        g_lineHeight = tm.tmHeight;
-        // approximate char width by measuring '0'
-        SIZE sz;
-        GetTextExtentPoint32W(hdc, L"0", 1, &sz);
-        g_charWidth = sz.cx;
-        SelectObject(hdc, old);
-        ReleaseDC(hwnd, hdc);
-
-        pMain->RecalcLayout(hwnd);
-        pMain->UpdateScrollInfo(hwnd);
-        return 0;
-
-        result = 1;
-    }
-    else
-    {
-        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
-            ::GetWindowLongPtrW(
-                hwnd,
-                GWLP_USERDATA
-            )));
-
-        bool wasHandled = false;
-
-        if (pMain) {
-            switch (msg)
-            {
-            case WM_CREATE:
-            {
-                // configure scrollbar range
-                SCROLLINFO si = { sizeof(si) };
-                si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
-                si.nMin = 0;
-                //si.nMax = bufferH;
-                si.nPage = 100; // updated in resize
-                si.nPos = 0;
-                SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
-                break;
-            }
-
-            case WM_VSCROLL:
-            {
-                int action = LOWORD(wParam);
-                int pos = HIWORD(wParam);
-                int maxLine = static_cast<int>((pMain->g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE) - 1;
-
-                switch (action)
-                {
-                case SB_LINEUP:    g_firstLine = max(0, g_firstLine - 1); break;
-                case SB_LINEDOWN:  g_firstLine = min(maxLine, g_firstLine + 1); break;
-                case SB_PAGEUP:    g_firstLine = max(0, g_firstLine - g_linesPerPage); break;
-                case SB_PAGEDOWN:  g_firstLine = min(maxLine, g_firstLine + g_linesPerPage); break;
-                case SB_THUMBTRACK: g_firstLine = pos; break;
-                case SB_TOP: g_firstLine = 0; break;
-                case SB_BOTTOM: g_firstLine = maxLine; break;
-                }
-                pMain->UpdateScrollInfo(hwnd);
-                InvalidateRect(hwnd, nullptr, TRUE);
-                return 0;
-            }
-
-            case WM_SIZE:
-            {
-                // Resize back buffer
-                HDC hdc = GetDC(hwnd);
-
-                int newWidth = LOWORD(lParam);
-                int newHeight = HIWORD(lParam);
-
-                if (pMain->memDC)
-                {
-                    SelectObject(pMain->memDC, pMain->oldBitmap);
-                    DeleteObject(pMain->memBitmap);
-                    DeleteDC(pMain->memDC);
-                }
-
-                pMain->memDC = CreateCompatibleDC(hdc);
-                pMain->memBitmap = CreateCompatibleBitmap(hdc, newWidth, newHeight);
-                pMain->oldBitmap = (HBITMAP)SelectObject(pMain->memDC, pMain->memBitmap);
-
-                pMain->bufferWidth = newWidth;
-                pMain->bufferHeight = newHeight;
-
-                ReleaseDC(hwnd, hdc);
-                pMain->RecalcLayout(hwnd);
-                pMain->UpdateScrollInfo(hwnd);
-                //InvalidateRect(hwnd, nullptr, TRUE);
-                return 0;
-            }
-
-            case WM_MOUSEWHEEL:
-            {
-                // Wheel rotates in multiples of WHEEL_DELTA (120). Positive = away from user = scroll up.
-                int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-                int lines = zDelta / WHEEL_DELTA; // number of detents
-                g_firstLine = max(0, g_firstLine - lines * 3); // scroll 3 lines per wheel detent
-                pMain->UpdateScrollInfo(hwnd);
-                InvalidateRect(hwnd, nullptr, TRUE);
-                return 0;
-            }
-
-            case WM_KEYDOWN:
-            {
-                int maxLine = static_cast<int>((pMain->g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE) - 1;
-                switch (wParam)
-                {
-                case VK_PRIOR: // Page Up
-                    g_firstLine = max(0, g_firstLine - g_linesPerPage); break;
-                case VK_NEXT: // Page Down
-                    g_firstLine = min(maxLine, g_firstLine + g_linesPerPage); break;
-                case VK_HOME:
-                    g_firstLine = 0; break;
-                case VK_END:
-                    g_firstLine = maxLine; break;
-                }
-                pMain->UpdateScrollInfo(hwnd);
-                InvalidateRect(hwnd, nullptr, TRUE);
-                return 0;
-            }
-
-            case WM_PAINT:
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(hwnd, &ps);
-
-                if (!pMain->memDC)
-                {
-                    // Create initial buffer if not yet created
-                    RECT client;
-                    GetClientRect(hwnd, &client);
-                    SendMessage(hwnd, WM_SIZE, 0, MAKELPARAM(client.right, client.bottom));
-                }
-
-                HBRUSH bgBrush = (HBRUSH)(COLOR_WINDOW + 1);
-                FillRect(pMain->memDC, &ps.rcPaint, bgBrush);
-
-                if (pMain->isPlaying) {
-                    SelectObject(pMain->memDC, pMain->hFont);
-                    SetBkMode(pMain->memDC, TRANSPARENT);
-
-                    RECT rc = ps.rcPaint;
-                    pMain->DrawHexDump(pMain->memDC, rc);
-                }
-
-                BitBlt(hdc,
-                    ps.rcPaint.left, ps.rcPaint.top,
-                    ps.rcPaint.right - ps.rcPaint.left,
-                    ps.rcPaint.bottom - ps.rcPaint.top,
-                    pMain->memDC,
-                    ps.rcPaint.left, ps.rcPaint.top,
-                    SRCCOPY);
-
-                EndPaint(hwnd, &ps);
-                return 0;
-            }
-            case WM_ERASEBKGND:
-                // Prevent flicker — we’ll handle full redraws in WM_PAINT
-                return 1;
-            }
-        }
-        if (!wasHandled)
-        {
-            result = DefWindowProc(hwnd, msg, wParam, lParam);
-        }
-    }
-    return result;
-}
-
-// Compute lines per page based on client height
-void Core::RecalcLayout(HWND hwnd)
-{
-    RECT rc;
-    GetClientRect(hwnd, &rc);
-    int height = rc.bottom - rc.top;
-    if (g_lineHeight > 0)
-        g_linesPerPage = max(1, height / g_lineHeight);
-    else
-        g_linesPerPage = 1;
-}
-
-// Update vertical scrollbar to reflect buffer size
-void Core::UpdateScrollInfo(HWND hwnd)
-{
-    int totalLines = static_cast<int>((g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE);
-    int maxLine = max(0, totalLines - 1);
-
-    g_firstLine = max(0, min(g_firstLine, maxLine));
-
-    SCROLLINFO si;
-    si.cbSize = sizeof(si);
-    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
-    si.nMin = 0;
-    si.nMax = maxLine;
-    si.nPage = g_linesPerPage;
-    si.nPos = g_firstLine;
-
-    SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
-}
-
-// Draw the visible range of hex dump into rc
-void Core::DrawHexDump(HDC hdc, RECT const& rc)
-{
-    // measure column positions (characters)
-    // Layout: "ADDR: " (8 chars for 6 hex digits + ': ') -> hex bytes (3 chars each incl space) -> two spaces -> ASCII 16 chars
-    // We'll position using pixel offsets computed from g_charWidth.
-    int addrChars = 6; // e.g. "0000FF"
-    int addrField = addrChars + 2; // "0000FF: "
-    int hexCharsPerByte = 3; // "FF "
-    int hexFieldChars = BYTES_PER_LINE * hexCharsPerByte;
-    int gapChars = 2;
-    int asciiFieldChars = BYTES_PER_LINE;
-
-    int xAddr = 8; // margin
-    int xHex = xAddr + addrField * g_charWidth;
-    int xAscii = xHex + hexFieldChars * g_charWidth + gapChars * g_charWidth;
-    int y = rc.top;
-
-    // Compute which lines to draw
-    int totalLines = static_cast<int>((g_bufferSize + BYTES_PER_LINE - 1) / BYTES_PER_LINE);
-    int startLine = g_firstLine;
-    int endLine = min(totalLines - 1, g_firstLine + g_linesPerPage - 1);
-    uint8_t (*fp)(Core*, uint16_t);
-    fp = hexSources[hexView];
-
-    wchar_t lineBuf[256];
-
-    for (int line = startLine; line <= endLine; ++line)
-    {
-        size_t base = static_cast<size_t>(line) * BYTES_PER_LINE;
-        int yLine = y + (line - startLine) * g_lineHeight;
-
-        // Address
-        swprintf_s(lineBuf, L"%06X: ", static_cast<unsigned int>(base));
-        TextOutW(hdc, xAddr, yLine, lineBuf, static_cast<int>(wcslen(lineBuf)));
-
-        // Hex bytes
-        std::wstring hexs;
-        hexs.reserve(BYTES_PER_LINE * 3);
-        for (int b = 0; b < BYTES_PER_LINE; ++b)
-        {
-            if (base + b < g_bufferSize)
-            {
-                wchar_t tmp[8];
-                if (base + b > 0x2000) {
-                    int i = 0;
-                }
-                swprintf_s(tmp, L"%02X ", fp(this, base + b));
-                hexs += tmp;
-                //swprintf_s(tmp, L"%02X ", ppu.ReadVRAM(base + b));
-                //if (base + b < cart.m_chrData.size()) {
-                //    swprintf_s(tmp, L"%02X ", cart.m_chrData[base + b]);
-                //    hexs += tmp;
-                //}
-            }
-            else
-            {
-                hexs += L"   ";
-            }
-        }
-        TextOutW(hdc, xHex, yLine, hexs.c_str(), static_cast<int>(hexs.size()));
-
-        // ASCII
-        std::wstring ascii;
-        ascii.reserve(BYTES_PER_LINE);
-        for (int b = 0; b < BYTES_PER_LINE; ++b)
-        {
-            if (base + b < g_bufferSize)
-            {
-                uint8_t v = 0;
-                v = fp(this, base + b); //g_buffer[base + b];
-                //v = ppu.ReadVRAM(base + b); //g_buffer[base + b];
-                //if (base + b < cart.m_chrData.size()) {
-                //    v = cart.m_chrData[base + b];
-                //}
-                if (v >= 0x20 && v <= 0x7E) ascii.push_back(static_cast<wchar_t>(v));
-                else ascii.push_back(L'.');
-            }
-            else
-            {
-                ascii.push_back(L' ');
-            }
-        }
-        TextOutW(hdc, xAscii, yLine, ascii.c_str(), static_cast<int>(ascii.size()));
-    }
-}
-
-bool ShowOpenDialog(HWND hwnd, std::wstring& filePath)
-{
-    OPENFILENAME ofn;
-    wchar_t szFile[MAX_PATH] = { 0 };
-
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = hwnd;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile) / sizeof(szFile[0]);
-
-    // File filters (each filter is "Name\0Pattern\0")
-    ofn.lpstrFilter = L"All Files\0*.*\0NES ROMs\0*.nes\0";
-    ofn.nFilterIndex = 1;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-    if (GetOpenFileName(&ofn))
-    {
-        filePath = szFile;
-		return true;
-
-        // Example: pass file path to your emulator
-        // LoadRom(szFile);
-    }
-    return false;
-}
-
 LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
@@ -606,11 +267,6 @@ LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
                     ShowWindow(pMain->m_hwndHex, SW_SHOWNORMAL);
                     break;
                 case VK_ESCAPE:
-                    CommandQueue::Command cmd;
-					bool newPauseState = !pMain->isPaused;
-                    cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
-                    pMain->context.command_queue.Push(cmd);
-                    pMain->isPaused = newPauseState;
 					//pMain->cpu.toggleFrozen(); // Toggle freeze
                     break;
                 }
@@ -1003,13 +659,22 @@ void Core::RunMessageLoop()
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
             switch (event.type) {
-            case SDL_KEYDOWN:
-                if (event.key.keysym.sym == SDLK_F11) {
+            case SDL_KEYDOWN: {
+                switch (event.key.keysym.sym) {
+                case SDLK_ESCAPE: {
+                    CommandQueue::Command cmd;
+                    bool newPauseState = !isPaused;
+                    cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
+                    context.command_queue.Push(cmd);
+                    isPaused = newPauseState;
+                } break;
+                case SDLK_F11: {
                     // Toggle Fullscreen on Alt+Enter
                     bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
                     SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+                } break;
                 }
-                break;
+            } break;
             case SDL_QUIT:
                 done = true;
                 break;
@@ -1036,15 +701,6 @@ void Core::RunMessageLoop()
 
         if (done) {
             break;
-        }
-
-        if (isPaused) {
-            Sleep(100); // Sleep to reduce CPU usage while paused
-            continue;
-        }
-
-        if (Update) {
-            Update();
         }
 
         // Start the Dear ImGui frame
@@ -1093,7 +749,29 @@ void Core::RunMessageLoop()
                 ImGuiFileDialog::Instance()->Close();
             }
 
-            if (isPlaying) {
+            // In a real emulator, you'd render your NES PPU buffer to an OpenGL texture
+            // and display it here using ImGui::Image()
+            //ImGui::Button("Mock NES Screen (256x240)", ImVec2(512, 480));
+            // Get the size of the current window to scale the image
+            ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+
+            // Debugger Window (CPU Registers)
+            ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
+            ImGui::Begin("CPU Debugger");
+            ImGui::Text("A: 0x00"); ImGui::SameLine();
+            ImGui::Text("X: 0x00"); ImGui::SameLine();
+            ImGui::Text("Y: 0x00");
+            ImGui::Separator();
+            ImGui::Text("PC: 0x8000");
+            ImGui::Text("SP: 0xFD");
+            //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
+            ImGui::Button("Pause");
+            ImGui::End();
+            debuggerUI.DrawScrollableDisassembler();
+
+			DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
+
+            if (!isPaused && isPlaying) {
                 // Wait for the Core (The "Sleep" phase)
                 // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
                 // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
@@ -1113,38 +791,19 @@ void Core::RunMessageLoop()
                 }
             }
 
+            if (Update) {
+                Update();
+            }
+
             // NES Display Window
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
-			ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
             ImGui::Text("FPS: %.1f", io.Framerate);
-
-            // In a real emulator, you'd render your NES PPU buffer to an OpenGL texture
-            // and display it here using ImGui::Image()
-            //ImGui::Button("Mock NES Screen (256x240)", ImVec2(512, 480));
-            // Get the size of the current window to scale the image
-            ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-
             // Display the texture (casting the GLuint to a void*)
             // We use viewportPanelSize to make the game scale with the window
-			DrawGameCentered();
+            DrawGameCentered();
             ImGui::End();
-
-            // Debugger Window (CPU Registers)
-            ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
-            ImGui::Begin("CPU Debugger");
-            ImGui::Text("A: 0x00"); ImGui::SameLine();
-            ImGui::Text("X: 0x00"); ImGui::SameLine();
-            ImGui::Text("Y: 0x00");
-            ImGui::Separator();
-            ImGui::Text("PC: 0x8000");
-            ImGui::Text("SP: 0xFD");
-            //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
-            ImGui::Button("Pause");
-            ImGui::End();
-            debuggerUI.DrawScrollableDisassembler();
-
-			DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
         }
 
         ImGui::Render();
