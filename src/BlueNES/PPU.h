@@ -80,6 +80,7 @@ class RendererLoopy;
 class A12Mapper;
 class Nes;
 class Serializer;
+class DebuggerContext;
 
 class PPU : public MemoryMapper
 {
@@ -156,7 +157,9 @@ public:
 	void Deserialize(Serializer& serializer);
 
 private:
+	void UpdateState();
 	SharedContext& context;
+	DebuggerContext* dbgContext;
 	uint32_t* buffer;
 	bool is_failure = false;
 

@@ -4,13 +4,14 @@
 #include "EmulatorCore.h"
 #include "Nes.h"
 #include "imgui.h"
+#include "DebuggerContext.h"
 
 bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     _core = core;
-	_bus = core->emulator.GetBus();
-    _ppu = core->emulator.GetPPU();
     _cartridge = core->emulator.GetCartridge();
+	_ppu = core->emulator.GetPPU();
     _sharedContext = sharedCtx;
+    _dbgContext = _sharedContext->debugger_context;
     for (int i = 0; i < 2; i++) {
         glGenTextures(1, &ntTextures[i]);
         glBindTexture(GL_TEXTURE_2D, ntTextures[i]);
@@ -33,8 +34,7 @@ void PPUViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) 
 
 // TODO Improve speed with dirty rectangles
 // Also, cache the two nametables and only change them when needed (bank switch or write).
-void PPUViewer::Draw(const char* title, bool* open)
-{
+void PPUViewer::Draw(const char* title, bool* open) {
     if (!ImGui::Begin(title, open)) { ImGui::End(); return; }
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
         renderNametable(nt0, 0);
@@ -84,7 +84,7 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
     for (int row = 0; row < 30; row++) {
         for (int col = 0; col < 32; col++) {
             // Get the tile index from the nametable in VRAM
-            uint8_t tileIndex = _ppu->m_vram[nametableAddr + row * 32 + col];
+            uint8_t tileIndex = _dbgContext->ppuState.nametables[nametableAddr + row * 32 + col];
             if (tileIndex != 0xff) {
 				int i = 0;
             }
@@ -97,7 +97,7 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
             int attrCol = col / 4;
             // Get attribute byte for the tile
             uint16_t attrAddr = (nametableAddr | 0x3c0) + attrRow * 8 + attrCol;
-            uint8_t attributeByte = _ppu->m_vram[attrAddr];
+            uint8_t attributeByte = _dbgContext->ppuState.nametables[attrAddr];
             if (attributeByte > 0) {
                 int i = 0;
             }
@@ -116,14 +116,14 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
     
     int tileOffset = tileIndex * 16; // 16 bytes per tile
     // Determine the pattern table base address
-    uint16_t patternTableBase = _ppu->GetBackgroundPatternTableBase();
+    uint16_t patternTableBase = _dbgContext->ppuState.bgPatternTableAddr;
 
     for (int y = 0; y < 8; y++) {
         
         int tileBase = patternTableBase + tileOffset; // 16 bytes per tile
 
-        uint8_t byte1 = _bus->cart.mapper->readCHR(tileBase + y);     // bitplane 0
-        uint8_t byte2 = _bus->cart.mapper->readCHR(tileBase + y + 8); // bitplane 1
+        uint8_t byte1 = _dbgContext->ppuState.chrMemory[tileBase + y];     // bitplane 0
+        uint8_t byte2 = _dbgContext->ppuState.chrMemory[tileBase + y + 8]; // bitplane 1
 
         for (int x = 0; x < 8; x++) {
             uint8_t bit0 = (byte1 >> (7 - x)) & 1;
@@ -132,7 +132,7 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
 
             uint32_t actualColor = 0;
             if (colorIndex == 0) {
-                actualColor = m_nesPalette[_ppu->paletteTable[0]] | 0xFF000000; // Transparent color (background color)
+                actualColor = m_nesPalette[_dbgContext->ppuState.palette[0]] | 0xFF000000; // Transparent color (background color)
             }
             else {
                 actualColor = colors[colorIndex] | 0xFF000000; // Map to actual color from palette

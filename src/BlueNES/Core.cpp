@@ -656,6 +656,9 @@ void Core::RunMessageLoop()
     static int titleUpdateDelay = 60;
     HACCEL hAccel = LoadAccelerators(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_ACCELERATOR1));
     
+    float ticksPerSec = (float)SDL_GetPerformanceFrequency();
+	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
+    int frameCount = 0;
     while (!done) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -773,7 +776,7 @@ void Core::RunMessageLoop()
 
 			DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
 
-            if (!isPaused && isPlaying) {
+            if (isPlaying && !isPaused) {
                 // Wait for the Core (The "Sleep" phase)
                 // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
                 // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
@@ -786,16 +789,19 @@ void Core::RunMessageLoop()
                     // 5. Rendering
                     RenderFrame(frame_data);
                     if (titleUpdateDelay-- <= 0) {
-                        std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)context.current_fps);
-                        SetWindowText(m_hwnd, title.c_str());
                         titleUpdateDelay = 60;
                     }
                 }
             }
-
-            if (Update) {
-                Update();
+            else {
+                // If paused, don't burn CPU! 
+                // Let the OS have the thread for a few milliseconds.
+                SDL_Delay(16);
             }
+
+            //if (Update) {
+            //    Update();
+            //}
 
             //if (ppuOpen) {
             //    // 1. Generate the pixels from PPU VRAM into a temporary buffer
@@ -813,16 +819,34 @@ void Core::RunMessageLoop()
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
-            ImGui::Text("FPS: %.1f", io.Framerate);
+            ImGui::Text("FPS: %d", (int)context.current_fps.load(std::memory_order_relaxed));
             // Display the texture (casting the GLuint to a void*)
             // We use viewportPanelSize to make the game scale with the window
             DrawGameCentered();
             ImGui::End();
         }
 
+		frameCount++;
+        uint64_t currentTick = SDL_GetPerformanceCounter();
+        if (currentTick > nextFrameTime) {
+            nextFrameTime = currentTick + (uint64_t)(ticksPerSec);
+            std::string title = "BlueOrb NES Emulator - FPS (UI): " + std::to_string((int)frameCount);
+            SDL_SetWindowTitle(window, title.c_str());
+            frameCount = 0;
+		}
+  //      if (currentTick < nextFrameTime) {
+  //          uint64_t waitTicks = nextFrameTime - currentTick;
+  //          uint32_t waitMs = (uint32_t)((waitTicks * 1000) / ticksPerSec);
+  //          if (waitMs > 0) {
+  //              SDL_Delay(waitMs);
+  //          }
+  //          // Busy-wait for the remaining time (if any)
+  //          while (SDL_GetPerformanceCounter() < nextFrameTime) {}
+		//}
+
         ImGui::Render();
-        //glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-		glViewport(0, 0, 800, 600);
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+		//glViewport(0, 0, 800, 600);
         glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

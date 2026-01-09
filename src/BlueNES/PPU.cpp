@@ -10,10 +10,12 @@
 #include "A12Mapper.h"
 #include "Mapper.h"
 #include "Serializer.h"
+#include "DebuggerContext.h"
 
 HWND m_hwnd;
 
 PPU::PPU(SharedContext& ctx, Nes& nes) : context(ctx), nes(nes) {
+	dbgContext = ctx.debugger_context;
 	oam.fill(0xFF);
 	m_ppuCtrl = 0;
 	oamAddr = 0;
@@ -392,7 +394,27 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	}
 }
 
+void PPU::UpdateState() {
+	dbgContext->ppuState.ctrl = m_ppuCtrl;
+	dbgContext->ppuState.mask = m_ppuMask;
+	dbgContext->ppuState.status = m_ppuStatus;
+	dbgContext->ppuState.scanline = renderer->m_scanline;
+	dbgContext->ppuState.dot = renderer->dot;
+	dbgContext->ppuState.bgPatternTableAddr = GetBackgroundPatternTableBase();
+	memcpy(dbgContext->ppuState.palette.data(), paletteTable.data(), 32);
+	memcpy(dbgContext->ppuState.nametables.data(), m_vram.data(), 0x800); // nametables
+	// TODO - CHR memory read may be slow depending on mapper implementation
+	// Consider memcpy by page?
+	for (int i = 0; i < 0x2000; i++) {
+		dbgContext->ppuState.chrMemory[i] = bus->cart.mapper->readCHR(i);
+	}
+}
+
 void PPU::Clock() {
+	// TODO Make the scanline and dot configurable since banks or scrolling may change during the frame render.
+	if (renderer->m_scanline == 0 && renderer->dot == 0) {
+		UpdateState();
+	}
 	renderer->clock(buffer);
 }
 

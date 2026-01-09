@@ -49,6 +49,18 @@ public:
         uint64_t cycle;
     };
 
+    struct PPUState {
+        uint8_t ctrl;
+        uint8_t mask;
+		uint8_t status;
+        uint16_t scanline;
+        uint16_t dot;
+		uint16_t bgPatternTableAddr;
+		std::array<uint8_t, 0x2000> chrMemory; // 8KB CHR snapshot
+        std::array<uint8_t, 0x800> nametables;
+		std::array<uint8_t, 32> palette;
+    };
+
     bool HasBreakpoint(uint16_t addr);
 	void ToggleBreakpoint(uint16_t addr);
 
@@ -72,4 +84,5 @@ public:
     std::atomic<uint16_t> step_over_target{ 0xFFFF };
 
     CpuState lastState{};
+    PPUState ppuState{};
 };

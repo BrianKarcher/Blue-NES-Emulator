@@ -137,7 +137,7 @@ void EmulatorCore::run() {
         if (currentTime >= nextFpsUpdateTime) {
 			// Update FPS once per second
 			LOG(L"FPS: %d, cycles: %d\n", frameCount, audioCycleCounter);
-            context.current_fps = frameCount;
+            context.current_fps.store(frameCount);
             frameCount = 0;
             audioCycleCounter = 0;
             nextFpsUpdateTime += freq;
