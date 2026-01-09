@@ -215,6 +215,7 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
             return nes.bus_->read(address);
         });
+        context.coreRunning.store(true);
         break;
     case CommandQueue::CommandType::RESET:
         audioBackend.resetBuffer();
@@ -225,6 +226,7 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         //m_core.Reset();
         break;
     case CommandQueue::CommandType::CLOSE:
+        context.coreRunning.store(false);
         audioBackend.resetBuffer();
         nes.ppu_->reset();
         nes.apu_->reset();

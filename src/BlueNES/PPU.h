@@ -99,6 +99,7 @@ public:
 	void writeOAM(uint16_t addr, uint8_t val);
 	inline uint8_t read_register(uint16_t addr);
 	uint8_t peek_register(uint16_t addr);
+	uint8_t PeekVRAM(uint16_t addr);
 	uint8_t ReadVRAM(uint16_t addr);
 	uint8_t GetScrollX() const;
 	uint8_t GetScrollY() const;

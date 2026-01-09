@@ -16,6 +16,8 @@
 
 class DebuggerContext;
 class Bus;
+class PPU;
+class Cartridge;
 
 class EmulatorCore
 {
@@ -31,6 +33,12 @@ public:
 	void stop();
 	Bus* GetBus() {
 		return nes.bus_;
+	}
+	PPU* GetPPU() {
+		return nes.ppu_;
+	}
+	Cartridge* GetCartridge() {
+		return nes.cart_;
 	}
 	
 private:

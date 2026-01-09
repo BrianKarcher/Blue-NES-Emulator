@@ -302,6 +302,31 @@ uint16_t PPU::GetVRAMAddress() const {
 	return renderer->getPPUAddr();
 }
 
+uint8_t PPU::PeekVRAM(uint16_t addr)
+{
+	uint8_t value = 0;
+	if (addr < 0x2000) {
+		// Reading from CHR-ROM/RAM
+		value = bus->cart.mapper->readCHR(addr);
+	}
+	else if (addr < 0x3F00) {
+		// Reading from nametables and attribute tables
+		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
+		mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
+		value = m_vram[mirroredAddr];
+	}
+	else if (addr < 0x4000) {
+		// Reading from palette RAM (mirrored every 32 bytes)
+		uint8_t paletteAddr = addr & 0x1F;
+		if (paletteAddr >= 0x10 && (paletteAddr % 4 == 0)) {
+			paletteAddr -= 0x10; // Mirror universal background color
+		}
+		value = paletteTable[paletteAddr];
+	}
+
+	return value;
+}
+
 uint8_t PPU::ReadVRAM(uint16_t addr)
 {
 	uint8_t value = 0;

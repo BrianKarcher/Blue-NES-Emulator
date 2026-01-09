@@ -9,6 +9,7 @@
 #include "SharedContext.h"
 #include "DebuggerUI.h"
 #include "ImGuiFileDialog.h"
+#include "PPUViewer.h"
 
 Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this) {
 	_bus = emulator.GetBus();
@@ -69,6 +70,7 @@ bool Core::init(HWND wnd)
     // Initialize with empty data (256x240 pixels, RGBA format)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
+    ppuViewer.Initialize(this, &context);
  //   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	//// Removed SDL_RENDERER_PRESENTVSYNC to allow uncapped framerate for better timing control
  //   if (!renderer)
@@ -794,6 +796,18 @@ void Core::RunMessageLoop()
             if (Update) {
                 Update();
             }
+
+            //if (ppuOpen) {
+            //    // 1. Generate the pixels from PPU VRAM into a temporary buffer
+            //    // You can use the logic from your old Win32 'renderNametable' here
+            //    auto nt0_pixels = ppu.DebugRenderNametable(0);
+            //    auto nt1_pixels = ppu.DebugRenderNametable(1);
+
+            //    // 2. Send those pixels to the GPU
+            //    ppuViewer.UpdateTexture(0, nt0_pixels);
+            //    ppuViewer.UpdateTexture(1, nt1_pixels);
+            //}
+			ppuViewer.Draw("PPU Viewer", &ppuOpen);
 
             // NES Display Window
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);

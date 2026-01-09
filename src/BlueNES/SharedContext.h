@@ -40,6 +40,7 @@ public:
     std::atomic<bool> is_running{ true };
     std::atomic<uint8_t> current_fps{ 0 };
     std::atomic<uint8_t> mirrorMode;
+    std::atomic<bool> coreRunning{ false };
 
     SharedContext();
 

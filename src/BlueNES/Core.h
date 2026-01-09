@@ -59,6 +59,8 @@ public:
 	ImGuiIO io;
 	SharedContext context;
 	EmulatorCore emulator;
+	PPUViewer ppuViewer;
+	bool ppuOpen = true;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
