@@ -7,8 +7,8 @@
 
 HexViewer::HexViewer(Core* core, SharedContext& sharedCtx) : _sharedCtx(sharedCtx), _dbgCtx(sharedCtx.debugger_context) {
     _bus = core->emulator.GetBus();
-    hexSources[0] = HexReadCPU;
-	hexSources[1] = HexReadPPU;
+    hexSources[CPU_SOURCE] = HexReadCPU;
+	hexSources[PPU_SOURCE] = HexReadPPU;
 }
 
 uint8_t HexReadPPU(HexViewer hexViewer, uint16_t addr) {
@@ -37,8 +37,29 @@ uint8_t HexReadCPU(HexViewer hexViewer, uint16_t addr) {
 	return hexViewer._bus->peek(addr);
 }
 
-void HexViewer::DrawMemoryViewer(const char* title, size_t size) {
+void HexViewer::DrawMemoryViewer(const char* title) {
     ImGui::Begin(title);
+
+    // 1. Dropdown for Hex Source
+    const char* sources[] = { "CPU Bus", "PPU VRAM", "OAM", "Palette" };
+    static int current_source = 0; // Local state or use pMain->hexView
+
+    ImGui::SetNextItemWidth(150); // Keep it compact
+    if (ImGui::Combo("Source", &current_source, sources, IM_ARRAYSIZE(sources))) {
+        // Update the core's hexView index when changed
+        sourceIdx = current_source;
+
+        // Optional: Update 'size' based on source
+        if (sourceIdx == CPU_SOURCE) size = 0x10000; // CPU range
+		else if (sourceIdx == PPU_SOURCE) size = 0x4000; // PPU range
+    }
+
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Switch between different memory address spaces.");
+
+    ImGui::Separator();
 
     // Set a default size for the viewer
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
@@ -72,7 +93,7 @@ void HexViewer::DrawMemoryViewer(const char* title, size_t size) {
                     ImGui::TableSetColumnIndex(n + 1);
                     size_t addr = row * 16 + n;
                     if (addr < size) {
-                        uint8_t val = _bus->peek(addr);
+                        uint8_t val = hexSources[sourceIdx](*this, addr);
 
                         // Highlight non-zero values or specific addresses (like Stack or Zero Page)
                         if (val == 0) ImGui::TextDisabled("00");
@@ -85,7 +106,7 @@ void HexViewer::DrawMemoryViewer(const char* title, size_t size) {
                 char ascii[17];
                 for (int n = 0; n < 16; n++) {
                     size_t addr = row * 16 + n;
-                    uint8_t c = (addr < size) ? _bus->peek(addr) : ' ';
+                    uint8_t c = (addr < size) ? hexSources[sourceIdx](*this, addr) : ' ';
                     ascii[n] = (c >= 32 && c <= 126) ? c : '.';
                 }
                 ascii[16] = '\0';

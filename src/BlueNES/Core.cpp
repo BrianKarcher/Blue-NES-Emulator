@@ -423,7 +423,7 @@ void Core::RunMessageLoop()
             ImGui::Button("Pause");
             ImGui::End();
             debuggerUI.DrawScrollableDisassembler();
-            hexViewer.DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
+            hexViewer.DrawMemoryViewer("Memory Viewer"); // 64KB of addressable memory
 
             if (isPlaying && !isPaused) {
                 // Wait for the Core (The "Sleep" phase)

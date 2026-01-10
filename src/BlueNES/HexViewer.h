@@ -16,10 +16,12 @@ class HexViewer
 {
 public:
 	HexViewer(Core* core, SharedContext& sharedCtx);
-	void DrawMemoryViewer(const char* title, size_t size);
+	void DrawMemoryViewer(const char* title);
 	DebuggerContext* _dbgCtx;
 	Bus* _bus;
 private:
+	int sourceIdx = CPU_SOURCE;
+	size_t size = 0x10000;
 	SharedContext& _sharedCtx;
 	std::array<uint8_t(*)(HexViewer hexViewer, uint16_t), 2> hexSources;
 };
