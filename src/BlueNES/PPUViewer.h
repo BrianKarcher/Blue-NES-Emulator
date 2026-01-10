@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <SDL_opengl.h>
+#include "imgui.h"
 
 class Core;
 class Bus;
@@ -21,6 +22,8 @@ private:
 	GLuint chr_textures[2] = { 0, 0 };
 	//void PPURenderToBackBuffer();
 
+	uint16_t GetBaseNametableAddress();
+	void DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x, float y);
 	void UpdateCHRTexture(int bank, uint8_t palette_idx);
 	void DrawCHRViewer();
 	

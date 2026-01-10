@@ -41,6 +41,47 @@ void PPUViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) 
     glBindTexture(GL_TEXTURE_2D, 0); // Unbind to avoid state bleeding
 }
 
+void PPUViewer::DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x, float y) {
+    float viewW = 256.0f;
+    float viewH = 240.0f;
+    float totalW = 512.0f;
+    float totalH = 480.0f;
+
+    // Normalize x/y to within the 512x480 space
+    x = fmod(x, totalW);
+    y = fmod(y, totalH);
+
+    // Helper to draw segments
+    auto draw_seg = [&](float sx, float sy, float sw, float sh) {
+        if (sw <= 0 || sh <= 0) return;
+        ImVec2 p1 = ImVec2(canvas_p0.x + sx, canvas_p0.y + sy);
+        ImVec2 p2 = ImVec2(p1.x + sw, p1.y + sh);
+        draw_list->AddRect(p1, p2, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
+        draw_list->AddRectFilled(p1, p2, IM_COL32(0, 255, 0, 30));
+    };
+
+    // Split horizontally and vertically if crossing seams
+    float w1 = std::min(viewW, totalW - x);
+    float w2 = viewW - w1;
+    float h1 = std::min(viewH, totalH - y);
+    float h2 = viewH - h1;
+
+    draw_seg(x, y, w1, h1);    // Top-Left piece
+    draw_seg(0, y, w2, h1);    // Top-Right piece (wrapped)
+    draw_seg(x, 0, w1, h2);    // Bottom-Left piece (wrapped)
+    draw_seg(0, 0, w2, h2);    // Bottom-Right piece (wrapped)
+}
+
+uint16_t PPUViewer::GetBaseNametableAddress() {
+    // Bits 0 and 1 of PPUCTRL select the nametable
+    // 0 = $2000 (Top Left)
+    // 1 = $2400 (Top Right)
+    // 2 = $2800 (Bottom Left)
+    // 3 = $2C00 (Bottom Right)
+    uint8_t ctrl = _dbgContext->ppuState.ctrl;
+    return (ctrl & 0x03);
+}
+
 // TODO Improve speed with dirty rectangles
 // Also, cache the two nametables and only change them when needed (bank switch or write).
 void PPUViewer::DrawNametables() {
@@ -60,7 +101,11 @@ void PPUViewer::DrawNametables() {
             slots[0] = 0; slots[1] = 1; slots[2] = 0; slots[3] = 1;
         }
 
+        ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();
         ImGui::BeginGroup();
+        // Set horizontal and vertical spacing between items to 0,0
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
         float w = 256, h = 240; // You can scale these
 
         // Top Row
@@ -71,7 +116,32 @@ void PPUViewer::DrawNametables() {
         ImGui::Image((void*)(intptr_t)ntTextures[slots[2]], ImVec2(w, h)); ImGui::SameLine();
         ImGui::Image((void*)(intptr_t)ntTextures[slots[3]], ImVec2(w, h));
 
+        ImGui::PopStyleVar(); // Always pop what you push
         ImGui::EndGroup();
+
+        // Get the base nametable index (0-3) from PPUCTRL
+        int ntIndex = GetBaseNametableAddress();
+
+        // Get the fine scroll values from the Scroll Registers ($2005)
+        int scrollX = _dbgContext->ppuState.scrollX;
+        int scrollY = _dbgContext->ppuState.scrollY;
+
+        // Map ntIndex to 512x480 coordinates
+        // Index 0: (0,0), Index 1: (256, 0), Index 2: (0, 240), Index 3: (256, 240)
+        float baseX = (ntIndex % 2) * 256.0f;
+        float baseY = (ntIndex / 2) * 240.0f;
+
+        // Final screen position of the scroll box
+        float finalX = baseX + (float)scrollX;
+        float finalY = baseY + (float)scrollY;
+
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+        // Use the Wrapped Logic to ensure the box appears correctly across boundaries
+        DrawWrappedRect(draw_list, canvas_p0, finalX, finalY);
+
+        ImGui::Text("PPUCTRL Bits: %d | Base Offset: (%.0f, %.0f)", ntIndex, baseX, baseY);
+        ImGui::Text("Fine Scroll: (%d, %d)", scrollX, scrollY);
     }
 }
 
