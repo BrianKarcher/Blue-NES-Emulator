@@ -21,6 +21,15 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    for (int i = 0; i < 2; i++) {
+        glGenTextures(1, &chr_textures[i]);
+        glBindTexture(GL_TEXTURE_2D, chr_textures[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
     return true;
 }
 
@@ -34,8 +43,7 @@ void PPUViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) 
 
 // TODO Improve speed with dirty rectangles
 // Also, cache the two nametables and only change them when needed (bank switch or write).
-void PPUViewer::Draw(const char* title, bool* open) {
-    if (!ImGui::Begin(title, open)) { ImGui::End(); return; }
+void PPUViewer::DrawNametables() {
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
         renderNametable(nt0, 0);
 		UpdateTexture(0, nt0);
@@ -64,6 +72,84 @@ void PPUViewer::Draw(const char* title, bool* open) {
         ImGui::Image((void*)(intptr_t)ntTextures[slots[3]], ImVec2(w, h));
 
         ImGui::EndGroup();
+    }
+}
+
+// This generates a 128x128 pixel buffer for one pattern table
+void PPUViewer::UpdateCHRTexture(int bank, uint8_t palette_idx) {
+    uint32_t pixels[128 * 128];
+
+    std::array<uint32_t, 4> palette;
+	_ppu->get_palette(palette_idx, palette);
+    for (int tileY = 0; tileY < 16; tileY++) {
+        for (int tileX = 0; tileX < 16; tileX++) {
+            uint16_t offset = (bank * 0x1000) + (tileY * 16 + tileX) * 16;
+
+            for (int row = 0; row < 8; row++) {
+                uint8_t tile_l = _dbgContext->ppuState.chrMemory[offset + row];
+                uint8_t tile_h = _dbgContext->ppuState.chrMemory[offset + row + 8];
+
+                for (int col = 0; col < 8; col++) {
+                    // Combine bits to get 0-3 color index
+                    uint8_t pixel = ((tile_l >> (7 - col)) & 0x01) |
+                        (((tile_h >> (7 - col)) & 0x01) << 1);
+
+                    // Map color index to actual RGB (using a debug palette)
+                    uint32_t color = palette[pixel];
+                    pixels[(tileY * 8 + row) * 128 + (tileX * 8 + col)] = color | 0xFF000000;
+                }
+            }
+        }
+    }
+
+    // Upload 'pixels' to your OpenGL texture for this bank
+    glBindTexture(GL_TEXTURE_2D, chr_textures[bank]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+}
+
+void PPUViewer::DrawCHRViewer() {
+    static int selected_palette = 0;
+
+    // UI to select which palette to view the tiles with
+    ImGui::SliderInt("Palette", &selected_palette, 0, 7);
+    ImGui::Separator();
+
+    ImGui::Columns(2, "CHRColumns", false);
+
+    for (int i = 0; i < 2; i++) {
+        UpdateCHRTexture(i, selected_palette);
+        ImGui::Text("Pattern Table $%04X", i * 0x1000);
+
+        // Display with 2x scaling (256x256)
+        ImGui::Image((void*)(intptr_t)chr_textures[i], ImVec2(256, 256));
+        ImGui::NextColumn();
+    }
+    ImGui::Columns(1);
+}
+
+void PPUViewer::Draw(const char* title, bool* p_open) {
+    if (!ImGui::Begin(title, p_open)) {
+        ImGui::End();
+        return;
+    }
+
+    if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
+        if (ImGui::BeginTabBar("PPUViews")) {
+
+            // Tab 1: Nametables
+            if (ImGui::BeginTabItem("Nametables")) {
+                DrawNametables(); // Your existing logic
+                ImGui::EndTabItem();
+            }
+
+            // Tab 2: CHR ROM / Pattern Tables
+            if (ImGui::BeginTabItem("CHR Viewer")) {
+                DrawCHRViewer();
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
     }
     ImGui::End();
 }

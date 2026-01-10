@@ -13,11 +13,16 @@ class PPUViewer
 {
 public:
 	bool Initialize(Core* core, SharedContext* sharedCtx);
-	void Draw(const char* title, bool* open);
+	void DrawNametables();
+	void Draw(const char* title, bool* p_open);
 
 private:
 	GLuint ntTextures[2] = { 0, 0 };
+	GLuint chr_textures[2] = { 0, 0 };
 	//void PPURenderToBackBuffer();
+
+	void UpdateCHRTexture(int bank, uint8_t palette_idx);
+	void DrawCHRViewer();
 	
 	void UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data);
 	void renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable);
