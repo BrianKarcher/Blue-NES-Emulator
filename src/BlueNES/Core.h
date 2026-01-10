@@ -48,8 +48,7 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
-uint8_t hexReadPPU(Core* core, uint16_t val);
-uint8_t hexReadCPU(Core* core, uint16_t val);
+class DebuggerContext;
 
 class Core
 {
@@ -103,6 +102,7 @@ private:
 	GLuint nes_texture;
 	HMENU hMenu;
 	Bus* _bus;
+	DebuggerContext* _dbgCtx;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);
 	bool ClearFrame();

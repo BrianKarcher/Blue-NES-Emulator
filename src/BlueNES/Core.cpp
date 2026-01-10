@@ -10,8 +10,9 @@
 #include "DebuggerUI.h"
 #include "ImGuiFileDialog.h"
 #include "PPUViewer.h"
+#include "DebuggerContext.h"
 
-Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this), hexViewer(this, context) {
+Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this), hexViewer(this, context), _dbgCtx(context.debugger_context) {
 	_bus = emulator.GetBus();
 }
 
@@ -293,14 +294,6 @@ void Core::RunMessageLoop()
         //    pMain->ClearFrame();
         //}
         //break;
-        //case ID_NES_RESET:
-        //{
-        //    CommandQueue::Command cmd;
-        //    cmd.type = CommandQueue::CommandType::RESET;
-        //    pMain->context.command_queue.Push(cmd);
-        //    pMain->isPlaying = true;
-        //}
-        //break;
         //case ID_NES_POWER:
         //{
         //    CommandQueue::Command cmd;
@@ -327,6 +320,12 @@ void Core::RunMessageLoop()
                     // Toggle Fullscreen on Alt+Enter
                     bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
                     SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+                } break;
+                case SDLK_F5: {
+                    _dbgCtx->is_paused.store(false);
+                } break;
+                case SDLK_F10: {
+                    _dbgCtx->step_over_active.store(true);
                 } break;
                 }
             } break;
@@ -380,7 +379,12 @@ void Core::RunMessageLoop()
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Emulation")) {
-                    if (ImGui::MenuItem("Reset")) { /* Reset NES */ }
+                    if (ImGui::MenuItem("Reset")) {
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::RESET;
+                        context.command_queue.Push(cmd);
+                        isPlaying = true;
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMainMenuBar();
@@ -413,14 +417,30 @@ void Core::RunMessageLoop()
             // Debugger Window (CPU Registers)
             ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
             ImGui::Begin("CPU Debugger");
-            ImGui::Text("A: 0x00"); ImGui::SameLine();
-            ImGui::Text("X: 0x00"); ImGui::SameLine();
-            ImGui::Text("Y: 0x00");
+            ImGui::Text("A: %02X", _dbgCtx->lastState.a); ImGui::SameLine();
+            ImGui::Text("X: %02X", _dbgCtx->lastState.x); ImGui::SameLine();
+            ImGui::Text("Y: %02X", _dbgCtx->lastState.y);
             ImGui::Separator();
-            ImGui::Text("PC: 0x8000");
-            ImGui::Text("SP: 0xFD");
+            ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
+            ImGui::Text("SP: %02X" , _dbgCtx->lastState.sp);
+
+			ImGui::Separator();
+			ImGui::Text("PPU Flags:");
+			ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
+            ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
+
+			bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
             //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
-            ImGui::Button("Pause");
+            if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
+                bool newPause = !isDebugPause;
+                if (newPause) {
+                    _dbgCtx->is_paused.store(true);
+                    _dbgCtx->continue_requested.store(false);
+                }
+                else {
+                    _dbgCtx->continue_requested.store(true);
+                }
+            }
             ImGui::End();
             debuggerUI.DrawScrollableDisassembler();
             hexViewer.DrawMemoryViewer("Memory Viewer"); // 64KB of addressable memory

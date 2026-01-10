@@ -11,7 +11,7 @@
 #include <thread>
 #include <chrono>
 
-CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg) {
+CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
 	//buildMap();
 	init_cpu();
 }
@@ -32,12 +32,18 @@ bool CPU::ShouldPause() {
 		dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
 		// Notify the Debugger UI thread
 		//PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
+		ppu.UpdateState();
 	}
 
 	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {
 		if (dbgCtx.step_requested.load(std::memory_order_relaxed)) {
 			dbgCtx.step_requested.store(false); // Consume the request
 			return false; // allow ONE instruction
+		}
+		if (dbgCtx.continue_requested.load(std::memory_order_relaxed)) {
+			dbgCtx.continue_requested.store(false); // Consume the request
+			dbgCtx.is_paused.store(false);
+			return false; // continue running
 		}
 		return true;
 	}

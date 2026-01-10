@@ -78,6 +78,7 @@ public:
     std::atomic<uint8_t> breakpoints[65536];
     //std::array<std::string, 0x10000> log{};
     std::atomic<bool> is_paused{ false };
+    std::atomic<bool> continue_requested{ false };
     // Did the UI request a single step?
     std::atomic<bool> step_requested{ false };
 

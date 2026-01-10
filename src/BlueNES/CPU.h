@@ -19,7 +19,7 @@ class DebuggerContext;
 #endif
 
 //#define CPUDEBUG
-#define NMIDEBUG
+//#define NMIDEBUG
 
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
@@ -187,11 +187,12 @@ class Bus;
 class OpenBusMapper;
 class Serializer;
 class SharedContext;
+class PPU;
 
 class CPU
 {
 public:
-	CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg);
+	CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu);
 	void connectBus(Bus* bus);
 
 	bool ShouldPause();
@@ -2290,6 +2291,7 @@ private:
 	OpenBusMapper& openBus;
 	DebuggerContext& dbgCtx;
 	SharedContext& sharedCtx;
+	PPU& ppu;
 	void push(uint8_t value);
 	uint8_t pull();
 

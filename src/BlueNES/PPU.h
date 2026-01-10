@@ -152,12 +152,12 @@ public:
 		}
 	}
 	void setBuffer(uint32_t* buf) { buffer = buf; }
+	void UpdateState();
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 
 private:
-	void UpdateState();
 	SharedContext& context;
 	DebuggerContext* dbgContext;
 	uint32_t* buffer;
