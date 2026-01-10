@@ -11,7 +11,7 @@
 #include "ImGuiFileDialog.h"
 #include "PPUViewer.h"
 
-Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this) {
+Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this), hexViewer(this, context) {
 	_bus = emulator.GetBus();
 }
 
@@ -19,7 +19,7 @@ SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 SDL_Texture* nesTexture = nullptr;
 
-bool Core::init(HWND wnd)
+bool Core::init()
 {
     // Setup SDL
     //if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER /* | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD*/) < 0)
@@ -71,27 +71,6 @@ bool Core::init(HWND wnd)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
     ppuViewer.Initialize(this, &context);
- //   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	//// Removed SDL_RENDERER_PRESENTVSYNC to allow uncapped framerate for better timing control
- //   if (!renderer)
- //   {
- //       SDL_Log("Renderer Error: %s", SDL_GetError());
- //       return false;
- //   }
-
- //   // Create NES framebuffer texture (256x240)
- //   nesTexture = SDL_CreateTexture(
- //       renderer,
- //       SDL_PIXELFORMAT_ARGB8888,    // NES framebuffer format
- //       SDL_TEXTUREACCESS_STREAMING, // CPU-updated texture
- //       256, 240
- //   );
-
- //   if (!nesTexture)
- //   {
- //       SDL_Log("Texture Error: %s", SDL_GetError());
- //       return false;
- //   }
 
     return true;
 }
@@ -112,277 +91,9 @@ HRESULT Core::Initialize()
 }
 
 HRESULT Core::CreateWindows() {
-    init(m_hwnd);
-
-    hexSources[0] = hexReadCPU;
-    hexSources[1] = hexReadPPU;
-
+    init();
     emulator.start();
     return S_OK;
-}
-
-uint8_t hexReadPPU(Core* core, uint16_t val) {
-    //return core->emulator.nes.ppu.ReadVRAM(val);
-    return 0;
-}
-
-uint8_t hexReadCPU(Core* core, uint16_t val) {
-    //return core->emulator.nes.bus.read(val);
-    return 0;
-}
-
-LRESULT CALLBACK Core::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT result = 0;
-
-    if (msg == WM_CREATE)
-    {
-        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-        Core* pMain = (Core*)pcs->lpCreateParams;
-
-        ::SetWindowLongPtrW(
-            hwnd,
-            GWLP_USERDATA,
-            reinterpret_cast<LONG_PTR>(pMain)
-        );
-
-        pMain->hHexCombo = CreateWindowEx(
-            0, L"COMBOBOX", NULL,
-            WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            0, 0, 200, 200,
-            hwnd, NULL, NULL, NULL
-        );
-
-        int index = SendMessage(pMain->hHexCombo, CB_ADDSTRING, 0, (LPARAM)L"CPU Memory");
-        SendMessage(pMain->hHexCombo, CB_SETITEMDATA, index, (LPARAM)0);
-        index = SendMessage(pMain->hHexCombo, CB_ADDSTRING, 0, (LPARAM)L"PPU Memory");
-        SendMessage(pMain->hHexCombo, CB_SETITEMDATA, index, (LPARAM)1);
-        index = SendMessage(pMain->hHexCombo, CB_SETCURSEL, 0, 0);
-
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-
-        // Child draw area with scroll bar
-        pMain->hHexDrawArea = CreateWindowEx(
-            0, L"DRAW_AREA", NULL,
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL,
-            0, 20, rect.right - rect.left, rect.bottom - rect.top - 20,
-            hwnd, NULL, HINST_THISCOMPONENT, pMain
-        );
-
-        result = 1;
-    }
-    else
-    {
-        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
-            ::GetWindowLongPtrW(
-                hwnd,
-                GWLP_USERDATA
-            )));
-
-        bool wasHandled = false;
-
-        if (pMain)
-        {
-            switch (msg)
-            {
-            //case WM_PAINT:
-            //{
-            //    InvalidateRect(pMain->hHexDrawArea, nullptr, TRUE);
-            //    return 0;
-            //}
-            case WM_COMMAND:
-            {
-            case CBN_SELCHANGE:
-            {
-                int sel = (int)SendMessage(pMain->hHexCombo, CB_GETCURSEL, 0, 0);
-                int value = (int)SendMessage(pMain->hHexCombo, CB_GETITEMDATA, sel, 0);
-
-                pMain->hexView = value;
-                //pMain->UpdateHexView();          // redraw child window
-                InvalidateRect(pMain->hHexDrawArea, NULL, TRUE);
-                return 0;
-            }
-            return DefWindowProc(hwnd, msg, wParam, lParam);
-            }
-
-            case WM_DESTROY:
-                if (pMain->memDC)
-                {
-                    SelectObject(pMain->memDC, pMain->oldBitmap);
-                    DeleteObject(pMain->memBitmap);
-                    DeleteDC(pMain->memDC);
-                }
-                if (pMain->hFont) DeleteObject(pMain->hFont);
-                //PostQuitMessage(0);
-				ShowWindow(hwnd, SW_HIDE);
-                return 0;
-            }
-
-        }
-
-        if (!wasHandled)
-        {
-            result = DefWindowProc(hwnd, msg, wParam, lParam);
-        }
-    }
-
-    return result;
-}
-
-LRESULT CALLBACK Core::MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT result = 0;
-
-    if (message == WM_CREATE)
-    {
-        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-        Core* pMain = (Core*)pcs->lpCreateParams;
-
-        ::SetWindowLongPtrW(
-            hwnd,
-            GWLP_USERDATA,
-            reinterpret_cast<LONG_PTR>(pMain)
-        );
-        result = 1;
-    }
-    else
-    {
-        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
-            ::GetWindowLongPtrW(
-                hwnd,
-                GWLP_USERDATA
-            )));
-
-        bool wasHandled = false;
-
-        if (pMain)
-        {
-            switch (message)
-            {
-            case WM_KEYDOWN:
-            {
-                switch (wParam)
-                {
-                case VK_F1:
-                    // Show palette window
-                    ShowWindow(pMain->m_hwndHex, SW_SHOWNORMAL);
-                    break;
-                case VK_ESCAPE:
-					//pMain->cpu.toggleFrozen(); // Toggle freeze
-                    break;
-                }
-                break;
-			}
-            case WM_COMMAND:
-                switch (LOWORD(wParam))
-                {
-                case ID_DEBUG_STEPOVER: {
-                    //pMain->debuggerUI.StepInto();
-                    // F10 pressed
-                    //CommandQueue::Command cmd;
-                    //cmd.type = CommandQueue::CommandType::SAVE_STATE;
-                    //pMain->context.command_queue.Push(cmd);
-                } break;
-                case ID_FILE_OPEN:
-                {
-
-                    break;
-                }
-                case ID_FILE_SAVESTATE:
-                {
-                    CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::SAVE_STATE;
-                    pMain->context.command_queue.Push(cmd);
-                    break;
-                }
-                case ID_FILE_LOADSTATE:
-                {
-                    CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::LOAD_STATE;
-                    pMain->context.command_queue.Push(cmd);
-                    break;
-                }
-                case ID_FILE_EXIT:
-                    PostQuitMessage(0);
-					break;
-                case ID_FILE_CLOSE:
-                {
-                    CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::CLOSE;
-                    pMain->context.command_queue.Push(cmd);
-                    pMain->isPlaying = false;
-                    //InvalidateRect(hwnd, NULL, FALSE);
-                    pMain->updateMenu();
-                    //pMain->emulator.stop();
-                    pMain->ClearFrame();
-                }
-                    break;
-                case ID_NES_RESET:
-                {
-                    CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::RESET;
-                    pMain->context.command_queue.Push(cmd);
-                    pMain->isPlaying = true;
-                }
-                    break;
-                case ID_NES_POWER:
-                {
-                    CommandQueue::Command cmd;
-                    cmd.type = CommandQueue::CommandType::RESET;
-                    pMain->context.command_queue.Push(cmd);
-                    pMain->isPlaying = true;
-                }
-                    break;
-                }
-                break;
-            case WM_SIZE:
-            {
-                UINT width = LOWORD(lParam);
-                UINT height = HIWORD(lParam);
-                pMain->OnResize(width, height);
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-
-            case WM_DISPLAYCHANGE:
-            {
-                InvalidateRect(hwnd, NULL, FALSE);
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-
-            case WM_PAINT:
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(hwnd, &ps);
-                //pMain->RenderFrame();
-                EndPaint(hwnd, &ps);
-                ValidateRect(hwnd, NULL);
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-
-            case WM_DESTROY:
-            {
-                PostQuitMessage(0);
-            }
-            result = 1;
-            wasHandled = true;
-            break;
-            }
-        }
-
-        if (!wasHandled)
-        {
-            result = DefWindowProc(hwnd, message, wParam, lParam);
-        }
-    }
-
-    return result;
 }
 
 void Core::updateMenu() {
@@ -397,56 +108,6 @@ void Core::LoadGame(const std::string& filePath)
     context.command_queue.Push(cmd);
     isPlaying = true;
 	//audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
-}
-
-LRESULT CALLBACK Core::PaletteWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT result = 0;
-
-    if (msg == WM_CREATE)
-    {
-        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-        Core* pMain = (Core*)pcs->lpCreateParams;
-
-        ::SetWindowLongPtrW(
-            hwnd,
-            GWLP_USERDATA,
-            reinterpret_cast<LONG_PTR>(pMain)
-        );
-
-        result = 1;
-    }
-    else
-    {
-        Core* pMain = reinterpret_cast<Core*>(static_cast<LONG_PTR>(
-            ::GetWindowLongPtrW(
-                hwnd,
-                GWLP_USERDATA
-            )));
-
-        if (pMain)
-        {
-            switch (msg)
-            {
-            case WM_PAINT:
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(hwnd, &ps);
-                pMain->DrawPalette(hwnd, hdc);
-                EndPaint(hwnd, &ps);
-                return 0;
-            }
-
-            case WM_DESTROY:
-                ShowWindow(hwnd, SW_HIDE);
-                return 0;
-            }
-        }
-
-        result = DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    return result;
 }
 
 // Function to convert std::string (UTF-8) to std::wstring (UTF-16/UTF-32 depending on platform)
@@ -557,66 +218,6 @@ void Core::OnResize(UINT width, UINT height)
 
 }
 
-void Core::DrawMemoryViewer(const char* title, size_t size) {
-    ImGui::Begin(title);
-
-    // Set a default size for the viewer
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-
-    // We use 1 column for the Address, 16 for Hex data, and 1 for ASCII
-    static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH |
-        ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
-
-    if (ImGui::BeginTable("MemTable", 18, flags, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
-        // Setup columns
-        ImGui::TableSetupColumn("Addr", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-        for (int i = 0; i < 16; i++) ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 25.0f);
-        ImGui::TableSetupColumn("ASCII", ImGuiTableColumnFlags_WidthStretch);
-
-        ImGui::TableHeadersRow();
-
-        // Use Clipper: each row displays 16 bytes
-        ImGuiListClipper clipper;
-        clipper.Begin((int)((size + 15) / 16));
-
-        while (clipper.Step()) {
-            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
-                ImGui::TableNextRow();
-
-                // Column 0: Address
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("%04X:", row * 16);
-
-                // Columns 1-16: Hex Bytes
-                for (int n = 0; n < 16; n++) {
-                    ImGui::TableSetColumnIndex(n + 1);
-                    size_t addr = row * 16 + n;
-                    if (addr < size) {
-                        uint8_t val = _bus->peek(addr);
-
-                        // Highlight non-zero values or specific addresses (like Stack or Zero Page)
-                        if (val == 0) ImGui::TextDisabled("00");
-                        else ImGui::Text("%02X", val);
-                    }
-                }
-
-                // Column 17: ASCII representation
-                ImGui::TableSetColumnIndex(17);
-                char ascii[17];
-                for (int n = 0; n < 16; n++) {
-                    size_t addr = row * 16 + n;
-                    uint8_t c = (addr < size) ? _bus->peek(addr) : ' ';
-                    ascii[n] = (c >= 32 && c <= 126) ? c : '.';
-                }
-                ascii[16] = '\0';
-                ImGui::TextUnformatted(ascii);
-            }
-        }
-        ImGui::EndTable();
-    }
-    ImGui::End();
-}
-
 void Core::DrawGameCentered() {
     // Get the current window (or viewport) size
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
@@ -660,6 +261,55 @@ void Core::RunMessageLoop()
 	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
     int frameCount = 0;
     while (!done) {
+
+
+        // TODO IMPLEMENT THESE!
+        //case ID_FILE_SAVESTATE:
+        //{
+        //    CommandQueue::Command cmd;
+        //    cmd.type = CommandQueue::CommandType::SAVE_STATE;
+        //    pMain->context.command_queue.Push(cmd);
+        //    break;
+        //}
+        //case ID_FILE_LOADSTATE:
+        //{
+        //    CommandQueue::Command cmd;
+        //    cmd.type = CommandQueue::CommandType::LOAD_STATE;
+        //    pMain->context.command_queue.Push(cmd);
+        //    break;
+        //}
+        //case ID_FILE_EXIT:
+        //    PostQuitMessage(0);
+        //    break;
+        //case ID_FILE_CLOSE:
+        //{
+        //    CommandQueue::Command cmd;
+        //    cmd.type = CommandQueue::CommandType::CLOSE;
+        //    pMain->context.command_queue.Push(cmd);
+        //    pMain->isPlaying = false;
+        //    //InvalidateRect(hwnd, NULL, FALSE);
+        //    pMain->updateMenu();
+        //    //pMain->emulator.stop();
+        //    pMain->ClearFrame();
+        //}
+        //break;
+        //case ID_NES_RESET:
+        //{
+        //    CommandQueue::Command cmd;
+        //    cmd.type = CommandQueue::CommandType::RESET;
+        //    pMain->context.command_queue.Push(cmd);
+        //    pMain->isPlaying = true;
+        //}
+        //break;
+        //case ID_NES_POWER:
+        //{
+        //    CommandQueue::Command cmd;
+        //    cmd.type = CommandQueue::CommandType::RESET;
+        //    pMain->context.command_queue.Push(cmd);
+        //    pMain->isPlaying = true;
+        //}
+
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -773,8 +423,7 @@ void Core::RunMessageLoop()
             ImGui::Button("Pause");
             ImGui::End();
             debuggerUI.DrawScrollableDisassembler();
-
-			DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
+            hexViewer.DrawMemoryViewer("Memory Viewer", 0x10000); // 64KB of addressable memory
 
             if (isPlaying && !isPaused) {
                 // Wait for the Core (The "Sleep" phase)

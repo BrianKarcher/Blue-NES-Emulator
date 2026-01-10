@@ -21,6 +21,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <stdio.h>
+#include "HexViewer.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -54,7 +55,7 @@ class Core
 {
 public:
 	Core();
-	bool init(HWND wnd);
+	bool init();
 	SDL_GLContext gl_context;
 	ImGuiIO io;
 	SharedContext context;
@@ -96,6 +97,7 @@ public:
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
 	DebuggerUI debuggerUI;
+	HexViewer hexViewer;
 	//PPUViewer ppuViewer;
 private:
 	GLuint nes_texture;
@@ -108,31 +110,6 @@ private:
 
 	void PollControllerState();
 	bool isPaused;
-	// The windows procedure.
-	static LRESULT CALLBACK MainWndProc(
-		HWND hWnd,
-		UINT message,
-		WPARAM wParam,
-		LPARAM lParam
-	);
-	static LRESULT CALLBACK HexWndProc(
-		HWND hWnd,
-		UINT message,
-		WPARAM wParam,
-		LPARAM lParam
-	);
-	static LRESULT CALLBACK HexDrawAreaProc(
-		HWND hWnd,
-		UINT message,
-		WPARAM wParam,
-		LPARAM lParam
-	);
-	static LRESULT CALLBACK PaletteWndProc(
-		HWND hwnd,
-		UINT msg,
-		WPARAM wParam,
-		LPARAM lParam
-	);
 
 	// Resize the render target.
 	void OnResize(
@@ -141,8 +118,4 @@ private:
 	);
 	
 	HWND m_hwnd;
-	// Hex Window handles
-	HWND m_hwndHex;
-	std::array<uint8_t(*)(Core*, uint16_t), 2> hexSources;
-	void DrawMemoryViewer(const char* title, size_t size);
 };
