@@ -172,7 +172,6 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 
 void MMC3::triggerIRQ() {
 	_irqPending = true;
-	cpu.setIRQ(true);
 }
 
 void MMC3::acknowledgeIRQ() {

@@ -46,7 +46,6 @@ public:
         // Reset frame counter
         cycle_counter = 0;
         frame_counter_mode = 0;
-        frame_counter_irq_inhibit = false;
         frame_counter_irq_flag = false;
         frame_counter_step = 0;
         frame_counter_reset_delay = 0;
@@ -57,6 +56,7 @@ public:
         }
         write_register(0x4015, 0);
         write_register(0x4017, 0);
+        frame_counter_irq_inhibit = true;
     }
 
     void step() {
@@ -109,12 +109,10 @@ public:
                 break;
             case 29829:
                 if (!frame_counter_irq_inhibit) {
-                    frame_counter_irq_flag = true;
                 }
                 break;
             case 29830:
                 if (!frame_counter_irq_inhibit) {
-                    frame_counter_irq_flag = true;
                 }
                 cycle_counter = 0;
                 return;  // Don't increment counter
@@ -131,6 +129,9 @@ public:
                 clock_half_frame();
                 break;
             case 22371:
+                clock_quarter_frame();
+                break;
+            case 29829:
                 clock_quarter_frame();
                 break;
             case 37281:

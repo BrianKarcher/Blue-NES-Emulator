@@ -81,7 +81,6 @@ void CPU::cpu_tick() {
 			// Dummy read
 			ReadByte(m_pc);
 			current_opcode = OP_IRQ;
-			irq_line = false;
 		}
 		// Priority 3: Normal Fetch
 		else {
@@ -115,7 +114,7 @@ void CPU::cpu_tick() {
 
 	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
 	prev_run_irq = run_irq;
-	run_irq = irq_line && GetFlag(FLAG_INTERRUPT) == 0;
+	run_irq = irq_line && (GetFlag(FLAG_INTERRUPT) == 0);
 	m_cycle_count++;
 }
 

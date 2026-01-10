@@ -74,6 +74,8 @@ void Nes::clock() {
             ppu_->writeOAM(dmaAddr, val);
             dmaAddr++;
         }
+        bool irq_active = apu_->get_irq_flag() || cart_->mapper->IrqPending();
+        cpu_->setIRQ(irq_active);
         cpu_->ConsumeCycle();
         ppu_->Clock();
         ppu_->Clock();
@@ -92,6 +94,10 @@ void Nes::clock() {
         }
     }
     else {
+        bool apu_irq = apu_->get_irq_flag();
+        bool mapper_irq = cart_->mapper->IrqPending();
+        bool irq_active = apu_irq || mapper_irq;
+        cpu_->setIRQ(irq_active);
         cpu_->cpu_tick();
 
         ppu_->Clock();
