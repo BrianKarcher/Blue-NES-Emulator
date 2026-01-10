@@ -12,7 +12,7 @@
 
 #pragma comment(lib, "comctl32.lib")
 
-DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core) : hInst(hInst), _core(core) {
+DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core, ImGuiIO& io) : hInst(hInst), _core(core), io(io) {
 	_bus = _core.emulator.GetBus();
 	log = (uint8_t*)malloc(0x10000); // 64KB log buffer
     dbgCtx = _core.context.debugger_context;
@@ -194,8 +194,45 @@ std::string DebuggerUI::Disassemble(uint16_t address) {
     return ss.str();
 }
 
+void DebuggerUI::OpenGoToAddressDialog() {
+    showGoToAddressDialog = true;
+}
+
+void DebuggerUI::GoTo(uint16_t addr) {
+    needsJump = true;
+	jumpToAddress = addr;
+}
+
 void DebuggerUI::DrawScrollableDisassembler() {
     ImGui::Begin("Disassembler");
+
+    if (showGoToAddressDialog) {
+        ImGui::OpenPopup("Go To Address");
+        showGoToAddressDialog = false;
+	}
+
+    if (ImGui::BeginPopupModal("Go To Address", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char addrBuf[5] = ""; // 4 hex chars + null
+        ImGui::Text("Enter Hex Address:");
+
+        // Auto-focus the input box when the popup appears
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
+
+        if (ImGui::InputText("##addr", addrBuf, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
+            // Convert hex string to integer
+            uint16_t targetAddr = (uint16_t)std::strtol(addrBuf, nullptr, 16);
+
+            // Set the jump target
+            this->jumpToAddress = targetAddr;
+            this->needsJump = true;
+
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::Button("Cancel")) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
 
     // Use a table for easy alignment
     static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
@@ -209,13 +246,29 @@ void DebuggerUI::DrawScrollableDisassembler() {
         ImGui::TableHeadersRow();
 
         // 65536 possible addresses (NES memory space)
+        if (this->needsJump) {
+            // If every line represents 1 byte of memory:
+            float targetScrollY = this->jumpToAddress * ImGui::GetTextLineHeightWithSpacing();
+            ImGui::SetScrollY(targetScrollY);
+
+            // We clear the flag here because we manually moved the scrollbar
+            this->needsJump = false;
+        }
+        uint16_t currentPC = dbgCtx->lastState.pc;
         ImGuiListClipper clipper;
         clipper.Begin(65536);
 
         while (clipper.Step()) {
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                uint16_t addr = (uint16_t)i;
                 ImGui::TableNextRow();
 
+                // Check if this row is where the PC is
+                if (addr == currentPC) {
+                    // Set the background color for the entire row
+                    // Format: (Alpha, Blue, Green, Red) in hex
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 0.0f, 0.6f)));
+                }
                 // --- COLUMN 0: Breakpoint Icon ---
                 ImGui::TableSetColumnIndex(0);
                 bool hasBreakpoint = dbgCtx->HasBreakpoint(i);

@@ -12,7 +12,7 @@
 #include "PPUViewer.h"
 #include "DebuggerContext.h"
 
-Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this), hexViewer(this, context), _dbgCtx(context.debugger_context) {
+Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this, io), hexViewer(this, context), _dbgCtx(context.debugger_context) {
 	_bus = emulator.GetBus();
 }
 
@@ -325,7 +325,14 @@ void Core::RunMessageLoop()
                     _dbgCtx->is_paused.store(false);
                 } break;
                 case SDLK_F10: {
-                    _dbgCtx->step_over_active.store(true);
+                    _dbgCtx->step_requested.store(true);
+                    Sleep(10);
+                    debuggerUI.GoTo(_dbgCtx->lastState.pc);
+                } break;
+                case SDLK_g: {
+                    if (SDL_GetModState() & KMOD_CTRL) {
+                        debuggerUI.OpenGoToAddressDialog();
+					}
                 } break;
                 }
             } break;

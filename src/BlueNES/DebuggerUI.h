@@ -11,16 +11,21 @@ class Core;
 class DebuggerContext;
 class CPU;
 class SharedContext;
+class ImGuiIO;
 
 class DebuggerUI
 {
 public:
-	DebuggerUI(HINSTANCE hInst, Core& core);
+	DebuggerUI(HINSTANCE hInst, Core& core, ImGuiIO& io);
 	//void ComputeDisplayMap();
 	//void FocusPC(uint16_t pc);
 	//void StepInto();
 	void DrawScrollableDisassembler();
+	void OpenGoToAddressDialog();
+	void GoTo(uint16_t addr);
 private:
+	bool showGoToAddressDialog = false;
+	ImGuiIO& io;
 	uint16_t contextMenuAddr = 0;
 	uint8_t *log;
 	//const char* instSt[256] = {
@@ -155,4 +160,6 @@ private:
 	SharedContext* sharedCtx;
 	std::wstring StringToWstring(const std::string& str);
 	std::string Disassemble(uint16_t address);
+	bool needsJump;
+	uint16_t jumpToAddress;
 };

@@ -83,7 +83,7 @@ public:
     std::atomic<bool> step_requested{ false };
 
     // Did the UI request a Step Over? (Auto-resume until PC hits target)
-    std::atomic<bool> step_over_active{ false };
+    //std::atomic<bool> step_over_active{ false };
     std::atomic<uint16_t> step_over_target{ 0xFFFF };
 
     CpuState lastState{};
