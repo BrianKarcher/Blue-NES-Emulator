@@ -23,8 +23,6 @@ Bus::~Bus() {
 }
 
 void Bus::reset() {
-	// Probably not necessary
-    ramMapper.cpuRAM.fill(0);
 }
 
 void Bus::registerAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {

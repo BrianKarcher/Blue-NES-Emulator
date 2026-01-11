@@ -265,20 +265,7 @@ void Core::RunMessageLoop()
 
 
         // TODO IMPLEMENT THESE!
-        //case ID_FILE_SAVESTATE:
-        //{
-        //    CommandQueue::Command cmd;
-        //    cmd.type = CommandQueue::CommandType::SAVE_STATE;
-        //    pMain->context.command_queue.Push(cmd);
-        //    break;
-        //}
-        //case ID_FILE_LOADSTATE:
-        //{
-        //    CommandQueue::Command cmd;
-        //    cmd.type = CommandQueue::CommandType::LOAD_STATE;
-        //    pMain->context.command_queue.Push(cmd);
-        //    break;
-        //}
+
         //case ID_FILE_EXIT:
         //    PostQuitMessage(0);
         //    break;
@@ -382,11 +369,23 @@ void Core::RunMessageLoop()
                         // Arguments: Key, Title, Filter, Path
                         ImGuiFileDialog::Instance()->OpenDialog("ChooseRomKey", "Select NES ROM", ".nes", config);
                     }
+                        ImGui::Separator();
+                        if (ImGui::MenuItem("Save State", nullptr, false, isPlaying)) {
+                            CommandQueue::Command cmd;
+                            cmd.type = CommandQueue::CommandType::SAVE_STATE;
+                            context.command_queue.Push(cmd);
+                        }
+                        if (ImGui::MenuItem("Load State", nullptr, false, isPlaying)) {
+                            CommandQueue::Command cmd;
+                            cmd.type = CommandQueue::CommandType::LOAD_STATE;
+                            context.command_queue.Push(cmd);
+                        }
+                    ImGui::Separator();
                     if (ImGui::MenuItem("Exit")) done = true;
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Emulation")) {
-                    if (ImGui::MenuItem("Reset")) {
+                    if (ImGui::MenuItem("Reset", nullptr, false, isPlaying)) {
                         CommandQueue::Command cmd;
                         cmd.type = CommandQueue::CommandType::RESET;
                         context.command_queue.Push(cmd);
