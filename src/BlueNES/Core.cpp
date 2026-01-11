@@ -436,6 +436,11 @@ void Core::RunMessageLoop()
 			ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
             ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
 
+            if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
+                _dbgCtx->hit_breakpoint.store(false);
+                debuggerUI.GoTo();
+			}
+
 			bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
             //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
             if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {

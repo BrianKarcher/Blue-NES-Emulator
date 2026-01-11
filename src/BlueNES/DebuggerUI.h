@@ -22,6 +22,7 @@ public:
 	//void StepInto();
 	void DrawScrollableDisassembler();
 	void OpenGoToAddressDialog();
+	void GoTo();
 	void GoTo(uint16_t addr);
 private:
 	bool showGoToAddressDialog = false;
@@ -160,6 +161,7 @@ private:
 	SharedContext* sharedCtx;
 	std::wstring StringToWstring(const std::string& str);
 	std::string Disassemble(uint16_t address);
+	void ScrollToAddress(uint16_t targetAddr);
 	bool needsJump;
 	uint16_t jumpToAddress;
 };

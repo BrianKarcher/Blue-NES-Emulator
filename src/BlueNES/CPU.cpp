@@ -32,6 +32,7 @@ bool CPU::ShouldPause() {
 		dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
 		// Notify the Debugger UI thread
 		//PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
+		dbgCtx.hit_breakpoint.store(true);
 		ppu.UpdateState();
 	}
 

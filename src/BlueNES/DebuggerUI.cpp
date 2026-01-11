@@ -196,12 +196,45 @@ void DebuggerUI::OpenGoToAddressDialog() {
     showGoToAddressDialog = true;
 }
 
+void DebuggerUI::GoTo() {
+	GoTo(dbgCtx->lastState.pc);
+}
+
 void DebuggerUI::GoTo(uint16_t addr) {
     auto it = displayMap.find(addr); // Ensure address is valid
 
     if (it != displayMap.end()) {
         needsJump = true;
-        jumpToAddress = it->second;
+        jumpToAddress = it->first;
+    }
+}
+
+void DebuggerUI::ScrollToAddress(uint16_t targetAddr) {
+    auto it = displayMap.find(targetAddr);
+	if (it == displayMap.end()) return; // Address not found
+
+    float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+
+    // 1. Calculate the pixel position of the target address
+    float targetScrollY = it->second * lineHeight;
+
+    // 2. Get current scroll state
+    float currentScrollY = ImGui::GetScrollY();
+    float windowHeight = ImGui::GetWindowHeight();
+
+    // 3. Check if target is off-screen (with a small padding/margin)
+    float margin = lineHeight * 2.0f;
+    bool isOffScreen = (targetScrollY < currentScrollY + margin) ||
+        (targetScrollY > currentScrollY + windowHeight - margin);
+
+    if (isOffScreen) {
+        // Move scroll so the target is centered
+        float centerScroll = targetScrollY - (windowHeight * 0.5f);
+
+        // Clamp to 0 so we don't scroll into negative space
+        if (centerScroll < 0) centerScroll = 0;
+
+        ImGui::SetScrollY(centerScroll);
     }
 }
 
@@ -247,11 +280,11 @@ void DebuggerUI::DrawScrollableDisassembler() {
         ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
-        // 65536 possible addresses (NES memory space)
         if (this->needsJump) {
+            ScrollToAddress(this->jumpToAddress);
             // If every line represents 1 byte of memory:
-            float targetScrollY = this->jumpToAddress * ImGui::GetTextLineHeightWithSpacing();
-            ImGui::SetScrollY(targetScrollY);
+            //float targetScrollY = this->jumpToAddress * ImGui::GetTextLineHeightWithSpacing();
+            //ImGui::SetScrollY(targetScrollY);
 
             // We clear the flag here because we manually moved the scrollbar
             this->needsJump = false;
