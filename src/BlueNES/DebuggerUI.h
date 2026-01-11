@@ -17,7 +17,7 @@ class DebuggerUI
 {
 public:
 	DebuggerUI(HINSTANCE hInst, Core& core, ImGuiIO& io);
-	//void ComputeDisplayMap();
+	void ComputeDisplayMap();
 	//void FocusPC(uint16_t pc);
 	//void StepInto();
 	void DrawScrollableDisassembler();

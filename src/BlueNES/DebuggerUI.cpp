@@ -47,19 +47,17 @@ std::wstring DebuggerUI::StringToWstring(const std::string& str) {
     return wstr;
 }
 
-//void DebuggerUI::ComputeDisplayMap() {
-//    displayList.clear();
-//    displayMap.clear();
-//
-//    for (int i = 0; i < 0x10000; ++i) {
-//        if (dbgCtx->memory_metadata[i] == META_CODE) {
-//            displayList.push_back(i);
-//			displayMap[i] = displayList.size() - 1;
-//        }
-//	}
-//    // Set the virtual count to the display map.
-//    ListView_SetItemCountEx(hList, displayList.size(), LVSICF_NOSCROLL | LVSICF_NOINVALIDATEALL);
-//}
+void DebuggerUI::ComputeDisplayMap() {
+    displayList.clear();
+    displayMap.clear();
+
+    for (int i = 0; i < 0x10000; ++i) {
+        if (dbgCtx->memory_metadata[i] == META_CODE) {
+            displayList.push_back(i);
+			displayMap[i] = displayList.size() - 1;
+        }
+	}
+}
 
 //void DebuggerUI::FocusPC(uint16_t pc) {
 //    // Find which index in our map corresponds to the current PC
@@ -199,8 +197,12 @@ void DebuggerUI::OpenGoToAddressDialog() {
 }
 
 void DebuggerUI::GoTo(uint16_t addr) {
-    needsJump = true;
-	jumpToAddress = addr;
+    auto it = displayMap.find(addr); // Ensure address is valid
+
+    if (it != displayMap.end()) {
+        needsJump = true;
+        jumpToAddress = it->second;
+    }
 }
 
 void DebuggerUI::DrawScrollableDisassembler() {
@@ -256,11 +258,11 @@ void DebuggerUI::DrawScrollableDisassembler() {
         }
         uint16_t currentPC = dbgCtx->lastState.pc;
         ImGuiListClipper clipper;
-        clipper.Begin(65536);
+        clipper.Begin(displayList.size());
 
         while (clipper.Step()) {
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-                uint16_t addr = (uint16_t)i;
+                uint16_t addr = (uint16_t)displayList[i];
                 ImGui::TableNextRow();
 
                 // Check if this row is where the PC is
@@ -271,7 +273,7 @@ void DebuggerUI::DrawScrollableDisassembler() {
                 }
                 // --- COLUMN 0: Breakpoint Icon ---
                 ImGui::TableSetColumnIndex(0);
-                bool hasBreakpoint = dbgCtx->HasBreakpoint(i);
+                bool hasBreakpoint = dbgCtx->HasBreakpoint(addr);
                 if (hasBreakpoint) {
                     ImGui::TextColored(ImVec4(1, 0, 0, 1), "  O"); // Red circle for BP
                 }
@@ -279,10 +281,10 @@ void DebuggerUI::DrawScrollableDisassembler() {
                 // --- COLUMN 1: Address ---
                 ImGui::TableSetColumnIndex(1);
                 char addrStr[8];
-                sprintf_s(addrStr, "$%04X", i);
+                sprintf_s(addrStr, "$%04X", addr);
 
                 // Selectable makes the whole row clickable and easy to target for right-click
-                if (ImGui::Selectable(addrStr, (dbgCtx->lastState.pc == i), ImGuiSelectableFlags_SpanAllColumns)) {
+                if (ImGui::Selectable(addrStr, (dbgCtx->lastState.pc == addr), ImGuiSelectableFlags_SpanAllColumns)) {
                     // Jump logic or selecting logic here
                 }
 
@@ -290,8 +292,8 @@ void DebuggerUI::DrawScrollableDisassembler() {
                 // This targets the Selectable we just created
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Add Breakpoint", nullptr, hasBreakpoint)) {
-                        if (hasBreakpoint) dbgCtx->breakpoints[i].store(false);
-                        else dbgCtx->breakpoints[i].store(true);
+                        if (hasBreakpoint) dbgCtx->breakpoints[addr].store(false);
+                        else dbgCtx->breakpoints[addr].store(true);
                     }
                     //if (ImGui::MenuItem("Run to here")) {
                     //    runToAddress = i;
@@ -305,7 +307,7 @@ void DebuggerUI::DrawScrollableDisassembler() {
 
                 // --- COLUMN 2: Instruction ---
                 ImGui::TableSetColumnIndex(2);
-                ImGui::TextUnformatted(Disassemble(i).c_str());
+                ImGui::TextUnformatted(Disassemble(addr).c_str());
             }
         }
         ImGui::EndTable();

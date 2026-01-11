@@ -443,6 +443,7 @@ void Core::RunMessageLoop()
                 if (newPause) {
                     _dbgCtx->is_paused.store(true);
                     _dbgCtx->continue_requested.store(false);
+					debuggerUI.ComputeDisplayMap();
                 }
                 else {
                     _dbgCtx->continue_requested.store(true);
