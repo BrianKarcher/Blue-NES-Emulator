@@ -464,7 +464,7 @@ public:
 
 		// Phantom op codes
 		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
-		opcode_table[0x101] = &run_standalone_instruction<Op_HardwareInterrupt_BRK>;
+		opcode_table[0x101] = &run_standalone_instruction<Op_HardwareInterrupt_IRQ>;
 	}
 
 	void Serialize(Serializer& serializer);
@@ -1284,7 +1284,7 @@ private:
 
 			case 4: // T4: Push Status Register (with B flag set)
 			{
-				// When pushed via BRK, Bit 4 (B flag) and Bit 5 are set to 1
+				// When pushed via BRK, Bit 4 (B flag) and Bit 5 (Unused) are set to 1
 				uint8_t status_to_push = cpu.m_p | 0x30;
 				cpu.WriteByte(0x0100 + cpu.m_sp--, status_to_push);
 
@@ -1294,13 +1294,29 @@ private:
 				return false;
 			}
 
-			case 5: // T5: Fetch Vector Low
+			case 5: { // T5: Fetch Vector Low
+				// if NMI is asserted during the first four ticks of a BRK instruction,
+				// the BRK instruction will execute normally at first (PC increments will occur and
+				// the status word will be pushed with the B flag set), but execution will branch to
+				// the NMI vector instead of the IRQ/BRK vector
+				if (cpu.nmi_need) {
+					cpu.addr_low = cpu.ReadByte(0xFFFA);
+				}
+				else {
 				cpu.addr_low = cpu.ReadByte(0xFFFE);
+				}
 				cpu.cycle_state = 6;
 				return false;
-
+			}
 			case 6: // T6: Fetch Vector High and Jump
+				if (cpu.nmi_need) {
+					cpu.addr_high = cpu.ReadByte(0xFFFB);
+					cpu.nmi_need = false; // Clear NMI request
+					cpu.nmi_previous = false;
+				}
+				else {
 				cpu.addr_high = cpu.ReadByte(0xFFFF);
+				}
 				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
 
 				return true; // Complete
@@ -1567,7 +1583,7 @@ private:
 
 			case 4: // T4: Push Status
 			{
-				uint8_t p = (cpu.m_p & 0xEF) | 0x20;
+				uint8_t p = (cpu.m_p & 0xEF) | 0x20; // Clear B flag, set Unused flag
 				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
 				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 5;
@@ -1588,7 +1604,7 @@ private:
 		}
 	};
 
-	struct Op_HardwareInterrupt_BRK {
+	struct Op_HardwareInterrupt_IRQ {
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Another Dummy Read (The 6502 is quirky like this)
@@ -1608,6 +1624,7 @@ private:
 
 			case 4: // T4: Push Status
 			{
+				// Disable the Break flag, set the Unused flag.
 				uint8_t p = (cpu.m_p & 0xEF) | 0x20;
 				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
 				cpu.SetFlag(FLAG_INTERRUPT);

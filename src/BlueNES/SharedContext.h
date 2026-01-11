@@ -38,7 +38,7 @@ public:
     // Lock-free atomic input (UI writes, Core reads)
     std::atomic<uint8_t> atomic_input{ 0 };
     std::atomic<bool> is_running{ true };
-    std::atomic<uint8_t> current_fps{ 0 };
+    std::atomic<uint16_t> current_fps{ 0 };
     std::atomic<uint8_t> mirrorMode;
     std::atomic<bool> coreRunning{ false };
 
