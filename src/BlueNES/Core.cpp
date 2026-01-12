@@ -71,6 +71,11 @@ bool Core::init()
     // Initialize with empty data (256x240 pixels, RGBA format)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
+    std::ifstream config("config.ini");
+    if (config.is_open()) {
+        std::getline(config, lastOpenedPath);
+    }
+
     ppuViewer.Initialize(this, &context);
 
     return true;
@@ -363,6 +368,7 @@ void Core::RunMessageLoop()
                 if (ImGui::BeginMenu("File")) {
                     if (ImGui::MenuItem("Load ROM...")) {
 						IGFD::FileDialogConfig config;
+						config.path = lastOpenedPath;
 						//config.title = "Select NES ROM";
 						//config.filters = { ".nes" };
 
@@ -403,6 +409,7 @@ void Core::RunMessageLoop()
                 if (ImGuiFileDialog::Instance()->IsOk()) {
                     std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
                     std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                    lastOpenedPath = filePath;
                     LoadGame(filePathName);
                     isPaused = false;
                     updateMenu();
@@ -554,4 +561,6 @@ void Core::RunMessageLoop()
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    std::ofstream configOut("config.ini");
+    configOut << lastOpenedPath;
 }

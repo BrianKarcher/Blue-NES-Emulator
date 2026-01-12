@@ -1287,9 +1287,6 @@ private:
 				// When pushed via BRK, Bit 4 (B flag) and Bit 5 (Unused) are set to 1
 				uint8_t status_to_push = cpu.m_p | 0x30;
 				cpu.WriteByte(0x0100 + cpu.m_sp--, status_to_push);
-
-				// The interrupt flag is set internally to prevent nested interrupts
-				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 5;
 				return false;
 			}
@@ -1303,8 +1300,10 @@ private:
 					cpu.addr_low = cpu.ReadByte(0xFFFA);
 				}
 				else {
-				cpu.addr_low = cpu.ReadByte(0xFFFE);
+					cpu.addr_low = cpu.ReadByte(0xFFFE);
 				}
+				// The interrupt flag is set internally to prevent nested interrupts
+				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 6;
 				return false;
 			}
@@ -1312,13 +1311,12 @@ private:
 				if (cpu.nmi_need) {
 					cpu.addr_high = cpu.ReadByte(0xFFFB);
 					cpu.nmi_need = false; // Clear NMI request
-					cpu.nmi_previous = false;
+					cpu.nmi_previous_need = false;
 				}
 				else {
-				cpu.addr_high = cpu.ReadByte(0xFFFF);
+					cpu.addr_high = cpu.ReadByte(0xFFFF);
 				}
 				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
-
 				return true; // Complete
 			}
 			return false;
@@ -1585,12 +1583,12 @@ private:
 			{
 				uint8_t p = (cpu.m_p & 0xEF) | 0x20; // Clear B flag, set Unused flag
 				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
-				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 5;
 				return false;
 			}
 			case 5: // T5: Fetch Vector Low
 				cpu.addr_low = cpu.ReadByte(0xFFFA);
+				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 6;
 				return false;
 
@@ -1627,12 +1625,12 @@ private:
 				// Disable the Break flag, set the Unused flag.
 				uint8_t p = (cpu.m_p & 0xEF) | 0x20;
 				cpu.WriteByte(0x0100 + cpu.m_sp--, p);
-				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 5;
 				return false;
 			}
 			case 5: // T5: Fetch Vector Low
 				cpu.addr_low = cpu.ReadByte(0xFFFE);
+				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 6;
 				return false;
 

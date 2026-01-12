@@ -110,6 +110,7 @@ private:
 
 	void PollControllerState();
 	bool isPaused;
+	std::string lastOpenedPath = ".";
 
 	// Resize the render target.
 	void OnResize(

@@ -220,7 +220,7 @@ void CPU::PowerOn() {
 	uint8_t resetLo = ReadByte(0xFFFC);
 	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
-	m_p = 0;
+	m_p = FLAG_INTERRUPT | FLAG_UNUSED;
 	m_a = 0;
 	m_x = 0;
 	m_y = 0;
@@ -260,7 +260,7 @@ void CPU::Reset() {
 	uint8_t resetLo = ReadByte(0xFFFC);
 	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
-	m_p = 0;
+	m_p = FLAG_INTERRUPT | FLAG_UNUSED;
 	m_a = 0;
 	m_x = 0;
 	m_y = 0;
