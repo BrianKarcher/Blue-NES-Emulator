@@ -199,6 +199,7 @@ public:
 	inline uint8_t ReadByte(uint16_t addr);
 	void WriteByte(uint16_t addr, uint8_t value);
 
+	void SetNMIImmediate();
 	void setNMI(bool state);
 	void SetIRQImmediate();
 	void setIRQ(bool state);

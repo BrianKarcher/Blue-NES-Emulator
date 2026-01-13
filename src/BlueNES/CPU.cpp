@@ -300,6 +300,16 @@ uint64_t CPU::GetCycleCount()
 	return m_cycle_count;
 }
 
+/// <summary>
+/// Only used for testing purposes to trigger an NMI immediately.
+/// </summary>
+void CPU::SetNMIImmediate() {
+	nmi_previous_need = true;
+	nmi_previous = true;
+	nmi_need = true;
+	nmi_line = true;
+}
+
 // Called by mappers/devices to set interrupt lines
 void CPU::setNMI(bool state) {
 	nmi_line = state;
