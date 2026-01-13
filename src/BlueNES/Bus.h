@@ -20,10 +20,14 @@ public:
 	~Bus();
 
 	RAMMapper ramMapper;
-	MemoryMapper** memoryMap; // 64KB memory map
+	// Some addresses are mapped to different devices, so we use a memory map
+	// An example is 0x4017, which is mapped to the APU (write), but also to the Input device (read)
+	MemoryMapper** readMemoryMap; // 64KB memory map
+	MemoryMapper** writeMemoryMap; // 64KB memory map
 
 	// Access functions
-	void registerAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
+	void ReadRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
+	void WriteRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
 	uint8_t read(uint16_t addr);
 	uint8_t peek(uint16_t addr);
 	void write(uint16_t addr, uint8_t data);

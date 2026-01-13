@@ -32,7 +32,6 @@ PPU::~PPU()
 void PPU::initialize() {
 	renderer = new RendererLoopy(context);
 	renderer->initialize(this);
-	bus->registerAdd(0x2000, 0x3FFF, this);
 }
 
 void PPU::set_hwnd(HWND hwnd) {
@@ -74,8 +73,11 @@ uint8_t PPU::peek(uint16_t address) {
 }
 
 void PPU::register_memory(Bus& bus) {
-	bus.registerAdd(0x2000, 0x3FFF, this);
-	bus.registerAdd(0x4014, 0x4014, this);
+	// TODO : Implement PPU open bus.
+	bus.ReadRegisterAdd(0x2000, 0x3FFF, this);
+	bus.ReadRegisterAdd(0x4014, 0x4014, this);
+	bus.WriteRegisterAdd(0x2000, 0x3FFF, this);
+	bus.WriteRegisterAdd(0x4014, 0x4014, this);
 }
 
 void PPU::writeOAM(uint16_t addr, uint8_t val) {

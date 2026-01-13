@@ -17,7 +17,8 @@ inline void ReadController1Mapper::write(uint16_t address, uint8_t value) {
 }
 
 void ReadController1Mapper::register_memory(Bus& bus) {
-	bus.registerAdd(0x4016, 0x4016, this);
+	bus.ReadRegisterAdd(0x4016, 0x4016, this);
+	bus.WriteRegisterAdd(0x4016, 0x4016, this);
 }
 
 ReadController2Mapper::ReadController2Mapper(Input& input) : m_input(input) {}
@@ -33,5 +34,5 @@ inline void ReadController2Mapper::write(uint16_t address, uint8_t value) {
 void ReadController2Mapper::register_memory(Bus& bus) {
 	// TODO!!!!!!!! SPLIT READ/WRITE!!!!!!!
 	// 4017 READ is for controller 2, but 4017 WRITE is for the APU frame counter
-	//bus.registerAdd(0x4017, 0x4017, this);
+	bus.ReadRegisterAdd(0x4017, 0x4017, this);
 }
