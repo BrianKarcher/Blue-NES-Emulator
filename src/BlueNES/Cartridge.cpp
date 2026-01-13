@@ -3,7 +3,7 @@
 #include "Bus.h"
 #include "INESLoader.h"
 #include "NROM.h"
-#include "Mapper.h"
+#include "MapperBase.h"
 #include "MMC1.h"
 #include "MMC3.h"
 #include "CPU.h"

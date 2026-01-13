@@ -41,6 +41,11 @@ namespace BlueNESTest
 			cart->mapper->m_prgRamData.resize(0x2000);
 			cpu = nes->cpu_;
 			cpu->init_cpu();
+			uint8_t rom[0x8000];
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			uint8_t chr[0x2000];
+			cart->mapper->SetCHRRom(chr, sizeof(chr));
+			cart->mapper->RecomputeMappings();
 			cpu->PowerOn();
 			cpu->SetPC(0x8000);
 			//bus->cart = &cart;
@@ -53,6 +58,12 @@ namespace BlueNESTest
 			//cpu->Activate(true);
 		}
 
+		// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
+		// To test this, we first set the NMI line low.
+		// Then we run an instruction that takes 2 cycles(ADC IMM), but it could be any instruction.
+		// During that execution, the CPU will have had enough time to sample the NMI line.
+		// We run another instruction (another ADC IMM) which should be interrupted by NMI.
+		// It does not matter what the second instruction is, as long as it takes at least one cycle.
 		TEST_METHOD(TestHardwareNMI)
 		{
 			uint8_t rom[0x8000];
@@ -75,7 +86,8 @@ namespace BlueNESTest
 			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
 		}
-		TEST_METHOD(TestHardwareBRK)
+
+		TEST_METHOD(TestHardwareIRQImmediate)
 		{
 			uint8_t rom[0x8000];
 			rom[0] = ADC_IMMEDIATE;
@@ -83,19 +95,52 @@ namespace BlueNESTest
 			rom[0xFFFE - 0x8000] = 0x00;
 			rom[0xFFFF - 0x8000] = 0x90;
 			cart->mapper->SetPRGRom(rom, sizeof(rom));
-			cpu->setIRQ(true);
+			cpu->SetIRQImmediate();
+			cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
 			uint8_t p = cpu->GetStatus();
 			RunInst();
+			// Now ensure BRK has triggered and PC is at IRQ vector
 			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
 			// The return address (0x8000) should be on the stack
+			// It is 8000 because ADC_IMMEDIATE was interrupted.
 			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
 			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
 			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
 			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
 			Assert::AreEqual(0x8000, (hi << 8) | lo);
-			Assert::AreEqual((uint8_t)0x00, cpu->GetA());
 			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			// Just the IRQ was run = 7 cycles
 			Assert::IsTrue(cpu->GetCycleCount() == 7);
+		}
+		
+		TEST_METHOD(TestHardwareIRQ)
+		{
+			uint8_t rom[0x8000];
+			rom[0] = ADC_IMMEDIATE;
+			rom[1] = 0x20;
+			rom[2] = ADC_IMMEDIATE;
+			rom[3] = 0x30;
+			rom[0xFFFE - 0x8000] = 0x00;
+			rom[0xFFFF - 0x8000] = 0x90;
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			cpu->setIRQ(true);
+			cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
+			uint8_t p = cpu->GetStatus();
+			RunInst();
+			// Ensure BRK has NOT triggered. The PC should be at 0x8002 after first ADC.
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			RunInst();
+			// Now ensure BRK has triggered and PC is at IRQ vector
+			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
+			// The return address (0x8002) should be on the stack
+			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
+			Assert::AreEqual(0x8002, (hi << 8) | lo);
+			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
+			// First ADC IMM = 2, BRK = 7
+			Assert::IsTrue(cpu->GetCycleCount() == 9);
 		}
 
 		TEST_METHOD(TestADCImmediate1)

@@ -305,6 +305,14 @@ void CPU::setNMI(bool state) {
 	nmi_line = state;
 }
 
+/// <summary>
+/// Only used for testing purposes to trigger an IRQ immediately.
+/// </summary>
+void CPU::SetIRQImmediate() {
+	run_irq = true;
+	prev_run_irq = true;
+}
+
 void CPU::setIRQ(bool state) {
 	irq_line = state;
 }

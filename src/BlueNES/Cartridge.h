@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <array>
 #include <vector>
-#include "Mapper.h"
+#include "MapperBase.h"
 #include "INESLoader.h"
 #include <filesystem>
 
@@ -43,7 +43,7 @@ public:
 	void SetMapper(uint8_t value, ines_file_t& inesFile);
 	void unload();
 	bool isLoaded();
-	Mapper* mapper;
+	MapperBase* mapper;
 	SharedContext& ctx;
 	std::wstring fileName;
 	std::filesystem::path getAndEnsureSavePath();

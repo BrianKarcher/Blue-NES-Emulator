@@ -200,6 +200,7 @@ public:
 	void WriteByte(uint16_t addr, uint8_t value);
 
 	void setNMI(bool state);
+	void SetIRQImmediate();
 	void setIRQ(bool state);
 	// Power On and Reset are different
 	void PowerOn();
@@ -1311,12 +1312,12 @@ private:
 				if (cpu.nmi_need) {
 					cpu.addr_high = cpu.ReadByte(0xFFFB);
 					cpu.nmi_need = false; // Clear NMI request
-					cpu.nmi_previous_need = false;
 				}
 				else {
 					cpu.addr_high = cpu.ReadByte(0xFFFF);
 				}
 				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+				cpu.nmi_previous_need = false;
 				return true; // Complete
 			}
 			return false;
@@ -1629,13 +1630,24 @@ private:
 				return false;
 			}
 			case 5: // T5: Fetch Vector Low
-				cpu.addr_low = cpu.ReadByte(0xFFFE);
+				if (cpu.nmi_need) {
+					cpu.addr_low = cpu.ReadByte(0xFFFA);
+				}
+				else {
+					cpu.addr_low = cpu.ReadByte(0xFFFE);
+				}
 				cpu.SetFlag(FLAG_INTERRUPT);
 				cpu.cycle_state = 6;
 				return false;
 
 			case 6: // T6: Fetch Vector High
-				cpu.addr_high = cpu.ReadByte(0xFFFF);
+				if (cpu.nmi_need) {
+					cpu.addr_high = cpu.ReadByte(0xFFFB);
+					cpu.nmi_need = false; // Clear NMI request
+				}
+				else {
+					cpu.addr_high = cpu.ReadByte(0xFFFF);
+				}
 				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
 				cpu.cycle_state = 0; // Reset
 				return true;
