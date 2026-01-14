@@ -8,7 +8,7 @@
 
 #define BANK_SIZE_CHR 0x400 // 1KB
 #define BANK_SIZE_PRG 0x2000 // 8KB
-static constexpr int A12_LOW_THRESHOLD = 8; // require A12 low >= this many PPU cycles
+static constexpr int A12_LOW_THRESHOLD = 3; // require A12 low >= this many CPU cycles
 
 // ---------------- Debug helper ----------------
 inline void MMC3::dbg(const wchar_t* fmt, ...) {
@@ -190,12 +190,9 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	bool current_a12 = (ppu_address & 0x1000) != 0;
 
 	// Track low-time duration
-	if (!current_a12) {
-		a12LowTime++;
-	}
-	else {
+	if (current_a12) {
 		// Detect rising edge of A12 (0 -> 1 transition)
-		if (!last_a12 && a12LowTime >= A12_LOW_THRESHOLD && current_a12) {
+		if (!last_a12 && current_a12 && (cpu.GetCycleCount() - a12LowCycle >= A12_LOW_THRESHOLD)) {
 		//if (!last_a12 && current_a12) {
 			//LOG(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
 			//if (a12_filter == 0) {
@@ -218,7 +215,7 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 			//a12_filter = 6;  // Typical filter delay
 		//}
 		}
-		a12LowTime = 0;
+		a12LowCycle = cpu.GetCycleCount();
 	}
 
 	last_a12 = current_a12;
@@ -246,7 +243,7 @@ void MMC3::Serialize(Serializer& serializer) {
 	serializer.Write(irq_enabled);
 	// A12 tracking
 	serializer.Write(last_a12);
-	serializer.Write(a12LowTime);
+	serializer.Write(a12LowCycle);
 	serializer.Write(_irqPending);
 }
 
@@ -263,7 +260,7 @@ void MMC3::Deserialize(Serializer& serializer) {
 	serializer.Read(irq_enabled);
 	// A12 tracking
 	serializer.Read(last_a12);
-	serializer.Read(a12LowTime);
+	serializer.Read(a12LowCycle);
 	serializer.Read(_irqPending);
 	updateChrMapping();
 	updatePrgMapping();

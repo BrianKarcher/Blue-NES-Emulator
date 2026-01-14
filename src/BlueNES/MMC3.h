@@ -59,7 +59,7 @@ private:
 
 	// A12 tracking
 	bool last_a12;
-	int a12LowTime = 8;  // in PPU cycles
+	long a12LowCycle = 0;  // CPU cycle at the start of the last low time sequence
 
 	void RecomputeMappings() override;
 	void updateChrMapping();
