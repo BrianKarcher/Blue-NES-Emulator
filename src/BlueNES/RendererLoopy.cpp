@@ -440,26 +440,16 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
 }
 
 void RendererLoopy::prepareSpriteLine(int y) {
-    // For MMC3 IRQ reasons, we need to read a sprite even if none are visible.
-    //uint16_t patternTableBase2 = m_ppu->GetSpritePatternTableBase(0x00);
-    // Mario 3 uses 8x16 sprites.
-    // And the game doesn't load any sprites at start.
-    // TODO Figure out how to get MMC 3 to work.
-    uint8_t lowByte = m_ppu->ReadVRAM(0x1000);
-
     spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
-    int spriteHeight = 8;
-    if ((m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) != 0) {
-        spriteHeight = 16;
-    }
+    int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
 
+    // The PPU always fetches 8 sprirtes worth of data
     for (int i = 0; i < 8; ++i) {
         const Sprite& s = secondaryOAM[i];
-        if (s.y >= 0xF0) continue;
 
         int spriteY = s.y;
         int relY = y - spriteY;
-        if (relY < 0 || relY >= (spriteHeight)) continue;
+        //if (relY < 0 || relY >= (spriteHeight)) continue;
 
         bool flipV = s.attributes & 0x80;
         bool flipH = s.attributes & 0x40;
@@ -468,20 +458,41 @@ void RendererLoopy::prepareSpriteLine(int y) {
 
         if (flipV) relY = (spriteHeight - 1) - relY;
 
-        uint8_t lowTile = s.tileIndex;
-        uint8_t highTile = lowTile;
+        uint16_t addrLow = 0;
+        uint16_t addrHigh = 0;
+        uint8_t tileId = s.tileIndex;
         if (spriteHeight == 16) {
-            highTile = lowTile | 1;
-            lowTile &= 0xFE;
-            if (relY >= 8) {
-                relY -= 8;
-                lowTile = highTile;
+            // 8x16: LSB of tile index determines pattern table ($0000 or $1000)
+            uint16_t bank = (tileId & 1) * 0x1000;
+            tileId &= 0xFE;
+
+            int row = (y - s.y) % 16;
+            if (s.y >= 0xF0) row = 0; // Force valid row for dummy reads
+
+            if (row >= 8) { // Bottom half of large sprite
+                row -= 8;
+                tileId |= 1;
             }
+
+			addrLow = bank + tileId * 16 + row;
+            addrHigh = addrLow + 8;
+        }
+        else {
+            // 8x8: PPUCTRL Bit 3 determines pattern table
+            uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
+
+            int row = (y - s.y) % 8;
+            if (s.y >= 0xF0) row = 0;
+
+            addrLow = bank + (tileId * 16) + row;
+            addrHigh = addrLow + 8;
         }
 
-        uint16_t patternTableBase = m_ppu->GetSpritePatternTableBase(s.tileIndex);
-        uint8_t lowByte = m_ppu->ReadVRAM(patternTableBase + lowTile * 16 + relY);
-        uint8_t highByte = m_ppu->ReadVRAM(patternTableBase + lowTile * 16 + relY + 8);
+        uint8_t lowByte = m_ppu->ReadVRAM(addrLow);
+        uint8_t highByte = m_ppu->ReadVRAM(addrHigh);
+
+		// Ensure we read the RAM first due to IRQ timing issues, cycle accuracy (needs work!), etc.
+        if (s.y >= 0xF0) continue;
 
         for (int x = 0; x < 8; ++x) {
             int screenX = s.x + x;
