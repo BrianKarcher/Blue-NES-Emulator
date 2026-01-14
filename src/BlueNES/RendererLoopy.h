@@ -129,6 +129,12 @@ private:
     // Tile info
     TileFetch tile;
 
+    // Fetchers / Shift Registers for the NEXT line
+    uint8_t spritePatternTableLow[8];
+    uint8_t spritePatternTableHigh[8];
+    uint16_t spritePatternAddrLow[8];
+    uint16_t spritePatternAddrHigh[8];
+
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
     uint8_t get_pixel();
     void renderPixel(uint32_t* buffer);

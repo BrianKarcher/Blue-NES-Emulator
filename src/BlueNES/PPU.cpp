@@ -151,6 +151,9 @@ inline void PPU::write_register(uint16_t addr, uint8_t value)
 		}
 		renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1);
 		write_vram(vramAddr, value);
+		if (m_mapper) {
+			m_mapper->ClockIRQCounter(renderer->ppuGetVramAddr());
+		}
 		break;
 	}
 }
@@ -236,6 +239,9 @@ inline uint8_t PPU::read_register(uint16_t addr)
 			mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
 			ppuDataBuffer = m_vram[mirroredAddr];
 			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
+		}
+		if (m_mapper) {
+			m_mapper->ClockIRQCounter(renderer->ppuGetVramAddr());
 		}
 		//// Increment VRAM address based on PPUCTRL setting
 		//if (vramAddr >= 0x3F00) {

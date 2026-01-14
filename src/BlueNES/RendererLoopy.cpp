@@ -366,9 +366,13 @@ void RendererLoopy::clock(uint32_t* buffer) {
         else if (dot == 257) {
             ppuCopyX();
             evaluateSprites(m_scanline, secondaryOAM);
+            spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
             prepareSpriteLine(m_scanline);
         }
-        else if (preRenderLine && dot >= 280 && dot <= 304) {
+        else if (dot >= 258 && dot <= 320) {
+            prepareSpriteLine(m_scanline);
+        }
+        if (preRenderLine && dot >= 280 && dot <= 304) {
             // Pre-render only: dots 280..304 copy vertical bits from t to v
             ppuCopyY();
         }
@@ -439,13 +443,77 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
     }
 }
 
+// Converting into a state machine
 void RendererLoopy::prepareSpriteLine(int y) {
-    spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
     int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
 
-    // The PPU always fetches 8 sprirtes worth of data
-    for (int i = 0; i < 8; ++i) {
-        const Sprite& s = secondaryOAM[i];
+    // Determine which sprite slot (0-7) we are fetching
+    // dot 257-264 = slot 0, 265-272 = slot 1, etc.
+    int slot = (dot - 257) / 8;
+    int step = (dot - 257) % 8;
+
+    const Sprite& s = secondaryOAM[slot];
+
+    if (s.y <= 0xF0) {
+        int i = 0;
+    }
+
+    switch (step) {
+    case 0: // Garbage NT Read
+    case 1: // Garbage NT Read
+    case 2: // Garbage AT Read
+    case 3: // Garbage AT Read
+        // Hardware performs dummy reads here, usually to NT/AT 
+        // These usually do NOT hit 0x1000, so A12 stays low.
+        m_ppu->ReadVRAM(0x2000 | s.tileIndex);
+        break;
+
+    case 4: { // Fetch Pattern Low Byte
+        uint8_t tileId = s.tileIndex;
+        uint16_t addrLow;
+        int row = (y - s.y);
+        bool flipV = s.attributes & 0x80;
+        if (flipV) {
+            row = (spriteHeight - 1) - row;
+        }
+        if (spriteHeight == 16) {
+            // 8x16: LSB of tile index determines pattern table ($0000 or $1000)
+            uint16_t bank = (tileId & 1) * 0x1000;
+            tileId &= 0xFE;
+
+            if (s.y >= 0xF0) row = 0; // Force valid row for dummy reads
+
+            if (row >= 8) { // Bottom half of large sprite
+                row -= 8;
+                tileId |= 1;
+            }
+
+            spritePatternAddrLow[slot] = bank + tileId * 16 + row;
+        }
+        else {
+            // 8x8: PPUCTRL Bit 3 determines pattern table
+            uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
+
+            if (s.y >= 0xF0) row = 0;
+
+            spritePatternAddrLow[slot] = bank + (tileId * 16) + row;
+        }
+        spritePatternTableLow[slot] = m_ppu->ReadVRAM(spritePatternAddrLow[slot]);
+    } break;
+
+    case 5: // Read Pattern Low Byte (Cycle 2)
+        // Hardware takes 2 cycles for a read.
+        break;
+
+    case 6: { // Fetch Pattern High Byte
+        // THIS accesses 0x1000 range + 8 bytes
+        spritePatternAddrHigh[slot] = spritePatternAddrLow[slot] + 8;
+        spritePatternTableHigh[slot] = m_ppu->ReadVRAM(spritePatternAddrHigh[slot]);
+    } break;
+
+    case 7: { // Read Pattern High Byte (Cycle 2)
+        // Ensure we read the RAM first due to IRQ timing issues, cycle accuracy (needs work!), etc.
+        if (s.y >= 0xF0) return;
 
         int spriteY = s.y;
         int relY = y - spriteY;
@@ -458,52 +526,17 @@ void RendererLoopy::prepareSpriteLine(int y) {
 
         if (flipV) relY = (spriteHeight - 1) - relY;
 
-        uint16_t addrLow = 0;
-        uint16_t addrHigh = 0;
-        uint8_t tileId = s.tileIndex;
-        if (spriteHeight == 16) {
-            // 8x16: LSB of tile index determines pattern table ($0000 or $1000)
-            uint16_t bank = (tileId & 1) * 0x1000;
-            tileId &= 0xFE;
-
-            int row = (y - s.y) % 16;
-            if (s.y >= 0xF0) row = 0; // Force valid row for dummy reads
-
-            if (row >= 8) { // Bottom half of large sprite
-                row -= 8;
-                tileId |= 1;
-            }
-
-			addrLow = bank + tileId * 16 + row;
-            addrHigh = addrLow + 8;
-        }
-        else {
-            // 8x8: PPUCTRL Bit 3 determines pattern table
-            uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
-
-            int row = (y - s.y) % 8;
-            if (s.y >= 0xF0) row = 0;
-
-            addrLow = bank + (tileId * 16) + row;
-            addrHigh = addrLow + 8;
-        }
-
-        uint8_t lowByte = m_ppu->ReadVRAM(addrLow);
-        uint8_t highByte = m_ppu->ReadVRAM(addrHigh);
-
-		// Ensure we read the RAM first due to IRQ timing issues, cycle accuracy (needs work!), etc.
-        if (s.y >= 0xF0) continue;
-
+        // We cache the next line of sprite pixels into a line buffer for quick access during pixel rendering
         for (int x = 0; x < 8; ++x) {
             int screenX = s.x + x;
             if (screenX >= 256) break;
 
             int bit = flipH ? x : (7 - x);
-            uint8_t color = ((highByte >> bit) & 1) << 1 |
-                ((lowByte >> bit) & 1);
+            uint8_t color = ((spritePatternTableHigh[slot] >> bit) & 1) << 1 |
+                ((spritePatternTableLow[slot] >> bit) & 1);
 
             if (color != 0) {  // Only overwrite if opaque
-                if (spriteLineBuffer[screenX].x == 255 || i == 0) {  // First in priority
+                if (spriteLineBuffer[screenX].x == 255 || slot == 0) {  // First in priority
                     spriteLineBuffer[screenX] = {
                         (uint8_t)screenX,
                         color,
@@ -514,8 +547,87 @@ void RendererLoopy::prepareSpriteLine(int y) {
                 }
             }
         }
+    } break;
     }
 }
+
+//void RendererLoopy::prepareSpriteLine(int y) {
+//    spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
+//    int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
+//
+//    // The PPU always fetches 8 sprirtes worth of data
+//    for (int i = 0; i < 8; ++i) {
+//        const Sprite& s = secondaryOAM[i];
+//
+//        int spriteY = s.y;
+//        int relY = y - spriteY;
+//        //if (relY < 0 || relY >= (spriteHeight)) continue;
+//
+//        bool flipV = s.attributes & 0x80;
+//        bool flipH = s.attributes & 0x40;
+//        uint8_t palette = s.attributes & 0x03;
+//        bool behind = s.attributes & 0x20;
+//
+//        if (flipV) relY = (spriteHeight - 1) - relY;
+//
+//        uint16_t addrLow = 0;
+//        uint16_t addrHigh = 0;
+//        uint8_t tileId = s.tileIndex;
+//        if (spriteHeight == 16) {
+//            // 8x16: LSB of tile index determines pattern table ($0000 or $1000)
+//            uint16_t bank = (tileId & 1) * 0x1000;
+//            tileId &= 0xFE;
+//
+//            int row = (y - s.y) % 16;
+//            if (s.y >= 0xF0) row = 0; // Force valid row for dummy reads
+//
+//            if (row >= 8) { // Bottom half of large sprite
+//                row -= 8;
+//                tileId |= 1;
+//            }
+//
+//			addrLow = bank + tileId * 16 + row;
+//            addrHigh = addrLow + 8;
+//        }
+//        else {
+//            // 8x8: PPUCTRL Bit 3 determines pattern table
+//            uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
+//
+//            int row = (y - s.y) % 8;
+//            if (s.y >= 0xF0) row = 0;
+//
+//            addrLow = bank + (tileId * 16) + row;
+//            addrHigh = addrLow + 8;
+//        }
+//
+//        uint8_t lowByte = m_ppu->ReadVRAM(addrLow);
+//        uint8_t highByte = m_ppu->ReadVRAM(addrHigh);
+//
+//		// Ensure we read the RAM first due to IRQ timing issues, cycle accuracy (needs work!), etc.
+//        if (s.y >= 0xF0) continue;
+//
+//        for (int x = 0; x < 8; ++x) {
+//            int screenX = s.x + x;
+//            if (screenX >= 256) break;
+//
+//            int bit = flipH ? x : (7 - x);
+//            uint8_t color = ((highByte >> bit) & 1) << 1 |
+//                ((lowByte >> bit) & 1);
+//
+//            if (color != 0) {  // Only overwrite if opaque
+//                if (spriteLineBuffer[screenX].x == 255 || i == 0) {  // First in priority
+//                    spriteLineBuffer[screenX] = {
+//                        (uint8_t)screenX,
+//                        color,
+//                        palette,
+//                        behind,
+//                        s.isSprite0 && color != 0
+//                    };
+//                }
+//            }
+//        }
+//    }
+//}
 
 void RendererLoopy::Serialize(Serializer& serializer) {
     RendererState state;
@@ -547,6 +659,10 @@ void RendererLoopy::Serialize(Serializer& serializer) {
         state.secondaryOAM[i].tileIndex = secondaryOAM[i].tileIndex;
         state.secondaryOAM[i].attributes = secondaryOAM[i].attributes;
         state.secondaryOAM[i].isSprite0 = secondaryOAM[i].isSprite0;
+		state.spritePatternAddrHigh[i] = spritePatternAddrHigh[i];
+		state.spritePatternAddrLow[i] = spritePatternAddrLow[i];
+		state.spritePatternTableHigh[i] = spritePatternTableHigh[i];
+		state.spritePatternTableLow[i] = spritePatternTableLow[i];
     }
 	serializer.Write(state);
 }
@@ -582,5 +698,9 @@ void RendererLoopy::Deserialize(Serializer& serializer) {
         secondaryOAM[i].tileIndex = state.secondaryOAM[i].tileIndex;
         secondaryOAM[i].attributes = state.secondaryOAM[i].attributes;
         secondaryOAM[i].isSprite0 = state.secondaryOAM[i].isSprite0;
+		spritePatternAddrHigh[i] = state.spritePatternAddrHigh[i];
+		spritePatternAddrLow[i] = state.spritePatternAddrLow[i];
+		spritePatternTableHigh[i] = state.spritePatternTableHigh[i];
+		spritePatternTableLow[i] = state.spritePatternTableLow[i];
     }
 }

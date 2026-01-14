@@ -208,9 +208,11 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 
 			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
-				LOG(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
+				//LOG(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
 				triggerIRQ();
 			}
+
+			LOG(L"A12 Edge Detected: Scanline: %d, Dot: %d, IRQ Counter: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot, irq_counter);
 
 			//a12_filter = 6;  // Typical filter delay
 		//}
