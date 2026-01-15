@@ -218,6 +218,40 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
                 ImGui::EndTabItem();
             }
 
+            if (ImGui::BeginTabItem("Palette")) {
+                // There are 8 palettes total: 4 for Background, 4 for Sprites
+                // Each palette has 4 colors (but the first is always the shared backdrop)
+
+                for (int i = 0; i < 8; i++) {
+                    ImGui::Text(i < 4 ? "BG Palette %d" : "Sprite Palette %d", i % 4);
+                    
+
+                    for (int j = 0; j < 4; j++) {
+                        ImGui::PushID((i * 4) + j); // Unique ID for each row of buttons
+                        // 1. Read the palette index from PPU VRAM ($3F00 range)
+                        uint16_t addr = 0x3F00 + (i * 4) + j;
+                        uint8_t colorIndex = _ppu->PeekVRAM(addr) & 0x3F; // Mask to 64 colors
+
+                        // 2. Convert NES color index to RGB (using your system palette array)
+						uint32_t nesColor = m_nesPalette[colorIndex];
+                        //uint32_t nesColor = 0x5C007E;
+						uint8_t red = (nesColor >> 16) & 0xFF;
+						uint8_t green = (nesColor >> 8) & 0xFF;
+						uint8_t blue = nesColor & 0xFF;
+                        ImVec4 color {(float)red, (float)green, (float)blue, (float)1.0f};
+
+                        // 3. Draw a color square
+                        ImGui::ColorButton("##color", color, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 40));
+                        ImGui::PopID();
+                        if (j < 3) ImGui::SameLine();
+                    }
+
+                    
+                    ImGui::Separator();
+                }
+                ImGui::EndTabItem();
+            }
+
             ImGui::EndTabBar();
         }
     }

@@ -11,8 +11,8 @@ MMC2Mapper::MMC2Mapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b),
     prg_bank_select = 0;
     chr_bank_0[0] = chr_bank_0[1] = 0;
     chr_bank_1[0] = chr_bank_1[1] = 0;
-    latch_0 = 0xFE; // Initial state usually FE
-    latch_1 = 0xFE;
+    //latch_0 = 0xFE; // Initial state usually FE
+    //latch_1 = 0xFE;
 }
 
 inline uint8_t MMC2Mapper::readCHR(uint16_t addr) {
