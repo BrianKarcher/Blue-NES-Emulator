@@ -158,6 +158,7 @@
     <ClCompile Include="MapperBase.cpp" />
     <ClCompile Include="MemoryMapper.cpp" />
     <ClCompile Include="MMC1.cpp" />
+    <ClCompile Include="MMC2Mapper.cpp" />
     <ClCompile Include="MMC3.cpp" />
     <ClCompile Include="Nes.cpp" />
     <ClCompile Include="APU.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="MapperBase.h" />
     <ClInclude Include="MemoryMapper.h" />
     <ClInclude Include="MMC1.h" />
+    <ClInclude Include="MMC2Mapper.h" />
     <ClInclude Include="MMC3.h" />
     <ClInclude Include="Nes.h" />
     <ClInclude Include="APU.h" />

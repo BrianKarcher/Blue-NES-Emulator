@@ -14,6 +14,7 @@
 #include "AxROMMapper.h"
 #include "SharedContext.h"
 #include "CNROM.h"
+#include "MMC2Mapper.h"
 
 Cartridge::Cartridge(SharedContext& ctx, CPU& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
@@ -122,6 +123,9 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         break;
     case 7:
         mapper = new AxROMMapper(this, inesFile.header.prg_rom_size);
+        break;
+    case 9:
+		mapper = new MMC2Mapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     default:
         mapper = new NROM(this);

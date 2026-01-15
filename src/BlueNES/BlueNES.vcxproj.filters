@@ -19,6 +19,9 @@
     <Filter Include="config">
       <UniqueIdentifier>{dd0a18ef-f66f-4e06-8bb5-34b720d3cc43}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Mappers">
+      <UniqueIdentifier>{2a6b8914-8546-4ca3-995a-70aafe05a64c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -63,22 +66,10 @@
     <ClCompile Include="RendererWithReg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MMC1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="NROM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PPUViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RendererLoopy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MMC3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="UxROMMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MainWindow.cpp">
@@ -100,12 +91,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CartMapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Mapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AxROMMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Serializer.cpp">
@@ -142,10 +127,31 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="CNROM.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="Mapper.cpp">
+      <Filter>Mappers</Filter>
     </ClCompile>
     <ClCompile Include="MapperBase.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="UxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC3.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC1.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="AxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC2Mapper.cpp">
+      <Filter>Mappers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -197,28 +203,13 @@
     <ClInclude Include="RendererWithReg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MMC1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NROM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Mapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PPUViewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RendererLoopy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MMC3.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="A12Mapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UxROMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MainWindow.h">
@@ -239,9 +230,6 @@
     <ClInclude Include="AudioRingBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryMapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RAMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -252,9 +240,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CartMapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AxROMMapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="OpenBusMapper.h">
@@ -305,11 +290,35 @@
     <ClInclude Include="thirdparty\imgui\file\dirent\dirent.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="CNROM.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="UxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC3.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC1.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryMapper.h">
+      <Filter>Mappers</Filter>
     </ClInclude>
     <ClInclude Include="MapperBase.h">
-      <Filter>Header Files</Filter>
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="CNROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="AxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="NROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC2Mapper.h">
+      <Filter>Mappers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

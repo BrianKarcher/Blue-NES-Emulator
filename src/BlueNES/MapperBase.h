@@ -29,7 +29,7 @@ public:
 	}
 
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
-	inline uint8_t readCHR(uint16_t addr) const {
+	virtual inline uint8_t readCHR(uint16_t addr) {
 		return _chrPages[addr >> 8][addr & 0xFF];
 	}
 
