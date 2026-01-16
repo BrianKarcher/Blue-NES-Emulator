@@ -243,13 +243,7 @@ inline uint8_t PPU::read_register(uint16_t addr)
 		if (m_mapper) {
 			m_mapper->ClockIRQCounter(renderer->ppuGetVramAddr());
 		}
-		//// Increment VRAM address based on PPUCTRL setting
-		//if (vramAddr >= 0x3F00) {
-		//	// Palette data always increments by 1
-		//	vramAddr += 1;
-		//	return value;
-		//}
-		//vramAddr += m_ppuCtrl & 0x04 ? 32 : 1;
+
 		LOG(L"(%d) 0x%04X PPUDATA Read 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		return value;
 	}
@@ -262,37 +256,29 @@ uint8_t PPU::peek_register(uint16_t addr)
 {
 	switch (addr)
 	{
-	case PPUCTRL:
-	{
+	case PPUCTRL: {
 		return m_ppuCtrl;
 	}
-	case PPUMASK:
-	{
+	case PPUMASK: {
 		// not typically readable, return 0
 		return 0;
 	}
-	case PPUSTATUS:
-	{
+	case PPUSTATUS: {
 		return m_ppuStatus;
 	}
-	case OAMADDR:
-	{
+	case OAMADDR: {
 		return oamAddr;
 	}
-	case OAMDATA:
-	{
+	case OAMDATA: {
 		return oam[oamAddr];
 	}
-	case PPUSCROLL:
-	{
+	case PPUSCROLL: {
 		return 0;
 	}
-	case PPUADDR:
-	{
+	case PPUADDR: {
 		return 0;
 	}
-	case PPUDATA:
-	{
+	case PPUDATA: {
 		return ppuDataBuffer;
 	}
 	}
@@ -312,8 +298,7 @@ uint16_t PPU::GetVRAMAddress() const {
 	return renderer->getPPUAddr();
 }
 
-uint8_t PPU::PeekVRAM(uint16_t addr)
-{
+uint8_t PPU::PeekVRAM(uint16_t addr) {
 	uint8_t value = 0;
 	if (addr < 0x2000) {
 		// Reading from CHR-ROM/RAM
@@ -337,8 +322,7 @@ uint8_t PPU::PeekVRAM(uint16_t addr)
 	return value;
 }
 
-uint8_t PPU::ReadVRAM(uint16_t addr)
-{
+uint8_t PPU::ReadVRAM(uint16_t addr) {
 	uint8_t value = 0;
 	if (addr < 0x2000) {
 		// Reading from CHR-ROM/RAM
@@ -392,11 +376,8 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 			// Handle special mirroring of background color entries
 			// These 4 addresses mirror to their lower counterparts
 			paletteAddr -= 0x10;
-			/*if (paletteAddr == 0x10) paletteAddr = 0x00;
-			if (paletteAddr == 0x14) paletteAddr = 0x04;
-			if (paletteAddr == 0x18) paletteAddr = 0x08;
-			if (paletteAddr == 0x1C) paletteAddr = 0x0C;*/
 		}
+		// & 0x3F fixes Punch Out, which uses invalid entry 0x8f.
 		paletteTable[paletteAddr] = value & 0x3F;
 		//InvalidateRect(core->m_hwndPalette, NULL, FALSE); // Update palette window if open
 		return;

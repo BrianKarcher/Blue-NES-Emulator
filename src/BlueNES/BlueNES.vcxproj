@@ -77,6 +77,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\include;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\backends;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\file;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\thirdparty\imgui\file\dirent;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)\bin\win-$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
