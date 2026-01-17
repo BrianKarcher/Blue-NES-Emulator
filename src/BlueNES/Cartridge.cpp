@@ -15,6 +15,7 @@
 #include "SharedContext.h"
 #include "CNROM.h"
 #include "MMC2Mapper.h"
+#include "MemoryBuffer.h"
 
 Cartridge::Cartridge(SharedContext& ctx, CPU& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
@@ -79,12 +80,110 @@ void Cartridge::unload() {
     m_isLoaded = false;
 }
 
+// Helper to convert UTF-16 7z names to std::string
+std::string Cartridge::GetFileName(const CSzArEx* db, UInt32 index) {
+    size_t len = SzArEx_GetFileNameUtf16(db, index, NULL);
+    std::vector<UInt16> temp(len);
+    SzArEx_GetFileNameUtf16(db, index, temp.data());
+    std::string res;
+    for (auto c : temp) if (c) res += (char)c;
+    return res;
+}
+
+std::vector<uint8_t> Cartridge::ReadNesFromZip(const std::string& zipPath) {
+    ISzAlloc allocImp = { SzAlloc, SzFree };
+    ISzAlloc allocTempImp = { SzAlloc, SzFree };
+
+    CFileInStream archiveStream;
+    CLookToRead2 lookStream;
+    CSzArEx db;
+
+    CrcGenerateTable();
+    SzArEx_Init(&db);
+
+    if (InFile_Open(&archiveStream.file, zipPath.c_str()) != 0) return {};
+
+    FileInStream_CreateVTable(&archiveStream);
+    LookToRead2_CreateVTable(&lookStream, False);
+
+    lookStream.bufSize = 1 << 18; // 256KB buffer
+    lookStream.buf = (Byte*)ISzAlloc_Alloc(&allocImp, lookStream.bufSize);
+    lookStream.realStream = &archiveStream.vt;
+    LookToRead2_INIT(&lookStream);
+
+    if (SzArEx_Open(&db, &lookStream.vt, &allocImp, &allocTempImp) != SZ_OK) {
+        ISzAlloc_Free(&allocImp, lookStream.buf);
+        File_Close(&archiveStream.file);
+        return {};
+    }
+
+    std::vector<uint8_t> fileData;
+    UInt32 blockIndex = 0xFFFFFFFF;
+    Byte* outBuffer = NULL;
+    size_t outBufferSize = 0;
+
+    for (UInt32 i = 0; i < db.NumFiles; i++) {
+        if (SzArEx_IsDir(&db, i)) continue;
+
+        std::string fileName = GetFileName(&db, i);
+        if (fileName.find(".nes") != std::string::npos) {
+            size_t offset = 0;
+            size_t outSizeProcessed = 0;
+
+            // SzArEx_Extract allocates/reallocates *outBuffer automatically
+            SRes res = SzArEx_Extract(&db, &lookStream.vt, i,
+                &blockIndex, &outBuffer, &outBufferSize,
+                &offset, &outSizeProcessed,
+                &allocImp, &allocTempImp);
+
+            if (res == SZ_OK) {
+                // Copy the specific file data from the uncompressed block
+                fileData.assign(outBuffer + offset, outBuffer + offset + outSizeProcessed);
+            }
+            break;
+        }
+    }
+
+    // Cleanup
+    ISzAlloc_Free(&allocImp, outBuffer);
+    ISzAlloc_Free(&allocImp, lookStream.buf);
+    SzArEx_Free(&db, &allocImp);
+    File_Close(&archiveStream.file);
+
+    return fileData;
+}
+
+std::vector<uint8_t> Cartridge::LoadFileToBuffer(const std::string& path) {
+    // Check if it's an archive by extension
+    if (path.find(".7z") != std::string::npos || path.find(".zip") != std::string::npos) {
+        return ReadNesFromZip(path); // This is the function we built earlier
+    }
+
+    // Standard file loading
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) return {};
+
+    size_t size = file.tellg();
+    std::vector<uint8_t> buffer(size);
+    file.seekg(0, std::ios::beg);
+    file.read((char*)buffer.data(), size);
+    return buffer;
+}
+
 void Cartridge::LoadROM(const std::string& filePath) {
     INESLoader ines;
     std::filesystem::path filepath(filePath);
     ines_file_t inesFile;
 	fileName = filepath.stem().wstring();
-    ines.load_data_from_ines(filePath.c_str(), inesFile);
+    std::vector<uint8_t> rawData = LoadFileToBuffer(filePath);
+    if (rawData.empty()) {
+        MessageBoxA(NULL, "File not found or empty.", "Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    // 2. Wrap it in our memory helper
+    MemoryBuffer stream(rawData);
+    ines.load_data_from_ines(stream, inesFile);
     // Set the mirror mode now. The mapper may change it later.
     m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
     isBatteryBacked = inesFile.header.flags6 & FLAG_6_BATTERY_BACKED;

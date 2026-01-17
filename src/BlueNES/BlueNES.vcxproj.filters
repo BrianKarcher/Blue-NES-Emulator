@@ -320,6 +320,9 @@
     <ClInclude Include="MMC2Mapper.h">
       <Filter>Mappers</Filter>
     </ClInclude>
+    <ClInclude Include="MemoryBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlueNES.rc">

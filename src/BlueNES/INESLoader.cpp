@@ -1,9 +1,8 @@
 #include "INESLoader.h"
 #include <cstdlib>
-#include <stdio.h>
 #include <string.h>
 #include <Windows.h>
-#include <fstream>
+#include "MemoryBuffer.h"
 
 // Function to validate iNES header
 bool INESLoader::validate_ines_header(const ines_header_t* header) {
@@ -14,25 +13,15 @@ bool INESLoader::validate_ines_header(const ines_header_t* header) {
 }
 
 // Function to load CHR-ROM data from iNES file
-void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_file) {
-    FILE* file = nullptr;
-    errno_t err = fopen_s(&file, filename, "rb");
-    
-    if (err != 0 || file == nullptr) {
-        MessageBoxA(NULL, "The specified iNES file does not exist or cannot be accessed.", "Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-
+void INESLoader::load_data_from_ines(MemoryBuffer stream, ines_file_t& ines_file) {
     // Read and validate header
-    if (fread(&ines_file.header, sizeof(ines_header_t), 1, file) != 1) {
+    if (stream.read(&ines_file.header, sizeof(ines_header_t)) == 0) {
         printf("Error: Cannot read iNES header\n");
-        fclose(file);
         return;
     }
 
     if (!validate_ines_header(&ines_file.header)) {
         printf("Error: Invalid iNES header\n");
-        fclose(file);
         return;
     }
 
@@ -43,7 +32,7 @@ void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_fil
 
     // Skip trainer if present
     if (trainer_size > 0) {
-        fseek(file, trainer_size, SEEK_CUR);
+        stream.seek(trainer_size, SEEK_CUR);
     }
 
     // Allocate memory for PRG-ROM data
@@ -51,18 +40,16 @@ void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_fil
     ines_file.prg_rom = prg_data;
     if (!prg_data) {
         printf("Error: Cannot allocate memory for PRG data structure\n");
-        fclose(file);
         return;
     }
 
     // Read PRG-ROM data
     prg_data->data = (uint8_t*)malloc(prg_rom_size);
-    if (fread(prg_data->data, prg_rom_size, 1, file) != 1) {
+    if (stream.read(prg_data->data, prg_rom_size) == 0) {
 		MessageBoxA(NULL, "Failed to read PRG-ROM data from the file.", "Error", MB_OK | MB_ICONERROR);
         printf("Error: Cannot read PRG-ROM data\n");
         free(prg_data->data);
         free(prg_data);
-        fclose(file);
         return;
     }
     prg_data->size = prg_rom_size;
@@ -73,7 +60,6 @@ void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_fil
     if (!chr_data) {
 		MessageBoxA(NULL, "Failed to allocate memory for CHR data structure.", "Error", MB_OK | MB_ICONERROR);
         printf("Error: Cannot allocate memory for CHR data structure\n");
-        fclose(file);
         return;
     }
 
@@ -87,22 +73,18 @@ void INESLoader::load_data_from_ines(const char* filename, ines_file_t& ines_fil
             MessageBoxA(NULL, "Failed to allocate memory for CHR-ROM data.", "Error", MB_OK | MB_ICONERROR);
             printf("Error: Cannot allocate memory for CHR-ROM data\n");
             free(chr_data);
-            fclose(file);
             return;
         }
 
         // Read CHR-ROM data
-        if (fread(chr_data->data, chr_rom_size, 1, file) != 1) {
+        if (stream.read(chr_data->data, chr_rom_size) == 0) {
             MessageBoxA(NULL, "Failed to read CHR-ROM data from the file.", "Error", MB_OK | MB_ICONERROR);
             printf("Error: Cannot read CHR-ROM data\n");
             free(chr_data->data);
             free(chr_data);
-            fclose(file);
             return;
         }
     }
-
-    fclose(file);
 
     // Set up structure
     chr_data->size = chr_rom_size;

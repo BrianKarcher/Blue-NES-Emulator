@@ -8,6 +8,7 @@
 #include "AudioBackend.h"
 #include "SharedContext.h"
 #include "DebuggerUI.h"
+#define USE_PLACES_FEATURE
 #include "ImGuiFileDialog.h"
 #include "PPUViewer.h"
 #include "DebuggerContext.h"
@@ -106,14 +107,12 @@ void Core::updateMenu() {
 
 }
 
-void Core::LoadGame(const std::string& filePath)
-{
+void Core::LoadGame(const std::string& filePath) {
     CommandQueue::Command cmd;
     cmd.type = CommandQueue::CommandType::LOAD_ROM;
     cmd.data = filePath;
     context.command_queue.Push(cmd);
     isPlaying = true;
-	//audioBackend->AddBuffer(44100 / 60); // Pre-fill 1 frame of silence to avoid pops
 }
 
 // Function to convert std::string (UTF-8) to std::wstring (UTF-16/UTF-32 depending on platform)
@@ -369,11 +368,13 @@ void Core::RunMessageLoop()
                     if (ImGui::MenuItem("Load ROM...")) {
 						IGFD::FileDialogConfig config;
 						config.path = lastOpenedPath;
+                        config.sidePaneWidth = 200.0f;
+                        config.flags = ImGuiFileDialogFlags_Modal | ImGuiFileDialogFlags_HideColumnType | ImGuiFileDialogFlags_ShowDevicesButton;
 						//config.title = "Select NES ROM";
 						//config.filters = { ".nes" };
 
                         // Arguments: Key, Title, Filter, Path
-                        ImGuiFileDialog::Instance()->OpenDialog("ChooseRomKey", "Select NES ROM", ".nes", config);
+                        ImGuiFileDialog::Instance()->OpenDialog("ChooseRomKey", "Select NES ROM", "ROM files{.nes,.zip,.7z},.nes,.zip,.7z,All files{.*}", config);
                     }
                         ImGui::Separator();
                         if (ImGui::MenuItem("Save State", nullptr, false, isPlaying)) {

@@ -3,6 +3,7 @@
 #include <string>
 
 #define FLAG_6_BATTERY_BACKED 0x02
+class MemoryBuffer;
 
 // iNES header structure
 typedef struct {
@@ -45,7 +46,7 @@ typedef struct {
 class INESLoader
 {
 public:
-    void load_data_from_ines(const char* filename, ines_file_t& ines_file);
+    void load_data_from_ines(MemoryBuffer stream, ines_file_t& ines_file);
 
 private:
     bool validate_ines_header(const ines_header_t* header);
