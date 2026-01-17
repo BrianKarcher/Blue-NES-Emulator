@@ -22,7 +22,7 @@
 #include <SDL_opengl.h>
 #include <stdio.h>
 #include "HexViewer.h"
-#include "7zTypes.h"
+//#include "7zTypes.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -120,7 +120,4 @@ private:
 	);
 	
 	HWND m_hwnd;
-	CLookToRead2 _lookStream;
-
-
 };
