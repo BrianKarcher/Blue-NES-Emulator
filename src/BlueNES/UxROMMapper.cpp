@@ -59,11 +59,11 @@ void UxROMMapper::RecomputeMappings() {
 }
 
 void UxROMMapper::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	MapperBase::Serialize(serializer);
 	serializer.Write(prg_bank_select);
 }
 
 void UxROMMapper::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	MapperBase::Deserialize(serializer);
 	serializer.Read(prg_bank_select);
 }

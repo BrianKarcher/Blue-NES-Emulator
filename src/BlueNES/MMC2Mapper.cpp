@@ -59,7 +59,7 @@ void MMC2Mapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle
         chr_bank_1[1] = val & 0x1F;
         break;
     case 0xF000: // Mirroring
-        cart.SetMirrorMode((val & 0x01) ? Cartridge::MirrorMode::HORIZONTAL : Cartridge::MirrorMode::VERTICAL);
+        SetMirrorMode((val & 0x01) ? MapperBase::MirrorMode::HORIZONTAL : MapperBase::MirrorMode::VERTICAL);
         break;
     }
     RecomputeMappings();
@@ -82,7 +82,7 @@ void MMC2Mapper::RecomputeMappings() {
 }
 
 void MMC2Mapper::Serialize(Serializer& serializer) {
-    Mapper::Serialize(serializer);
+    MapperBase::Serialize(serializer);
     serializer.Write(prg_bank_select);
     serializer.Write(chr_bank_0);
     serializer.Write(chr_bank_1);
@@ -91,7 +91,7 @@ void MMC2Mapper::Serialize(Serializer& serializer) {
 }
 
 void MMC2Mapper::Deserialize(Serializer& serializer) {
-    Mapper::Deserialize(serializer);
+    MapperBase::Deserialize(serializer);
     serializer.Read(prg_bank_select);
     serializer.Read(chr_bank_0);
     serializer.Read(chr_bank_1);

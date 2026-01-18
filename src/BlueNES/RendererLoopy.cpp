@@ -464,7 +464,6 @@ void RendererLoopy::prepareSpriteLine(int y) {
     case 2: // Garbage AT Read
     case 3: // Garbage AT Read
         // Hardware performs dummy reads here, usually to NT/AT 
-        // These usually do NOT hit 0x1000, so A12 stays low.
         m_ppu->ReadVRAM(0x2000 | s.tileIndex);
         break;
 

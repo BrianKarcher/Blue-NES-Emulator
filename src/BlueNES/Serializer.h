@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
+#include <array>
 
 struct HeaderState {
 
@@ -88,7 +89,6 @@ struct PPUState {
 	uint8_t ppuMask;
 	uint8_t ppuStatus;
 	uint8_t ppuCtrl;
-	uint8_t vram[0x800];
 	uint8_t ppuDataBuffer;
 };
 
@@ -127,6 +127,17 @@ public:
 		}
 	}
 
+	template<typename T, int size>
+	void WriteArray(const std::array<T, size>& v) {
+		static_assert(std::is_trivially_copyable_v<T>,
+			"Vector element type must be trivially copyable");
+
+		if (size > 0) {
+			os->write(reinterpret_cast<const char*>(v.data()),
+				size * sizeof(T));
+		}
+	}
+
 	template<typename T>
 	void Read(T& data) {
 		is->read(reinterpret_cast<char*>(&data), sizeof(T));
@@ -148,6 +159,17 @@ public:
 		is->read(reinterpret_cast<char*>(&size), sizeof(size));
 
 		v.resize(size);
+
+		if (size > 0) {
+			is->read(reinterpret_cast<char*>(v.data()),
+				size * sizeof(T));
+		}
+	}
+
+	template<typename T, int size>
+	void ReadArray(std::array<T, size>& v) {
+		static_assert(std::is_trivially_copyable_v<T>,
+			"Vector element type must be trivially copyable");
 
 		if (size > 0) {
 			is->read(reinterpret_cast<char*>(v.data()),

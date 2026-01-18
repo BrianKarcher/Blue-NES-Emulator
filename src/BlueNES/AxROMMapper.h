@@ -10,7 +10,8 @@ class AxROMMapper : public MapperBase
 public:
 	AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	void RecomputeMappings() override;
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 	void shutdown() {}
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;

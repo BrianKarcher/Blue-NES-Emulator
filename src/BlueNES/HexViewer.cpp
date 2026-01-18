@@ -4,6 +4,7 @@
 #include "SharedContext.h"
 #include "Core.h"
 #include "DebuggerContext.h"
+#include "MapperBase.h"
 
 HexViewer::HexViewer(Core* core, SharedContext& sharedCtx) : _sharedCtx(sharedCtx), _dbgCtx(sharedCtx.debugger_context) {
     _bus = core->emulator.GetBus();
@@ -17,8 +18,7 @@ uint8_t HexReadPPU(HexViewer hexViewer, uint16_t addr) {
     }
     else if (addr < 0x3F00) {
         // Reading from nametables and attribute tables
-        uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
-        mirroredAddr = hexViewer._bus->cart.MirrorNametable(mirroredAddr);
+        uint16_t mirroredAddr = addr - 0x2000; // Mirror nametables every 4KB
         return hexViewer._dbgCtx->ppuState.nametables[mirroredAddr];
     }
     else if (addr < 0x4000) {

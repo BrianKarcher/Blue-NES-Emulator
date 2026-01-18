@@ -25,19 +25,10 @@ class SharedContext;
 class Cartridge
 {
 public:
-	enum MirrorMode {
-		HORIZONTAL = 0,
-		VERTICAL = 1,
-		SINGLE_LOWER = 2,
-		SINGLE_UPPER = 3,
-		FOUR_SCREEN = 4
-	};
 	Cartridge(SharedContext& ctx, CPU& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::string& filePath);
-	MirrorMode GetMirrorMode();
-	void SetMirrorMode(MirrorMode mirrorMode);
 	// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
 	uint16_t MirrorNametable(uint16_t addr);
 	uint8_t ReadPRGRAM(uint16_t address);
@@ -53,7 +44,6 @@ public:
 	std::filesystem::path getAndEnsureSavePath();
 private:
 	Bus* m_bus;
-	MirrorMode m_mirrorMode;
 	CPU& cpu;
 	//std::string GetFileName(const CSzArEx* db, UInt32 index);
 	std::vector<uint8_t> ReadNesFromZip(const std::string& zipPath);

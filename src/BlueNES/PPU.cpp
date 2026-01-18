@@ -8,9 +8,12 @@
 #include "RendererSlow.h"
 #include "RendererLoopy.h"
 #include "A12Mapper.h"
-#include "Mapper.h"
+#include "MapperBase.h"
 #include "Serializer.h"
 #include "DebuggerContext.h"
+#include "Mapper.h"
+#include <array>
+#include "Cartridge.h"
 
 HWND m_hwnd;
 
@@ -45,7 +48,6 @@ void PPU::reset()
 	m_ppuStatus = 0;
 	ppuDataBuffer = 0;
 	paletteTable.fill(0x00);
-	m_vram.fill(0x00);
 	renderer->reset();
 	clearBuffer(context.GetBackBuffer());
 	context.SwapBuffers();
@@ -235,9 +237,8 @@ inline uint8_t PPU::read_register(uint16_t addr)
 			}
 			value = paletteTable[paletteAddr];
 			// But buffer is filled with the underlying nametable byte
-			uint16_t mirroredAddr = vramAddr & 0x2FFF; // Mirror nametables every 4KB
-			mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
-			ppuDataBuffer = m_vram[mirroredAddr];
+			uint16_t mirroredAddr = 0x2000 + (vramAddr & 0x2FFF); // Mirror nametables every 4KB
+			ppuDataBuffer = bus->cart.mapper->readCHR(mirroredAddr);
 			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
 		}
 		if (m_mapper) {
@@ -306,9 +307,8 @@ uint8_t PPU::PeekVRAM(uint16_t addr) {
 	}
 	else if (addr < 0x3F00) {
 		// Reading from nametables and attribute tables
-		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
-		mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
-		value = m_vram[mirroredAddr];
+		addr = 0x2000 + (addr & 0x0FFF); // Mirror nametables every 4KB
+		value = bus->cart.mapper->readCHR(addr);
 	}
 	else if (addr < 0x4000) {
 		// Reading from palette RAM (mirrored every 32 bytes)
@@ -333,9 +333,8 @@ uint8_t PPU::ReadVRAM(uint16_t addr) {
 	}
 	else if (addr < 0x3F00) {
 		// Reading from nametables and attribute tables
-		uint16_t mirroredAddr = addr & 0x2FFF; // Mirror nametables every 4KB
-		mirroredAddr = bus->cart.MirrorNametable(mirroredAddr);
-		value = m_vram[mirroredAddr];
+		addr = 0x2000 + (addr & 0x0FFF); // Mirror nametables every 4KB
+		value = bus->cart.mapper->readCHR(addr);
 	}
 	else if (addr < 0x4000) {
 		// Reading from palette RAM (mirrored every 32 bytes)
@@ -362,9 +361,8 @@ void PPU::write_vram(uint16_t addr, uint8_t value)
 	}
 	else if (addr < 0x3F00) {
 		// Name tables and attribute tables
-		addr &= 0x2FFF; // Mirror nametables every 4KB
-		addr = bus->cart.MirrorNametable(addr);
-		m_vram[addr] = value;
+		addr = 0x2000 + (addr & 0x0FFF); // Mirror nametables every 4KB
+		bus->cart.mapper->writeCHR(addr, value);
 		return;
 	}
 	else if (addr < 0x4000) {
@@ -394,7 +392,7 @@ void PPU::UpdateState() {
 	dbgContext->ppuState.scrollX = GetScrollX();
 	dbgContext->ppuState.scrollY = GetScrollY();
 	memcpy(dbgContext->ppuState.palette.data(), paletteTable.data(), 32);
-	memcpy(dbgContext->ppuState.nametables.data(), m_vram.data(), 0x800); // nametables
+	memcpy(dbgContext->ppuState.nametables.data(), bus->cart.mapper->_vram.data(), 0x800); // nametables
 	// TODO - CHR memory read may be slow depending on mapper implementation
 	// Consider memcpy by page?
 	for (int i = 0; i < 0x2000; i++) {
@@ -493,9 +491,7 @@ void PPU::Serialize(Serializer& serializer) {
 	state.ppuMask = m_ppuMask;
 	state.ppuStatus = m_ppuStatus;
 	state.ppuCtrl = m_ppuCtrl;
-	for (int i = 0; i < 0x800; i++) {
-		state.vram[i] = m_vram[i];
-	}
+	
 	state.ppuDataBuffer = ppuDataBuffer;
 	serializer.Write(state);
 }
@@ -514,8 +510,6 @@ void PPU::Deserialize(Serializer& serializer) {
 	m_ppuMask = state.ppuMask;
 	m_ppuStatus = state.ppuStatus;
 	m_ppuCtrl = state.ppuCtrl;
-	for (int i = 0; i < 0x800; i++) {
-		m_vram[i] = state.vram[i];
-	}
+	
 	ppuDataBuffer = state.ppuDataBuffer;
 }

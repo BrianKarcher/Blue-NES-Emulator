@@ -148,7 +148,7 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 			break;
 
 		case 0xA000:
-			cart->SetMirrorMode((val & 1) == 0 ? Cartridge::MirrorMode::VERTICAL : Cartridge::MirrorMode::HORIZONTAL);
+			SetMirrorMode((val & 1) == 0 ? MapperBase::MirrorMode::VERTICAL : MapperBase::MirrorMode::HORIZONTAL);
 			break;
 
 		case 0xC000:  // IRQ Latch
@@ -233,7 +233,7 @@ void MMC3::RecomputeMappings() {
 }
 
 void MMC3::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	MapperBase::Serialize(serializer);
 	serializer.Write(prgMode);
 	serializer.Write(chrMode);
 	serializer.Write(banks, 8);
@@ -250,7 +250,7 @@ void MMC3::Serialize(Serializer& serializer) {
 }
 
 void MMC3::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	MapperBase::Deserialize(serializer);
 	serializer.Read(prgMode);
 	serializer.Read(chrMode);
 	serializer.Read(banks, 8);

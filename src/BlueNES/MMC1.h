@@ -28,6 +28,8 @@ class MMC1 : public MapperBase
 public:
 	MMC1(Cartridge* cartridge, CPU& cpu, uint8_t prgRomSize, uint8_t chrRomSize);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 
 	inline void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;
@@ -42,7 +44,6 @@ private:
 	uint8_t controlReg = 0x0C;   // default after reset usually 0x0C (mirroring = 0x0, PRG mode = 3)
 	uint8_t shiftRegister;
 	void processShift(uint16_t addr, uint8_t val);
-	void RecomputeMappings() override;
 	//uint32_t chr0Addr;
 	//uint32_t chr1Addr;
 	//uint32_t prg0Addr;

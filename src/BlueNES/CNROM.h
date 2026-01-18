@@ -5,7 +5,8 @@ class CNROM : public MapperBase
 {
 public:
 	CNROM();
-	void RecomputeMappings() override;
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 
 	void Serialize(Serializer& serializer) override;

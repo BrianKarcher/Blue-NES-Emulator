@@ -15,7 +15,8 @@ public:
 	void Deserialize(Serializer& serializer) override {
 		Mapper::Deserialize(serializer);
 	}
-	void RecomputeMappings() override;
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 
 private:
 	Cartridge* cartridge;

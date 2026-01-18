@@ -136,7 +136,6 @@ public:
 	uint8_t m_ppuMask = 0;
 	uint8_t m_ppuStatus = 0;
 	uint8_t m_ppuCtrl = 0;
-	std::array<uint8_t, 0x800> m_vram; // 2 KB VRAM
 	void get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors);
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite);
 	bool isFrameComplete();

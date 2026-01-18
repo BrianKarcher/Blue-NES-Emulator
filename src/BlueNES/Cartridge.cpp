@@ -134,7 +134,6 @@ void Cartridge::unload() {
         delete mapper;
         mapper = nullptr;
     }
-    m_mirrorMode = MirrorMode::VERTICAL;
     m_isLoaded = false;
 }
 
@@ -242,8 +241,7 @@ void Cartridge::LoadROM(const std::string& filePath) {
     // 2. Wrap it in our memory helper
     MemoryBuffer stream(rawData);
     ines.load_data_from_ines(stream, inesFile);
-    // Set the mirror mode now. The mapper may change it later.
-    m_mirrorMode = inesFile.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
+
     isBatteryBacked = inesFile.header.flags6 & FLAG_6_BATTERY_BACKED;
 
     uint8_t mapperNum = inesFile.header.flags6 >> 4;
@@ -269,74 +267,25 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
     case 1:
         mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
-    case 2:
-		mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
-        break;
+  //  case 2:
+		//mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+  //      break;
     case 3:
 		mapper = new CNROM();
         break;
-    case 4:
-        mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
-        break;
+    //case 4:
+    //    mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+    //    break;
     case 7:
         mapper = new AxROMMapper(this, inesFile.header.prg_rom_size);
         break;
-    case 9:
-		mapper = new MMC2Mapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
-        break;
+  //  case 9:
+		//mapper = new MMC2Mapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+  //      break;
     default:
         mapper = new NROM(this);
         break;
     }
-}
-
-// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
-// Mirror nametable addresses based on mirroring mode
-uint16_t Cartridge::MirrorNametable(uint16_t addr) {
-    // Get nametable index (0-3) and offset within nametable
-    addr &= 0x2FFF;  // Mask to nametable range
-    uint16_t offset = addr & 0x03FF;  // Offset within 1KB nametable
-    uint16_t table = (addr >> 10) & 0x03;  // Which nametable (0-3)
-
-    // Map logical nametable to physical VRAM based on mirror mode
-    switch (m_mirrorMode) {
-    case HORIZONTAL:
-        // $2000=$2400 (NT1), $2800=$2C00 (NT2)
-        // Tables 0,1 map to first 1KB, tables 2,3 map to second 1KB
-        table = (table & 0x02) >> 1;
-        break;
-
-    case VERTICAL:
-        // $2000=$2800 (NT1), $2400=$2C00 (NT2)
-        // Tables 0,2 map to first 1KB, tables 1,3 map to second 1KB
-        table = table & 0x01;
-        break;
-
-    case SINGLE_LOWER:
-        // All nametables map to first 1KB
-        table = 0;
-        break;
-
-    case SINGLE_UPPER:
-        // All nametables map to second 1KB
-        table = 1;
-        break;
-
-    case FOUR_SCREEN:
-        // No mirroring (requires 4KB of VRAM on cartridge)
-        // This would need external RAM on the cartridge
-        break;
-    }
-
-    return (table * 0x400) + offset;
-}
-
-Cartridge::MirrorMode Cartridge::GetMirrorMode() {
-	return m_mirrorMode;
-}
-
-void Cartridge::SetMirrorMode(MirrorMode mirrorMode) {
-    m_mirrorMode = mirrorMode;
 }
 
 uint8_t Cartridge::ReadPRGRAM(uint16_t address) {

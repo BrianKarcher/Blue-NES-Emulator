@@ -11,7 +11,7 @@ void NROM::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 
 }
 
-void NROM::RecomputeMappings() {
+void NROM::RecomputePrgMappings() {
 	if (m_prgRomData.size() < 0x8000) {
 		// 32 KB PRG ROM mirrored
 		MapperBase::SetPrgPage(0, 0);
@@ -21,6 +21,7 @@ void NROM::RecomputeMappings() {
 		MapperBase::SetPrgPage(0, 0);
 		MapperBase::SetPrgPage(1, 1);
 	}
-	
+}
+void NROM::RecomputeChrMappings() {
 	MapperBase::SetChrPage(0, 0);
 }

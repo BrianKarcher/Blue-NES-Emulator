@@ -14,23 +14,26 @@ void AxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycl
 	prgBankSelect = val & 0x07; // Select 32KB PRG bank (3 bits)
 	prgBankSelect &= (prgBank32kCount - 1);
 	nameTable = val & 0x10;
+	SetMirrorMode(nameTable ? MapperBase::MirrorMode::SINGLE_UPPER : MapperBase::MirrorMode::SINGLE_LOWER);
 	RecomputeMappings();
 }
 
-void AxROMMapper::RecomputeMappings() {
+void AxROMMapper::RecomputePrgMappings() {
 	MapperBase::SetPrgPage(0, prgBankSelect);
+}
+
+void AxROMMapper::RecomputeChrMappings() {
 	MapperBase::SetChrPage(0, 0); // No CHR banking, always first bank
-	cartridge->SetMirrorMode(nameTable ? Cartridge::MirrorMode::SINGLE_UPPER : Cartridge::MirrorMode::SINGLE_LOWER);
 }
 
 void AxROMMapper::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	MapperBase::Serialize(serializer);
 	serializer.Write(nameTable);
 	serializer.Write(prgBankSelect);
 }
 
 void AxROMMapper::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	MapperBase::Deserialize(serializer);
 	serializer.Read(nameTable);
 	serializer.Read(prgBankSelect);
 	RecomputeMappings();

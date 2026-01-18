@@ -94,7 +94,7 @@ void PPUViewer::DrawNametables() {
         // Logic to arrange the 4 slots based on mirroring
             // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
         int slots[4];
-        if (_cartridge->GetMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) {
+        if (_cartridge->mapper->GetMirrorMode() == MapperBase::MirrorMode::HORIZONTAL) {
             slots[0] = 0; slots[1] = 0; slots[2] = 1; slots[3] = 1;
         }
         else {
@@ -208,7 +208,7 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
 
             // Tab 1: Nametables
             if (ImGui::BeginTabItem("Nametables")) {
-                DrawNametables(); // Your existing logic
+                DrawNametables();
                 ImGui::EndTabItem();
             }
 

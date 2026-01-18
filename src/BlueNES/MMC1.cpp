@@ -117,16 +117,16 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		
 		uint8_t nt = val & 0b11;
 		if (nt == 0) {
-			cartridge->SetMirrorMode(Cartridge::MirrorMode::SINGLE_LOWER);
+			SetMirrorMode(MapperBase::MirrorMode::SINGLE_LOWER);
 		}
 		else if (nt == 1) {
-			cartridge->SetMirrorMode(Cartridge::MirrorMode::SINGLE_UPPER);
+			SetMirrorMode(MapperBase::MirrorMode::SINGLE_UPPER);
 		}
 		else if (nt == 2) {
-			cartridge->SetMirrorMode(Cartridge::MirrorMode::VERTICAL);
+			SetMirrorMode(MapperBase::MirrorMode::VERTICAL);
 		}
 		else {
-			cartridge->SetMirrorMode(Cartridge::MirrorMode::HORIZONTAL);
+			SetMirrorMode(MapperBase::MirrorMode::HORIZONTAL);
 		}
 		
 	}
@@ -177,36 +177,8 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 	RecomputeMappings();
 }
 
-// ---------------- recomputeMappings ----------------
-// Compute prg0Addr/prg1Addr/chr0Addr/chr1Addr in bytes based on current registers and sizes
-void MMC1::RecomputeMappings()
-{
+void MMC1::RecomputePrgMappings() {
 	const uint8_t prgMode = (controlReg >> 2) & 0x03; // bits 2-3
-	const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
-
-	// -------- CHR mapping --------
-	// Remove the early return - always compute banking even for CHR-RAM!
-	if (chrBankCount == 0) {
-		// CHR-RAM: always 8KB, no real banking
-		MapperBase::SetChrPage(0, 0);
-		MapperBase::SetChrPage(1, 1);
-	}
-	else if (chrMode == 0) {
-		// 8KB mode
-		uint32_t bank8k = chrBank0Reg;
-		//if (boardType == BoardType::SAROM)
-		//	bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
-		bank8k %= chrBankCount;
-		MapperBase::SetChrPage(0, bank8k);
-		MapperBase::SetChrPage(1, bank8k + 1);
-	}
-	else {
-		// 4KB mode
-		uint32_t bank0 = chrBank0Reg; // &(chrBankCount - 1);
-		uint32_t bank1 = chrBank1Reg; // &(chrBankCount - 1);
-		MapperBase::SetChrPage(0, bank0);
-		MapperBase::SetChrPage(1, bank1);
-	}
 
 	// ------------ PRG BANKING ------------
 	uint32_t prgMax = prgBank16kCount - 1;
@@ -254,8 +226,36 @@ void MMC1::RecomputeMappings()
 	//LOG(L"  CHR addrs: chr0=0x%06X chr1=0x%06X (chrBankCount=%d)\n", chr0Addr, chr1Addr, chrBankCount);
 }
 
+void MMC1::RecomputeChrMappings() {
+	const uint8_t chrMode = (controlReg >> 4) & 0x01; // bit 4
+
+	// -------- CHR mapping --------
+	// Remove the early return - always compute banking even for CHR-RAM!
+	if (chrBankCount == 0) {
+		// CHR-RAM: always 8KB, no real banking
+		MapperBase::SetChrPage(0, 0);
+		MapperBase::SetChrPage(1, 1);
+	}
+	else if (chrMode == 0) {
+		// 8KB mode
+		uint32_t bank8k = chrBank0Reg;
+		//if (boardType == BoardType::SAROM)
+		//	bank8k &= 0x04;                     // SAROM: only 4 banks (16KB total)
+		bank8k %= chrBankCount;
+		MapperBase::SetChrPage(0, bank8k);
+		MapperBase::SetChrPage(1, bank8k + 1);
+	}
+	else {
+		// 4KB mode
+		uint32_t bank0 = chrBank0Reg; // &(chrBankCount - 1);
+		uint32_t bank1 = chrBank1Reg; // &(chrBankCount - 1);
+		MapperBase::SetChrPage(0, bank0);
+		MapperBase::SetChrPage(1, bank1);
+	}
+}
+
 void MMC1::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	MapperBase::Serialize(serializer);
 	serializer.Write(shiftRegister);
 	serializer.Write(controlReg);
 	serializer.Write(chrBank0Reg);
@@ -266,7 +266,7 @@ void MMC1::Serialize(Serializer& serializer) {
 }
 
 void MMC1::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	MapperBase::Deserialize(serializer);
 	serializer.Read(shiftRegister);
 	serializer.Read(controlReg);
 	serializer.Read(chrBank0Reg);

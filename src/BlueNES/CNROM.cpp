@@ -6,8 +6,11 @@ CNROM::CNROM() : MapperBase()
 	MapperBase::SetChrPageSize(0x2000);
 }
 
-void CNROM::RecomputeMappings() {
+void CNROM::RecomputePrgMappings() {
 	MapperBase::SetPrgPage(0, 0);
+}
+
+void CNROM::RecomputeChrMappings() {
 	MapperBase::SetChrPage(0, _chrBankReg);
 }
 
@@ -19,12 +22,12 @@ void CNROM::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 }
 
 void CNROM::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	MapperBase::Serialize(serializer);
 	serializer.Write(_chrBankReg);
 }
 
 void CNROM::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	MapperBase::Deserialize(serializer);
 	serializer.Read(_chrBankReg);
 	RecomputeMappings();
 }
