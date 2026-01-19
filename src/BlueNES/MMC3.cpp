@@ -58,12 +58,25 @@ MMC3::~MMC3() {
 
 }
 
+void MMC3::initialize(ines_file_t& data) {
+	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+		isFourScreen = true;
+		_nametableRamSize = 0x1000; // 4 screen
+	}
+	MapperBase::initialize(data);
+	MapperBase::SetPrgPageSize(0x2000);
+	MapperBase::SetChrPageSize(0x400);
+	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+		MapperBase::SetMirrorMode(MapperBase::MirrorMode::FOUR_SCREEN);
+	}
+}
+
 void MMC3::shutdown() {
 	renderLoopy->setMapper(nullptr);
 	this->bus.ppu.setMapper(nullptr);
 }
 
-void MMC3::updateChrMapping() {
+void MMC3::RecomputeChrMappings() {
 	if (chrMode) {
 		// $0000-$03FF: R2 (fine)
 		// $0400-$07FF: R3
@@ -97,7 +110,7 @@ void MMC3::updateChrMapping() {
 	}
 }
 
-void MMC3::updatePrgMapping() {
+void MMC3::RecomputePrgMappings() {
 	if (prgMode == 0) {
 		MapperBase::SetPrgPage(0, banks[6]); // 8000
 		MapperBase::SetPrgPage(1, banks[7]); // A000
@@ -121,8 +134,7 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 			chrMode = val & 0x80;
 			m_regSelect = val & 0x7; // 3 LSB
 			//LOG(L"prg: %d chr: %d reg: %d\n", prgMode, chrMode, m_regSelect);
-			updatePrgMapping();
-			updateChrMapping();
+			RecomputeMappings();
 			break;
 
 		case 0x8001:
@@ -140,15 +152,20 @@ void MMC3::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 
 			if (m_regSelect < 6) {
 				banks[m_regSelect] &= chrBank1kCount - 1;
-				updateChrMapping();
+				RecomputeChrMappings();
 			}
 			else {
-				updatePrgMapping();
+				RecomputePrgMappings();
 			}
 			break;
 
 		case 0xA000:
-			SetMirrorMode((val & 1) == 0 ? MapperBase::MirrorMode::VERTICAL : MapperBase::MirrorMode::HORIZONTAL);
+			if (isFourScreen) {
+				SetMirrorMode(MapperBase::MirrorMode::FOUR_SCREEN);
+			}
+			else {
+				SetMirrorMode((val & 1) == 0 ? MapperBase::MirrorMode::VERTICAL : MapperBase::MirrorMode::HORIZONTAL);
+			}
 			break;
 
 		case 0xC000:  // IRQ Latch
@@ -227,11 +244,6 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	//}
 }
 
-void MMC3::RecomputeMappings() {
-	updatePrgMapping();
-	updateChrMapping();
-}
-
 void MMC3::Serialize(Serializer& serializer) {
 	MapperBase::Serialize(serializer);
 	serializer.Write(prgMode);
@@ -264,6 +276,5 @@ void MMC3::Deserialize(Serializer& serializer) {
 	serializer.Read(last_a12);
 	serializer.Read(a12LowCycle);
 	serializer.Read(_irqPending);
-	updateChrMapping();
-	updatePrgMapping();
+	RecomputeMappings();
 }

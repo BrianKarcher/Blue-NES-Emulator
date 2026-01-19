@@ -3,6 +3,7 @@
 #include <string>
 
 #define FLAG_6_BATTERY_BACKED 0x02
+#define FLAG_6_NAMETABLE_LAYOUT 0x08
 class MemoryBuffer;
 
 // iNES header structure

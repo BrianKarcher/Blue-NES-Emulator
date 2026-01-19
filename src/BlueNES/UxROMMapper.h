@@ -23,6 +23,8 @@ public:
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 	void shutdown() {}
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
@@ -36,6 +38,4 @@ private:
 	Cartridge* cart;
 	CPU& cpu;
 	Bus& bus;
-
-	void RecomputeMappings() override;
 };

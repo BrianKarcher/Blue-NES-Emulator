@@ -65,7 +65,7 @@ void MMC2Mapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle
     RecomputeMappings();
 }
 
-void MMC2Mapper::RecomputeMappings() {
+void MMC2Mapper::RecomputePrgMappings() {
     // PRG Setup:
     // $8000: Selectable
     // $A000, $C000, $E000: Fixed to last three 8KB banks
@@ -73,7 +73,9 @@ void MMC2Mapper::RecomputeMappings() {
     MapperBase::SetPrgPage(1, prgBank8kCount - 3);
     MapperBase::SetPrgPage(2, prgBank8kCount - 2);
     MapperBase::SetPrgPage(3, prgBank8kCount - 1);
+}
 
+void MMC2Mapper::RecomputeChrMappings() {
     // CHR Setup:
     // Page 0 (0x0000) uses latch_0 to pick between two registers
     // Page 1 (0x1000) uses latch_1 to pick between two registers

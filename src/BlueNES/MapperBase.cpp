@@ -3,12 +3,16 @@
 
 void MapperBase::initialize(ines_file_t& data) {
 	Mapper::initialize(data);
+	_vram.resize(_nametableRamSize);
 	m_mirrorMode = data.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
+	_prgRomSize = data.header.prg_rom_size * 16384;
+	_chrRomSize = data.header.chr_rom_size * 8192;
 	RecomputeMappings();
 }
 
 void MapperBase::SetPrgPageSize(uint16_t pageSize) {
 	_prgPageSize = pageSize;
+	_prgPageCount = _prgRomSize / _prgPageSize;
 }
 
 void MapperBase::SetPrgPage(uint16_t pageIndex, uint8_t bank) {
@@ -38,6 +42,7 @@ void MapperBase::SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uin
 
 void MapperBase::SetChrPageSize(uint16_t pageSize) {
 	_chrPageSize = pageSize;
+	_chrPageCount = _chrRomSize / _chrPageSize;
 }
 
 void MapperBase::SetChrPage(uint16_t pageIndex, uint8_t bank) {
@@ -150,9 +155,9 @@ void MapperBase::shutdown() {
 }
 
 void MapperBase::Serialize(Serializer& serializer) {
-	serializer.WriteArray<uint8_t, 0x800>(_vram);
+	serializer.WriteVector(_vram);
 }
 
 void MapperBase::Deserialize(Serializer& serializer) {
-	serializer.ReadArray<uint8_t, 0x800>(_vram);
+	serializer.ReadVector(_vram);
 }

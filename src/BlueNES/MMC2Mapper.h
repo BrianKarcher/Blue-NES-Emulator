@@ -11,6 +11,8 @@ public:
     MMC2Mapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
     void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) override;
+    void RecomputePrgMappings() override;
+    void RecomputeChrMappings() override;
 
     // Crucial for MMC2: We must intercept PPU reads to handle the bank latches
     inline uint8_t readCHR(uint16_t addr) override;
@@ -19,7 +21,6 @@ public:
     void Deserialize(Serializer& serializer) override;
 
 private:
-    void RecomputeMappings() override;
     inline void dbg(const wchar_t* fmt, ...);
 
     uint8_t prg_bank_select;

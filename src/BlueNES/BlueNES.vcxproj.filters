@@ -153,6 +153,9 @@
     <ClCompile Include="MMC2Mapper.cpp">
       <Filter>Mappers</Filter>
     </ClCompile>
+    <ClCompile Include="DxROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -322,6 +325,9 @@
     </ClInclude>
     <ClInclude Include="MemoryBuffer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DxROM.h">
+      <Filter>Mappers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

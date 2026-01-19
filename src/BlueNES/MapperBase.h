@@ -19,15 +19,19 @@ public:
 	};
 	uint8_t* _prgPages[0x100];
 	uint16_t _prgPageSize = 0;
+	uint16_t _prgRomSize = 0;
+	uint8_t _prgPageCount = 0;
 	uint8_t* _chrPages[0x100];
 	uint16_t _chrPageSize = 0;
+	uint16_t _chrRomSize = 0;
+	uint8_t _chrPageCount = 0;
 	const uint16_t _nametablePageSize = 0x400;
 
 	virtual void RecomputeMappings();
 	virtual void RecomputePrgMappings() = 0;
 	virtual void RecomputeChrMappings() = 0;
 	virtual void RecomputeMirrorModeMapping();
-	void initialize(ines_file_t& data) override;
+	virtual void initialize(ines_file_t& data) override;
 	void SetPrgPageSize(uint16_t pageSize);
 	void SetPrgPage(uint16_t pageIndex, uint8_t bank);
 	void SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset);
@@ -53,7 +57,8 @@ public:
 	void writeCHR(uint16_t addr, uint8_t data);
 	void shutdown();
 
-	std::array<uint8_t, 0x800> _vram; // 2 KB VRAM used to hold nametables. Some mappers may override this.
+	uint16_t _nametableRamSize = 0x800; // Default 2 KB nametable RAM size
+	std::vector<uint8_t> _vram; // 2 KB VRAM used to hold nametables. Some mappers may override this.
 
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;

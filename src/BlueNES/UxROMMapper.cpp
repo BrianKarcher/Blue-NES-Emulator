@@ -52,9 +52,12 @@ void UxROMMapper::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycl
 	RecomputeMappings();
 }
 
-void UxROMMapper::RecomputeMappings() {
+void UxROMMapper::RecomputePrgMappings() {
 	MapperBase::SetPrgPage(0, prg_bank_select);
 	MapperBase::SetPrgPage(1, prgBank16kCount - 1);
+}
+
+void UxROMMapper::RecomputeChrMappings() {
 	MapperBase::SetChrPage(0, 0); // UxROM typically has CHR RAM, so just map first page
 }
 

@@ -59,7 +59,7 @@ public:
         uint16_t scrollX;
         uint16_t scrollY;
 		std::array<uint8_t, 0x2000> chrMemory; // 8KB CHR snapshot
-        std::array<uint8_t, 0x800> nametables;
+        std::array<uint8_t, 0x1000> nametables;
 		std::array<uint8_t, 32> palette;
     };
 

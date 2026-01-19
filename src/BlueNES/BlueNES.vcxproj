@@ -149,6 +149,7 @@
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="DebuggerContext.cpp" />
     <ClCompile Include="DebuggerUI.cpp" />
+    <ClCompile Include="DxROM.cpp" />
     <ClCompile Include="EmulatorCore.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
@@ -197,6 +198,7 @@
     <ClInclude Include="Core.h" />
     <ClInclude Include="DebuggerContext.h" />
     <ClInclude Include="DebuggerUI.h" />
+    <ClInclude Include="DxROM.h" />
     <ClInclude Include="EmulatorCore.h" />
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />

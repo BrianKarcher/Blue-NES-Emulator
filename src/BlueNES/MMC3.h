@@ -15,7 +15,7 @@ class RendererLoopy;
 #define LOG(...) do {} while(0) // completely removed by compiler
 #endif
 
-#define MMC3DEBUG
+//#define MMC3DEBUG
 
 class MMC3 : public MapperBase, public A12Mapper
 {
@@ -23,11 +23,14 @@ public:
 	MMC3(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 	~MMC3();
 
+	void initialize(ines_file_t& data) override;
 	void shutdown();
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
 	bool IrqPending();
+	void RecomputePrgMappings() override;
+	void RecomputeChrMappings() override;
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
 
@@ -43,6 +46,7 @@ private:
 	uint8_t prgBank8kCount;
 	uint8_t chrBank8kCount;
 	uint8_t chrBank1kCount;
+	bool isFourScreen = false;
 
 	uint8_t m_regSelect;
 
@@ -60,8 +64,4 @@ private:
 	// A12 tracking
 	bool last_a12;
 	long a12LowCycle = 0;  // CPU cycle at the start of the last low time sequence
-
-	void RecomputeMappings() override;
-	void updateChrMapping();
-	void updatePrgMapping();
 };
