@@ -94,7 +94,7 @@ void PPUViewer::DrawNametables() {
         // Logic to arrange the 4 slots based on mirroring
             // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
         int slots[4];
-        if (_cartridge->mapper->GetMirrorMode() == MapperBase::MirrorMode::HORIZONTAL) {
+        if (_dbgContext->ppuState.mirrorMode == MapperBase::MirrorMode::HORIZONTAL) {
             slots[0] = 0; slots[1] = 0; slots[2] = 1; slots[3] = 1;
         }
         else {

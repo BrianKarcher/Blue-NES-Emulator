@@ -60,8 +60,8 @@ public:
 	uint16_t _nametableRamSize = 0x800; // Default 2 KB nametable RAM size
 	std::vector<uint8_t> _vram; // 2 KB VRAM used to hold nametables. Some mappers may override this.
 
-	void Serialize(Serializer& serializer) override;
-	void Deserialize(Serializer& serializer) override;
+	virtual void Serialize(Serializer& serializer) override;
+	virtual void Deserialize(Serializer& serializer) override;
 private:
 	MirrorMode m_mirrorMode;
 };

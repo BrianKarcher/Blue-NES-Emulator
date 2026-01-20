@@ -391,6 +391,7 @@ void PPU::UpdateState() {
 	dbgContext->ppuState.bgPatternTableAddr = GetBackgroundPatternTableBase();
 	dbgContext->ppuState.scrollX = GetScrollX();
 	dbgContext->ppuState.scrollY = GetScrollY();
+	dbgContext->ppuState.mirrorMode = bus->cart.mapper->GetMirrorMode();
 	memcpy(dbgContext->ppuState.palette.data(), paletteTable.data(), 32);
 	memcpy(dbgContext->ppuState.nametables.data(), bus->cart.mapper->_vram.data(), 0x800); // nametables
 	// TODO - CHR memory read may be slow depending on mapper implementation

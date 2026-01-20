@@ -61,6 +61,7 @@ public:
 		std::array<uint8_t, 0x2000> chrMemory; // 8KB CHR snapshot
         std::array<uint8_t, 0x1000> nametables;
 		std::array<uint8_t, 32> palette;
+        uint8_t mirrorMode;
     };
 
     bool HasBreakpoint(uint16_t addr);

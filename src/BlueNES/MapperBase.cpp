@@ -155,9 +155,11 @@ void MapperBase::shutdown() {
 }
 
 void MapperBase::Serialize(Serializer& serializer) {
+	Mapper::Serialize(serializer);
 	serializer.WriteVector(_vram);
 }
 
 void MapperBase::Deserialize(Serializer& serializer) {
+	Mapper::Deserialize(serializer);
 	serializer.ReadVector(_vram);
 }
