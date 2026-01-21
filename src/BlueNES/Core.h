@@ -61,7 +61,6 @@ public:
 	SharedContext context;
 	EmulatorCore emulator;
 	PPUViewer ppuViewer;
-	bool ppuOpen = true;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
@@ -120,4 +119,12 @@ private:
 	);
 	
 	HWND m_hwnd;
+	struct UIWindows {
+		bool ppuOpen = true;
+		bool cpuOpen = true;
+		bool hexOpen = true;
+		bool debuggerOpen = true;
+	};
+
+	UIWindows _uiWindows;
 };

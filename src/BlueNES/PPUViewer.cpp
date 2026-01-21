@@ -216,6 +216,7 @@ void PPUViewer::DrawCHRViewer() {
 }
 
 void PPUViewer::Draw(const char* title, bool* p_open) {
+	if (!*p_open) return;
     if (!ImGui::Begin(title, p_open)) {
         ImGui::End();
         return;

@@ -20,7 +20,7 @@ public:
 	void ComputeDisplayMap();
 	//void FocusPC(uint16_t pc);
 	//void StepInto();
-	void DrawScrollableDisassembler();
+	void DrawScrollableDisassembler(bool* debuggerOpen);
 	void OpenGoToAddressDialog();
 	void GoTo();
 	void GoTo(uint16_t addr);

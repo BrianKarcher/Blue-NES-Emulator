@@ -400,6 +400,22 @@ void Core::RunMessageLoop()
                     }
                     ImGui::EndMenu();
                 }
+                if (ImGui::BeginMenu("Debug")) {
+                    if (ImGui::MenuItem("PPU", nullptr)) {
+						_uiWindows.ppuOpen = !_uiWindows.ppuOpen;
+                    }
+                    if (ImGui::MenuItem("Memory", nullptr)) {
+                        _uiWindows.hexOpen = !_uiWindows.hexOpen;
+                    }
+                    if (ImGui::MenuItem("CPU", nullptr)) {
+                        _uiWindows.cpuOpen = !_uiWindows.cpuOpen;
+                    }
+                    if (ImGui::MenuItem("Debugger", nullptr)) {
+                        _uiWindows.debuggerOpen = !_uiWindows.debuggerOpen;
+                    }
+
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMainMenuBar();
             }
 
@@ -430,40 +446,43 @@ void Core::RunMessageLoop()
 
             // Debugger Window (CPU Registers)
             ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
-            ImGui::Begin("CPU Debugger");
-            ImGui::Text("A: %02X", _dbgCtx->lastState.a); ImGui::SameLine();
-            ImGui::Text("X: %02X", _dbgCtx->lastState.x); ImGui::SameLine();
-            ImGui::Text("Y: %02X", _dbgCtx->lastState.y);
-            ImGui::Separator();
-            ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
-            ImGui::Text("SP: %02X" , _dbgCtx->lastState.sp);
+            if (_uiWindows.cpuOpen) {
+                ImGui::Begin("CPU Debugger", &_uiWindows.cpuOpen);
+                ImGui::Text("A: %02X", _dbgCtx->lastState.a); ImGui::SameLine();
+                ImGui::Text("X: %02X", _dbgCtx->lastState.x); ImGui::SameLine();
+                ImGui::Text("Y: %02X", _dbgCtx->lastState.y);
+                ImGui::Separator();
+                ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
+                ImGui::Text("SP: %02X", _dbgCtx->lastState.sp);
 
-			ImGui::Separator();
-			ImGui::Text("PPU Flags:");
-			ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
-            ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
+                ImGui::Separator();
+                ImGui::Text("PPU Flags:");
+                ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
+                ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
 
-            if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
-                _dbgCtx->hit_breakpoint.store(false);
-                debuggerUI.GoTo();
-			}
-
-			bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
-            //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
-            if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
-                bool newPause = !isDebugPause;
-                if (newPause) {
-                    _dbgCtx->is_paused.store(true);
-                    _dbgCtx->continue_requested.store(false);
-					debuggerUI.ComputeDisplayMap();
+                if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
+                    _dbgCtx->hit_breakpoint.store(false);
+                    debuggerUI.GoTo();
                 }
-                else {
-                    _dbgCtx->continue_requested.store(true);
+
+                bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
+                //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
+                if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
+                    bool newPause = !isDebugPause;
+                    if (newPause) {
+                        _dbgCtx->is_paused.store(true);
+                        _dbgCtx->continue_requested.store(false);
+                        debuggerUI.ComputeDisplayMap();
+                    }
+                    else {
+                        _dbgCtx->continue_requested.store(true);
+                    }
                 }
+                ImGui::End();
             }
-            ImGui::End();
-            debuggerUI.DrawScrollableDisassembler();
-            hexViewer.DrawMemoryViewer("Memory Viewer"); // 64KB of addressable memory
+
+            debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
+            hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
 
             if (isPlaying && !isPaused) {
                 // Wait for the Core (The "Sleep" phase)
@@ -502,7 +521,7 @@ void Core::RunMessageLoop()
             //    ppuViewer.UpdateTexture(0, nt0_pixels);
             //    ppuViewer.UpdateTexture(1, nt1_pixels);
             //}
-			ppuViewer.Draw("PPU Viewer", &ppuOpen);
+			ppuViewer.Draw("PPU Viewer", &_uiWindows.ppuOpen);
 
             // NES Display Window
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);

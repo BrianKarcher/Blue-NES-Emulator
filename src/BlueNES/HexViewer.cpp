@@ -37,8 +37,9 @@ uint8_t HexReadCPU(HexViewer hexViewer, uint16_t addr) {
 	return hexViewer._bus->peek(addr);
 }
 
-void HexViewer::DrawMemoryViewer(const char* title) {
-    ImGui::Begin(title);
+void HexViewer::DrawMemoryViewer(const char* title, bool *hexOpen) {
+	if (!*hexOpen) return;
+    ImGui::Begin(title, hexOpen);
 
     // 1. Dropdown for Hex Source
     const char* sources[] = { "CPU Bus", "PPU VRAM", "OAM", "Palette" };

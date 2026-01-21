@@ -16,7 +16,7 @@ class HexViewer
 {
 public:
 	HexViewer(Core* core, SharedContext& sharedCtx);
-	void DrawMemoryViewer(const char* title);
+	void DrawMemoryViewer(const char* title, bool* hexOpen);
 	DebuggerContext* _dbgCtx;
 	Bus* _bus;
 private:

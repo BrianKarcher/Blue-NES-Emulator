@@ -238,8 +238,9 @@ void DebuggerUI::ScrollToAddress(uint16_t targetAddr) {
     }
 }
 
-void DebuggerUI::DrawScrollableDisassembler() {
-    ImGui::Begin("Disassembler");
+void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
+	if (!*debuggerOpen) return;
+    ImGui::Begin("Disassembler", debuggerOpen);
 
     if (showGoToAddressDialog) {
         ImGui::OpenPopup("Go To Address");
