@@ -393,7 +393,8 @@ void PPU::UpdateState() {
 	dbgContext->ppuState.scrollY = GetScrollY();
 	dbgContext->ppuState.mirrorMode = bus->cart.mapper->GetMirrorMode();
 	memcpy(dbgContext->ppuState.palette.data(), paletteTable.data(), 32);
-	memcpy(dbgContext->ppuState.nametables.data(), bus->cart.mapper->_vram.data(), 0x800); // nametables
+	int nametableCount = bus->cart.mapper->GetMirrorMode() == MapperBase::MirrorMode::FOUR_SCREEN ? 4 : 2;
+	memcpy(dbgContext->ppuState.nametables.data(), bus->cart.mapper->_vram.data(), 0x400 * nametableCount);
 	// TODO - CHR memory read may be slow depending on mapper implementation
 	// Consider memcpy by page?
 	for (int i = 0; i < 0x2000; i++) {

@@ -18,8 +18,8 @@ public:
 	void Draw(const char* title, bool* p_open);
 
 private:
-	GLuint ntTextures[2] = { 0, 0 };
-	GLuint chr_textures[2] = { 0, 0 };
+	GLuint ntTextures[4] = { 0, 0, 0, 0 };
+	GLuint chr_textures[4] = { 0, 0, 0, 0 };
 	//void PPURenderToBackBuffer();
 
 	uint16_t GetBaseNametableAddress();
@@ -33,8 +33,7 @@ private:
 	void render_tile(std::array<uint32_t, 256 * 240>& buffer,
 		int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 
-	std::array<uint32_t, 256 * 240> nt0;
-	std::array<uint32_t, 256 * 240> nt1;
+	std::array<std::array<uint32_t, 256 * 240>, 4> *nt;
 	Core* _core;
 	Cartridge* _cartridge;
 	PPU* _ppu;

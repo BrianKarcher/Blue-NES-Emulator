@@ -12,7 +12,8 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
 	_ppu = core->emulator.GetPPU();
     _sharedContext = sharedCtx;
     _dbgContext = _sharedContext->debugger_context;
-    for (int i = 0; i < 2; i++) {
+    nt = new std::array<std::array<uint32_t, 256 * 240>, 4>();
+    for (int i = 0; i < 4; i++) {
         glGenTextures(1, &ntTextures[i]);
         glBindTexture(GL_TEXTURE_2D, ntTextures[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
@@ -21,7 +22,7 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
         glGenTextures(1, &chr_textures[i]);
         glBindTexture(GL_TEXTURE_2D, chr_textures[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
@@ -86,10 +87,11 @@ uint16_t PPUViewer::GetBaseNametableAddress() {
 // Also, cache the two nametables and only change them when needed (bank switch or write).
 void PPUViewer::DrawNametables() {
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
-        renderNametable(nt0, 0);
-		UpdateTexture(0, nt0);
-        renderNametable(nt1, 1);
-		UpdateTexture(1, nt1);
+		int nametableCount = _dbgContext->ppuState.mirrorMode == MapperBase::MirrorMode::FOUR_SCREEN ? 4 : 2;
+        for (int i = 0; i < nametableCount; i++) {
+            renderNametable((*nt)[i], i);
+            UpdateTexture(i, (*nt)[i]);
+        }
 
         // Logic to arrange the 4 slots based on mirroring
             // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
@@ -97,6 +99,9 @@ void PPUViewer::DrawNametables() {
         if (_dbgContext->ppuState.mirrorMode == MapperBase::MirrorMode::HORIZONTAL) {
             slots[0] = 0; slots[1] = 0; slots[2] = 1; slots[3] = 1;
         }
+        else if (_dbgContext->ppuState.mirrorMode == MapperBase::MirrorMode::FOUR_SCREEN) {
+            slots[0] = 0; slots[1] = 1; slots[2] = 2; slots[3] = 3;
+		}
         else {
             slots[0] = 0; slots[1] = 1; slots[2] = 0; slots[3] = 1;
         }
@@ -142,6 +147,19 @@ void PPUViewer::DrawNametables() {
 
         ImGui::Text("PPUCTRL Bits: %d | Base Offset: (%.0f, %.0f)", ntIndex, baseX, baseY);
         ImGui::Text("Fine Scroll: (%d, %d)", scrollX, scrollY);
+		std::string mirrorModeStr;
+		switch (_dbgContext->ppuState.mirrorMode) {
+		    case MapperBase::MirrorMode::HORIZONTAL:
+			    mirrorModeStr = "Horizontal";
+			    break;
+		    case MapperBase::MirrorMode::VERTICAL:
+			    mirrorModeStr = "Vertical";
+			    break;
+		    case MapperBase::MirrorMode::FOUR_SCREEN:
+			    mirrorModeStr = "Four Screen";
+			    break;
+		}
+        ImGui::Text("Mirror Mode: %s", mirrorModeStr.c_str());
     }
 }
 
