@@ -222,7 +222,7 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.ppu_->reset();
         nes.apu_->reset();
         nes.bus_->reset();
-        nes.cpu_->PowerOn();
+        nes.cpu_->Reset();
         //m_core.Reset();
         break;
     case CommandQueue::CommandType::CLOSE:

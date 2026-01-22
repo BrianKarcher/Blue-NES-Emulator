@@ -237,7 +237,7 @@ inline uint8_t PPU::read_register(uint16_t addr)
 			}
 			value = paletteTable[paletteAddr];
 			// But buffer is filled with the underlying nametable byte
-			uint16_t mirroredAddr = 0x2000 + (vramAddr & 0x2FFF); // Mirror nametables every 4KB
+			uint16_t mirroredAddr = 0x2000 + (vramAddr & 0xFFF); // Mirror nametables every 4KB
 			ppuDataBuffer = bus->cart.mapper->readCHR(mirroredAddr);
 			renderer->ppuIncrementVramAddr(m_ppuCtrl & PPUCTRL_INCREMENT ? 32 : 1); // increment v
 		}

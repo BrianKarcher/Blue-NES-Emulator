@@ -256,6 +256,7 @@ public:
 	// --- Constants for Phantom Opcodes ---
 	static constexpr uint16_t OP_NMI = 0x100;
 	static constexpr uint16_t OP_IRQ = 0x101;
+	static constexpr uint16_t OP_RESET = 0x102;
 
 	// The CPU Tick Loop
 	void cpu_tick();
@@ -265,209 +266,7 @@ public:
 		if (value & 0x80) m_p |= 0x80; else m_p &= ~0x80; // Negative Flag
 	}
 
-	void init_cpu() {
-		// Replace the problematic line with the following code to explicitly use a lambda function:  
-		//std::function<InstructionHandler> func = [](CPU& cpu) {
-		//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
-		//};
-		// Or use a direct function pointer assignment:
-
-		//std::function<void(CPU& cpu)> func = &run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>;
-
-		// $BD = LDA Absolute, X (Read operation)
-		// Mode_AbsoluteX takes <false> because LDA::is_write is false
-		//opcode_table[0xA5] = &run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>;
-
-		opcode_table[0x06] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ASL>>;
-		opcode_table[0x0A] = &run_accumulator_instruction<Op_ASL>;
-		opcode_table[0x0E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ASL>>;
-		opcode_table[0x16] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ASL>>;
-		opcode_table[0x1E] = &run_instruction<Mode_AbsoluteX<Op_ASL::is_rmw>, Op_RMW<Logic_ASL>>;
-
-		opcode_table[0x21] = &run_instruction<Mode_IndirectX, Op_AND>;
-		opcode_table[0x25] = &run_instruction<Mode_ZeroPage, Op_AND>;
-		opcode_table[0x29] = &run_instruction<Mode_Immediate, Op_AND>;
-		opcode_table[0x2D] = &run_instruction<Mode_Absolute, Op_AND>;
-		opcode_table[0x31] = &run_instruction<Mode_IndirectY<Op_AND::is_rmw>, Op_AND>;
-		opcode_table[0x35] = &run_instruction<Mode_ZeroPageX, Op_AND>;
-		opcode_table[0x39] = &run_instruction<Mode_AbsoluteY<Op_AND::is_rmw>, Op_AND>;
-		opcode_table[0x3D] = &run_instruction<Mode_AbsoluteX<Op_AND::is_rmw>, Op_AND>;
-
-		opcode_table[0x61] = &run_instruction<Mode_IndirectX, Op_ADC>;
-		opcode_table[0x65] = &run_instruction<Mode_ZeroPage, Op_ADC>;
-		opcode_table[0x69] = &run_instruction<Mode_Immediate, Op_ADC>;
-		opcode_table[0x6D] = &run_instruction<Mode_Absolute, Op_ADC>;
-		opcode_table[0x71] = &run_instruction<Mode_IndirectY<Op_ADC::is_rmw>, Op_ADC>;
-		opcode_table[0x75] = &run_instruction<Mode_ZeroPageX, Op_ADC>;
-		opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
-		opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
-
-		opcode_table[0x90] = &run_standalone_instruction<Op_BCC>;
-		opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
-		opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
-		opcode_table[0x30] = &run_standalone_instruction<Op_BMI>;
-		opcode_table[0xD0] = &run_standalone_instruction<Op_BNE>;
-		opcode_table[0x10] = &run_standalone_instruction<Op_BPL>;
-		opcode_table[0x50] = &run_standalone_instruction<Op_BVC>;
-		opcode_table[0x70] = &run_standalone_instruction<Op_BVS>;
-
-		opcode_table[0x00] = &run_standalone_instruction<Op_BRK>;
-
-		opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
-		opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
-
-		opcode_table[0x18] = &run_instruction<Mode_Implied, Op_CLC>;
-		opcode_table[0xD8] = &run_instruction<Mode_Implied, Op_CLD>;
-		opcode_table[0x58] = &run_instruction<Mode_Implied, Op_CLI>;
-		opcode_table[0xB8] = &run_instruction<Mode_Implied, Op_CLV>;
-
-		opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
-		opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
-		opcode_table[0xD5] = &run_instruction<Mode_ZeroPageX, Op_CMP>;
-		opcode_table[0xCD] = &run_instruction<Mode_Absolute, Op_CMP>;
-		opcode_table[0xDD] = &run_instruction<Mode_AbsoluteX<Op_CMP::is_rmw>, Op_CMP>;
-		opcode_table[0xD9] = &run_instruction<Mode_AbsoluteY<Op_CMP::is_rmw>, Op_CMP>;
-		opcode_table[0xC1] = &run_instruction<Mode_IndirectX, Op_CMP>;
-		opcode_table[0xD1] = &run_instruction<Mode_IndirectY<Op_CMP::is_rmw>, Op_CMP>;
-
-		opcode_table[0xE0] = &run_instruction<Mode_Immediate, Op_CPX>;
-		opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
-		opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
-
-		opcode_table[0xC0] = &run_instruction<Mode_Immediate, Op_CPY>;
-		opcode_table[0xC4] = &run_instruction<Mode_ZeroPage, Op_CPY>;
-		opcode_table[0xCC] = &run_instruction<Mode_Absolute, Op_CPY>;
-
-		opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_DEC>>;
-		opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_DEC>>;
-		opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_DEC>>;
-		opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_DEC>>;
-
-		opcode_table[0xCA] = &run_instruction<Mode_Implied, Op_DEX>;
-		opcode_table[0x88] = &run_instruction<Mode_Implied, Op_DEY>;
-
-		opcode_table[0x49] = &run_instruction<Mode_Immediate, Op_EOR>;
-		opcode_table[0x45] = &run_instruction<Mode_ZeroPage, Op_EOR>;
-		opcode_table[0x55] = &run_instruction<Mode_ZeroPageX, Op_EOR>;
-		opcode_table[0x4D] = &run_instruction<Mode_Absolute, Op_EOR>;
-		opcode_table[0x5D] = &run_instruction<Mode_AbsoluteX<Op_EOR::is_write>, Op_EOR>;
-		opcode_table[0x59] = &run_instruction<Mode_AbsoluteY<Op_EOR::is_write>, Op_EOR>;
-		opcode_table[0x41] = &run_instruction<Mode_IndirectX, Op_EOR>;
-		opcode_table[0x51] = &run_instruction<Mode_IndirectY<Op_EOR::is_write>, Op_EOR>;
-
-		opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_INC>>;
-		opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_INC>>;
-		opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_INC>>;
-		// $FE: INC Absolute, X
-		// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
-		opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_INC>>;
-		opcode_table[0xE8] = &run_instruction<Mode_Implied, Op_INX>;
-		opcode_table[0xC8] = &run_instruction<Mode_Implied, Op_INY>;
-
-		opcode_table[0x4C] = &run_standalone_instruction<Op_JMP_Absolute>;
-		opcode_table[0x6C] = &run_standalone_instruction<Op_JMP_Indirect>;
-
-		opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
-
-		opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
-		opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
-		opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
-		opcode_table[0xAD] = &run_instruction<Mode_Absolute, Op_LDA>;
-		opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
-		opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
-		opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
-		opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
-
-		opcode_table[0xA2] = &run_instruction<Mode_Immediate, Op_LDX>;
-		opcode_table[0xA6] = &run_instruction<Mode_ZeroPage, Op_LDX>;
-		opcode_table[0xB6] = &run_instruction<Mode_ZeroPageY, Op_LDX>;
-		opcode_table[0xAE] = &run_instruction<Mode_Absolute, Op_LDX>;
-		opcode_table[0xBE] = &run_instruction<Mode_AbsoluteY<Op_LDX::is_rmw>, Op_LDX>;
-
-		opcode_table[0xA0] = &run_instruction<Mode_Immediate, Op_LDY>;
-		opcode_table[0xA4] = &run_instruction<Mode_ZeroPage, Op_LDY>;
-		opcode_table[0xB4] = &run_instruction<Mode_ZeroPageX, Op_LDY>;
-		opcode_table[0xAC] = &run_instruction<Mode_Absolute, Op_LDY>;
-		opcode_table[0xBC] = &run_instruction<Mode_AbsoluteX<Op_LDY::is_rmw>, Op_LDY>;
-
-		opcode_table[0x4A] = &run_instruction<Mode_Implied, Op_LSR_Accumulator>;
-		opcode_table[0x46] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_LSR>>;
-		opcode_table[0x56] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_LSR>>;
-		opcode_table[0x4E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_LSR>>;
-		opcode_table[0x5E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_LSR>>;
-
-		opcode_table[0xEA] = &run_instruction<Mode_Implied, Op_NOP>;
-
-		opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
-		opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
-		opcode_table[0x15] = &run_instruction<Mode_ZeroPageX, Op_ORA>;
-		opcode_table[0x0D] = &run_instruction<Mode_Absolute, Op_ORA>;
-		opcode_table[0x1D] = &run_instruction<Mode_AbsoluteX<Op_ORA::is_rmw>, Op_ORA>;
-		opcode_table[0x19] = &run_instruction<Mode_AbsoluteY<Op_ORA::is_rmw>, Op_ORA>;
-		opcode_table[0x01] = &run_instruction<Mode_IndirectX, Op_ORA>;
-		opcode_table[0x11] = &run_instruction<Mode_IndirectY<Op_ORA::is_rmw>, Op_ORA>;
-
-		opcode_table[0x48] = &run_standalone_instruction<Op_PHA>;
-		opcode_table[0x08] = &run_standalone_instruction<Op_PHP>;
-		opcode_table[0x68] = &run_standalone_instruction<Op_PLA>;
-		opcode_table[0x28] = &run_standalone_instruction<Op_PLP>;
-
-		opcode_table[0x2A] = &run_instruction<Mode_Implied, Op_ROL_Accumulator>;
-		opcode_table[0x26] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ROL>>;
-		opcode_table[0x36] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ROL>>;
-		opcode_table[0x2E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ROL>>;
-		opcode_table[0x3E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_ROL>>;
-
-		opcode_table[0x6A] = &run_instruction<Mode_Implied, Op_ROR_Accumulator>;
-		opcode_table[0x66] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ROR>>;
-		opcode_table[0x76] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ROR>>;
-		opcode_table[0x6E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ROR>>;
-		opcode_table[0x7E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_ROR>>;
-		
-		
-		opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
-		opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
-
-		opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
-		opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
-		opcode_table[0xE9] = &run_instruction<Mode_Immediate, Op_SBC>;
-		opcode_table[0xED] = &run_instruction<Mode_Absolute, Op_SBC>;
-		opcode_table[0xF1] = &run_instruction<Mode_IndirectY<Op_SBC::is_rmw>, Op_SBC>;
-		opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
-		opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
-		opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
-
-		opcode_table[0x38] = &run_instruction<Mode_Implied, Op_SEC>;
-		opcode_table[0xF8] = &run_instruction<Mode_Implied, Op_SED>;
-		opcode_table[0x78] = &run_instruction<Mode_Implied, Op_SEI>;
-
-		opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
-		opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
-		opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
-		opcode_table[0x91] = &run_instruction<Mode_IndirectY<Op_STA::is_rmw>, Op_STA>;
-		opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
-		opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
-		opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
-
-		opcode_table[0x86] = &run_instruction<Mode_ZeroPage, Op_STX>;
-		opcode_table[0x96] = &run_instruction<Mode_ZeroPageY, Op_STX>;
-		opcode_table[0x8E] = &run_instruction<Mode_Absolute, Op_STX>;
-
-		opcode_table[0x84] = &run_instruction<Mode_ZeroPage, Op_STY>;
-		opcode_table[0x94] = &run_instruction<Mode_ZeroPageX, Op_STY>;
-		opcode_table[0x8C] = &run_instruction<Mode_Absolute, Op_STY>;
-
-		opcode_table[0xAA] = &run_instruction<Mode_Implied, Op_TAX>;
-		opcode_table[0xA8] = &run_instruction<Mode_Implied, Op_TAY>;
-		opcode_table[0xBA] = &run_instruction<Mode_Implied, Op_TSX>;
-		opcode_table[0x8A] = &run_instruction<Mode_Implied, Op_TXA>;
-		opcode_table[0x9A] = &run_instruction<Mode_Implied, Op_TXS>;
-		opcode_table[0x98] = &run_instruction<Mode_Implied, Op_TYA>;
-
-		// Phantom op codes
-		opcode_table[0x100] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
-		opcode_table[0x101] = &run_standalone_instruction<Op_HardwareInterrupt_IRQ>;
-	}
+	void init_cpu();
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
@@ -1657,6 +1456,64 @@ private:
 		}
 	};
 
+	struct Op_HardwareReset {
+		static bool step(CPU& cpu) {
+			switch (cpu.cycle_state) {
+			case 1: // T1: Initial dummy read
+				cpu.ReadByte(cpu.m_pc);
+				cpu.cycle_state = 2;
+				return false;
+
+			case 2: // T2: Dummy read (Stack Pointer is typically decremented but not written to)
+				cpu.ReadByte(0x0100 + cpu.m_sp--);
+				cpu.cycle_state = 3;
+				return false;
+
+			case 3: // T3: Dummy read 
+				cpu.ReadByte(0x0100 + cpu.m_sp--);
+				cpu.cycle_state = 4;
+				return false;
+
+			case 4: // T4: Dummy read
+				cpu.ReadByte(0x0100 + cpu.m_sp--);
+				cpu.cycle_state = 5;
+				return false;
+
+			case 5: // T5: Fetch Reset Vector Low
+				cpu.addr_low = cpu.ReadByte(0xFFFC);
+				// The Interrupt flag is set to prevent IRQs during bootup
+				cpu.SetFlag(FLAG_INTERRUPT);
+				cpu.cycle_state = 6;
+				return false;
+
+			case 6: // T6: Fetch Reset Vector High
+				cpu.addr_high = cpu.ReadByte(0xFFFD);
+				cpu.m_pc = (cpu.addr_high << 8) | cpu.addr_low;
+
+				// Reset internal interrupt latches to prevent stale signals
+				cpu.nmi_need = false;
+				cpu.nmi_previous_need = false;
+
+				cpu.cycle_state = 0;
+				cpu.reset_line = false;
+
+				cpu.irq_line = false;
+				cpu.prev_run_irq = false;
+				cpu.run_irq = false;
+				return true; // Complete
+			}
+			return false;
+		}
+	};
+
+	struct Op_HLT {
+		static bool step(CPU& cpu) {
+			cpu.m_pc -= 1; // Stay on this instruction
+			return true;
+		}
+		static constexpr bool is_rmw = false; // Trait used by the Addressing Mode
+	};
+
 	struct Logic_INC {
 		static void execute(CPU& cpu, uint8_t& val) {
 			val++;
@@ -2332,6 +2189,8 @@ private:
 	bool prev_run_irq;
 	bool run_irq;
 	bool irq_line;
+
+	bool reset_line;
 
 	int checkInterrupts();
 	void handleNMI();
