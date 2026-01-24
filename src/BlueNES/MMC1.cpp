@@ -50,20 +50,19 @@ inline void MMC1::dbg(const wchar_t* fmt, ...) const {
 
 void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {
 	// Ignore writes that happen too close together (within 2 CPU cycles)
-	//if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
-	//	LOG(L"MMC1: Ignoring consecutive-cycle write\n");
-	//	return;
-	//}
-	//lastWriteCycle = currentCycle;
+	// "On consecutive-cycle writes, writes to the shift register (D0) after the first are ignored."
+	if (currentCycle > 0 && (currentCycle - lastWriteCycle) < 2) {
+		LOG(L"MMC1: Ignoring consecutive-cycle write\n");
+		return;
+	}
+	lastWriteCycle = currentCycle;
 	// Debug print
 	//std::string bits = std::bitset<8>(shiftRegister).to_string();
 	//std::wstring wbits(bits.begin(), bits.end());
 	//LOG(L"MMC1 write 0x%04X = 0x%02X  shiftReg=0b%s\n",
 	//	addr, val, wbits.c_str());
-	wchar_t buffer[60];
 	//std::wstring bits = std::to_wstring(std::bitset<8>(shiftRegister).to_string());
-	//swprintf_s(buffer, L"MMC 0x%08X %S %S\n", addr, std::bitset<8>(val).to_string().c_str(), std::bitset<8>(shiftRegister).to_string().c_str());  // 8-digit uppercase hex
-	//OutputDebugStringW(buffer);
+	LOG(L"MMC 0x%08X %S %S\n", addr, std::bitset<8>(val).to_string().c_str(), std::bitset<8>(shiftRegister).to_string().c_str());  // 8-digit uppercase hex
 	//OutputDebugStringW((L"MMC " + std::to_wstring(addr) + L" " + std::to_wstring(val) + L" " + std::to_wstring(shiftRegister) + L"\n").c_str());
 	// High bit resets the shift register.
 	if (val & 0x80) {
@@ -147,6 +146,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		
 		if (boardType == BoardType::SUROM) {
 			suromPrgOuterBank = (val & 0x10);
+			LOG(L"SUROM: CHR bank 0 set, outer PRG bank = %d\n", suromPrgOuterBank ? 1 : 0);
 		}
 	}
 	// CHR Bank 1
@@ -158,6 +158,7 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 			chrBank1Reg = val & 0x1F;
 			if (boardType == BoardType::SUROM) {
 				suromPrgOuterBank = (val & 0x10);
+				LOG(L"SUROM: CHR bank 1 set, outer PRG bank = %d\n", suromPrgOuterBank ? 1 : 0);
 			}
 		}
 	}

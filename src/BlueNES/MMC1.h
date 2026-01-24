@@ -58,6 +58,6 @@ private:
 	Cartridge* cartridge;
 	CPU& cpu;
 	//ines_file_t* inesFile;
-	//uint64_t lastWriteCycle = 0;
+	uint64_t lastWriteCycle = 0;
 	bool debug = false;
 };
