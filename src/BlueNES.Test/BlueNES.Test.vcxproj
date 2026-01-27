@@ -78,7 +78,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\zlib-1.3.1\out\install\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\libzip-1.11.4\out\build\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\bin\win-x64\Release;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)\bin\win-$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -105,7 +106,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;CPU.obj;Bus.obj;Mapper.obj;EmulatorCore.obj;PPU.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;Input.obj;MMC1.obj;NROM.obj;RendererLoopy.obj;Core.obj;DebuggerUI.obj;Nes.obj;AudioMapper.obj;MemoryMapper.obj;InputMappers.obj;Serializer.obj;AxROMMapper.obj;MMC3.obj;UxROMMapper.obj;APU.obj;imgui.obj;imgui_draw.obj;imgui_impl_opengl3.obj;imgui_impl_sdl2.obj;imgui_tables.obj;imgui_widgets.obj;imguifiledialog.obj;DebuggerContext.obj;PPUViewer.obj;MapperBase.obj;HexViewer.obj;CNROM.obj;SharedContext.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;SevenZip.lib;zip.lib;zlibd.lib;zlibstaticd.lib;CPU.obj;Bus.obj;Mapper.obj;EmulatorCore.obj;PPU.obj;Cartridge.obj;INESLoader.obj;AudioBackend.obj;Input.obj;MMC1.obj;NROM.obj;RendererLoopy.obj;Core.obj;DebuggerUI.obj;Nes.obj;AudioMapper.obj;MemoryMapper.obj;InputMappers.obj;Serializer.obj;AxROMMapper.obj;MMC3.obj;UxROMMapper.obj;APU.obj;imgui.obj;imgui_draw.obj;imgui_impl_opengl3.obj;imgui_impl_sdl2.obj;imgui_tables.obj;imgui_widgets.obj;imguifiledialog.obj;DebuggerContext.obj;PPUViewer.obj;MapperBase.obj;HexViewer.obj;CNROM.obj;SharedContext.obj;DxROM.obj;MMC2Mapper.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>copy "..\BlueNES\x64\Debug\cpu.obj" "$(OutDir)"</Command>
@@ -170,6 +171,7 @@
     <ClCompile Include="APU.Test.cpp" />
     <ClCompile Include="AudioBackend.Test.cpp" />
     <ClCompile Include="BlueNES.Test.cpp" />
+    <ClCompile Include="MMC1.Test.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

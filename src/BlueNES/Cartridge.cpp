@@ -266,7 +266,7 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
         mapper = new NROM(this);
         break;
     case 1:
-        mapper = new MMC1(this, cpu, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC1(this, cpu);
         break;
     case 2:
 		mapper = new UxROMMapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);

@@ -5,7 +5,7 @@
 #include <bitset>
 #include "CPU.h"
 
-MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize) : cpu(c) {
+MMC1::MMC1(Cartridge* cartridge, CPU& c) : cpu(c) {
 	MapperBase::SetPrgPageSize(0x4000);
 	MapperBase::SetChrPageSize(0x1000);
 	// We use the 1 bit to track when the register is full, instead of a separate counter.
@@ -15,10 +15,14 @@ MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize)
 	chrBank0Reg = 0;
 	chrBank1Reg = 0;
 	prgBankReg = 0; // MMC1 starts Bank 0 at $8000
-	prgBank16kCount = prgRomSize;
+	this->cartridge = cartridge;
+}
+
+void MMC1::initialize(ines_file_t& data) {
+	prgBank16kCount = data.header.prg_rom_size;
 	suromPrgOuterBank = 0;
 	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
-	chrBankCount = chrRomSize * 2;
+	chrBankCount = data.header.chr_rom_size * 2;
 	// Detect board type from PRG/CHR configuration
 	if (prgBank16kCount == 4 && chrBankCount == 4) {
 		boardType = BoardType::SAROM;   // 64KB PRG, 16KB CHR-ROM
@@ -32,7 +36,7 @@ MMC1::MMC1(Cartridge* cartridge, CPU& c, uint8_t prgRomSize, uint8_t chrRomSize)
 	else {
 		boardType = BoardType::GenericMMC1;
 	}
-	this->cartridge = cartridge;
+	MapperBase::initialize(data);
 }
 
 // ---------------- Debug helper ----------------
