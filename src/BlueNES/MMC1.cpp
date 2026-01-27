@@ -192,6 +192,7 @@ void MMC1::RecomputePrgMappings() {
 	if (boardType == BoardType::SUROM) {
 		// SUROM has 512KB PRG-ROM (32 x 16KB banks), but only 16 banks are selectable
 		prgBank &= 15;
+		// SUROM uses the outer bank bit from the CHR bank register to select high bit of PRG bank
 		prgBank |= suromPrgOuterBank; // set bit 4 from CHR bank reg bit 4
 		lastBankStart = suromPrgOuterBank ? 31 : 15;
 	}

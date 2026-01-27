@@ -146,15 +146,33 @@ namespace BlueNESTest
 
 			// Test upper 256 KB (outer bank = 1)
 			WriteMMC1(0xA000, 0x10); // Set CHR bank 0 to 0x10 (outer bank = 1)
-			WriteMMC1(0xE000, 0x07); // Set PRG bank to 0x07
-			Assert::AreEqual((uint8_t)0x07, mmc1->prgBankReg, L"PRG bank not set correctly for upper 256 KB");
 			Assert::AreEqual((uint8_t)0x10, mmc1->suromPrgOuterBank, L"Outer bank not set to 1 for upper 256 KB");
 
 			// Verify PRG mapping
-			//for (int i = 0x8000; i <= 0xFFFF; i++) {
-			//	uint8_t prgData = bus->peek(i); // Read from $8000
-			//	Assert::AreEqual(static_cast<uint8_t>(((i - 0x8000) / 0x4000) + 16), prgData, L"PRG data incorrect for upper 256 KB");
-			//}
+			// Check the upper 256 KB
+			for (int j = 0; j < 15; j++) {
+				WriteMMC1(0xE000, j); // Set PRG bank to j
+				Assert::AreEqual((uint8_t)(j), mmc1->prgBankReg, L"PRG bank not set correctly for upper 256 KB");
+				for (int i = 0x8000; i < 0xC000; i++) {
+					//if (i == 0xC000) { // There's an error on bank 1?
+					//	int j = 0;
+					//}
+					uint8_t prgData = bus->peek(i); // Read from $8000
+					// Expected address into the PRG ROM
+					int addr = (j * 0x4000) + (i - 0x8000) + (16 * 0x4000);
+					std::wstring msg = L"PRG data incorrect for lower 256 KB (addr=" + std::to_wstring(addr) + L"), data=" + std::to_wstring(prgData);
+					Assert::AreEqual(static_cast<uint8_t>(addr / 0x4000), prgData, msg.c_str());
+				}
+				// Verify the fixed bank at $C000-$FFFF
+				for (int i = 0xC000; i <= 0xFFFF; i++) {
+					//if (i == 0xC000) { // There's an error on bank 1?
+					//	int j = 0;
+					//}
+					uint8_t prgData = bus->peek(i); // Read from $8000
+					std::wstring msg = L"PRG data incorrect for upper 256 KB (bank=31) data=" + std::to_wstring(prgData);
+					Assert::AreEqual(static_cast<uint8_t>(31), prgData, msg.c_str());
+				}
+			}
 		}
 	};
 }
