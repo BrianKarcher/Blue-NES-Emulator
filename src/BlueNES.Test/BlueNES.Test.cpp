@@ -2300,5 +2300,16 @@ namespace BlueNESTest
 			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 			Assert::IsTrue(cpu->GetCycleCount() == 2);
 		}
+
+		// Unofficial op codes
+		TEST_METHOD(TestNOPZP04)
+		{
+			uint8_t rom[] = { 0x04, 0x00 }; // 0000 1111
+			cart->mapper->SetPRGRom(rom, sizeof(rom));
+			RunInst();
+			// A (0xF0) | M (0x0F) = 0xFF
+			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
+			Assert::IsTrue(cpu->GetCycleCount() == 3);
+		}
 	};
 }

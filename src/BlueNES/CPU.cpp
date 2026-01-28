@@ -663,6 +663,9 @@ void CPU::init_cpu() {
 	opcode_table[OP_NMI] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
 	opcode_table[OP_IRQ] = &run_standalone_instruction<Op_HardwareInterrupt_IRQ>;
 	opcode_table[OP_RESET] = &run_standalone_instruction<Op_HardwareReset>;
+
+	// Unnoficial op codes
+	opcode_table[0x04] = &run_instruction<Mode_ZeroPage, Op_NOP>;
 }
 
 void CPU::buildMap() {
