@@ -41,7 +41,6 @@ void MMC1::initialize(ines_file_t& data) {
 
 // ---------------- Debug helper ----------------
 inline void MMC1::dbg(const wchar_t* fmt, ...) const {
-#ifdef MMC1DEBUG
 	if (!debug) return;
 	wchar_t buf[512];
 	va_list args;
@@ -49,7 +48,6 @@ inline void MMC1::dbg(const wchar_t* fmt, ...) const {
 	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
 	va_end(args);
 	OutputDebugStringW(buf);
-#endif
 }
 
 void MMC1::writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) {

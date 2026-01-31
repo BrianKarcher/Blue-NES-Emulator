@@ -21,7 +21,7 @@ public:
 
 	RAMMapper ramMapper;
 	// Some addresses are mapped to different devices, so we use a memory map
-	// An example is 0x4017, which is mapped to the APU (write), but also to the Input device (read)
+	// An example is 0x4017, which is mapped to the APU (write), but also to an Input device (read)
 	MemoryMapper** readMemoryMap; // 64KB memory map
 	MemoryMapper** writeMemoryMap; // 64KB memory map
 

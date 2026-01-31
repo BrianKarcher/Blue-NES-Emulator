@@ -2294,6 +2294,7 @@ namespace BlueNESTest
 			uint8_t rom[] = { TYA_IMPLIED };
 			cart->mapper->SetPRGRom(rom, sizeof(rom));
 			cpu->SetY(0x77);
+			cpu->SetA(0x05);
 			RunInst();
 			Assert::AreEqual((uint8_t)0x77, cpu->GetA());
 			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
@@ -2304,10 +2305,9 @@ namespace BlueNESTest
 		// Unofficial op codes
 		TEST_METHOD(TestNOPZP04)
 		{
-			uint8_t rom[] = { 0x04, 0x00 }; // 0000 1111
+			uint8_t rom[] = { 0x04, 0x00 };
 			cart->mapper->SetPRGRom(rom, sizeof(rom));
 			RunInst();
-			// A (0xF0) | M (0x0F) = 0xFF
 			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
 			Assert::IsTrue(cpu->GetCycleCount() == 3);
 		}

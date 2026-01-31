@@ -2,6 +2,15 @@
 #include "Mapper.h"
 #include <array>
 #include <cstdint>
+#include <stdarg.h>
+
+//#define MAPPERDEBUG
+
+#if defined(_DEBUG) && defined(MAPPERDEBUG)
+#define LOG(...) dbg(__VA_ARGS__)
+#else
+#define LOG(...) do {} while(0) // completely removed by compiler
+#endif
 
 // TODO : Integrate common mapper functionality here
 class MapperBase : public Mapper {
@@ -21,12 +30,14 @@ public:
 	uint16_t _prgPageSize = 0;
 	uint16_t _prgRomSize = 0;
 	uint8_t _prgPageCount = 0;
-	uint8_t* _chrPages[0x100];
+	uint8_t* _ppuPages[0x100];
+	bool _isPpuPageWritable[0x100];
 	uint16_t _chrPageSize = 0;
 	uint16_t _chrRomSize = 0;
 	uint8_t _chrPageCount = 0;
 	const uint16_t _nametablePageSize = 0x400;
 
+	inline void dbg(const wchar_t* fmt, ...) const;
 	virtual void RecomputeMappings();
 	virtual void RecomputePrgMappings() = 0;
 	virtual void RecomputeChrMappings() = 0;
@@ -48,7 +59,7 @@ public:
 
 	void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle);
 	virtual inline uint8_t readCHR(uint16_t addr) {
-		return _chrPages[addr >> 8][addr & 0xFF];
+		return _ppuPages[addr >> 8][addr & 0xFF];
 	}
 
 	MapperBase::MirrorMode GetMirrorMode();

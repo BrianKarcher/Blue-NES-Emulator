@@ -13,7 +13,7 @@ Bus::Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMap
     // This may not be needed
     ramMapper.cpuRAM.fill(0);
 	readMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
-	writeMemoryMap = new MemoryMapper * [0x10000]; // 64KB address space
+	writeMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
 	for (int i = 0; i < 0x10000; i++) {
 		readMemoryMap[i] = &openBus;
 		writeMemoryMap[i] = &openBus;

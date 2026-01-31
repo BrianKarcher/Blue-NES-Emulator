@@ -1,13 +1,30 @@
 #include "MapperBase.h"
 #include "Serializer.h"
+#include <Windows.h>
 
 void MapperBase::initialize(ines_file_t& data) {
 	Mapper::initialize(data);
+	for (int i = 0; i < 0x20; i++) {
+		_isPpuPageWritable[i] = isCHRWritable;
+	}
+	for (int i = 0x20; i < 0x100; i++) {
+		_isPpuPageWritable[i] = true;
+	}
 	_vram.resize(_nametableRamSize);
 	m_mirrorMode = data.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
 	_prgRomSize = data.header.prg_rom_size * 16384;
 	_chrRomSize = data.header.chr_rom_size * 8192;
 	RecomputeMappings();
+}
+
+// ---------------- Debug helper ----------------
+inline void MapperBase::dbg(const wchar_t* fmt, ...) const {
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
 }
 
 void MapperBase::SetPrgPageSize(uint16_t pageSize) {
@@ -61,12 +78,13 @@ void MapperBase::SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uin
 	// (0x2000 PPU range / 256 bytes = 32 entries)
 	uint8_t startPage = startInclusive >> 8;
 	uint8_t endPage = endExclusive >> 8;
+	LOG(L"Mapper SetChrRange: start=0x%04X end=0x%04X bank=0x%08X\n", startInclusive, endExclusive, bankOffset);
 	for (int i = startPage; i < endPage; i++) {
 		// Calculate how many bytes into the requested bank we are
 		uint32_t relativeOffset = (i - startPage) * 256;
 
 		// Map the pointer to the specific 256-byte chunk in the ROM
-		_chrPages[i] = &source[bankOffset + relativeOffset];
+		_ppuPages[i] = &source[bankOffset + relativeOffset];
 	}
 }
 
@@ -75,9 +93,10 @@ void MapperBase::writePRGROM(uint16_t address, uint8_t data, uint64_t currentCyc
 }
 
 void MapperBase::writeCHR(uint16_t addr, uint8_t data) {
-	//if (isCHRWritable) {
-		_chrPages[addr >> 8][addr & 0xFF] = data;
-	//}
+	uint8_t addrHi = addr >> 8;
+	if (_isPpuPageWritable[addrHi]) {
+		_ppuPages[addrHi][addr & 0xFF] = data;
+	}
 }
 
 void MapperBase::RecomputeMappings() {

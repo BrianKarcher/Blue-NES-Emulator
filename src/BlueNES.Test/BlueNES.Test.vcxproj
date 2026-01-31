@@ -78,7 +78,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\BlueNES\x64\Debug;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Brian Karcher\source\repos\SDL2-2.32.10\lib\x64;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\zlib-1.3.1\out\install\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\libzip-1.11.4\out\build\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\bin\win-x64\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>E:\Projects\SDL2-2.32.10\lib\x64;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\zlib-1.3.1\out\install\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\Third Party\libzip-1.11.4\out\build\x64-Debug\lib;C:\Users\Brian Karcher\source\repos\Blue-NES-Emulator\src\bin\win-x64\Release;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\bin\win-$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
