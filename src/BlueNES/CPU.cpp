@@ -219,7 +219,7 @@ inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
 #endif
 }
 
-void CPU::PowerOn() {
+void CPU::PowerCycle() {
 	uint8_t resetLo = ReadByte(0xFFFC);
 	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;

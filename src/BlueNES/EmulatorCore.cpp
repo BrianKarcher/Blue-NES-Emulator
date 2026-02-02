@@ -206,9 +206,9 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.cart_->unload();
         nes.ppu_->reset();
         nes.apu_->reset();
-        nes.bus_->reset();
+        nes.bus_->PowerCycle();
         nes.cart_->LoadROM(cmd.data);
-        nes.cpu_->PowerOn();
+        nes.cpu_->PowerCycle();
         m_paused = false;
         UpdateNextFrameTime();
         // Set up DMC read callback
@@ -223,14 +223,20 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.apu_->reset();
         nes.bus_->reset();
         nes.cpu_->Reset();
-        //m_core.Reset();
+        break;
+    case CommandQueue::CommandType::POWER:
+        audioBackend.resetBuffer();
+        nes.ppu_->reset();
+        nes.apu_->reset();
+        nes.bus_->PowerCycle();
+        nes.cpu_->PowerCycle();
         break;
     case CommandQueue::CommandType::CLOSE:
         context.coreRunning.store(false);
         audioBackend.resetBuffer();
         nes.ppu_->reset();
         nes.apu_->reset();
-        nes.bus_->reset();
+        nes.bus_->PowerCycle();
         m_paused = true;
         // Set up DMC read callback
         nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {

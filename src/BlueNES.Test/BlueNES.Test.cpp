@@ -46,7 +46,7 @@ namespace BlueNESTest
 			uint8_t chr[0x2000];
 			cart->mapper->SetCHRRom(chr, sizeof(chr));
 			cart->mapper->RecomputeMappings();
-			cpu->PowerOn();
+			cpu->PowerCycle();
 			cpu->SetPC(0x8000);
 			//bus->cart = &cart;
 			//bus->cpu = &processor;

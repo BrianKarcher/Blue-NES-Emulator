@@ -7,6 +7,7 @@
 #include "MemoryMapper.h"
 #include "OpenBusMapper.h"
 #include "Serializer.h"
+#include <time.h>
 
 Bus::Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
@@ -18,6 +19,7 @@ Bus::Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMap
 		readMemoryMap[i] = &openBus;
 		writeMemoryMap[i] = &openBus;
 	}
+	srand((unsigned)time(NULL));
 }
 
 Bus::~Bus() {
@@ -26,6 +28,17 @@ Bus::~Bus() {
 }
 
 void Bus::reset() {
+}
+
+inline uint8_t Bus::RandomByte() {
+	return rand() & 0xFF;
+}
+
+void Bus::PowerCycle() {
+	ramMapper.cpuRAM.fill(0xFF);
+	/*for (auto& byte : ramMapper.cpuRAM) {
+		byte = RandomByte();
+	}*/
 }
 
 void Bus::ReadRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {

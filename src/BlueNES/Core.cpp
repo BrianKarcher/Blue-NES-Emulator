@@ -398,6 +398,12 @@ void Core::RunMessageLoop()
                         context.command_queue.Push(cmd);
                         isPlaying = true;
                     }
+                    if (ImGui::MenuItem("Power", nullptr, false, isPlaying)) {
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::POWER;
+                        context.command_queue.Push(cmd);
+                        isPlaying = true;
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Debug")) {

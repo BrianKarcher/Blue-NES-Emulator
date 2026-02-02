@@ -41,6 +41,8 @@ public:
 	void performDMA(uint8_t page);
 
 	void reset();
+	inline uint8_t RandomByte();
+	void PowerCycle();
 	bool IrqPending();
 
 	// Devices connected to the bus

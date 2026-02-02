@@ -203,8 +203,8 @@ public:
 	void setNMI(bool state);
 	void SetIRQImmediate();
 	void setIRQ(bool state);
-	// Power On and Reset are different
-	void PowerOn();
+	// Power Cycle and Reset are different
+	void PowerCycle();
 	uint8_t Clock();
 	uint8_t GetA();
 	void SetA(uint8_t a);

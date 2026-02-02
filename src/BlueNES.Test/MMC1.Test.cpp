@@ -50,7 +50,7 @@ namespace BlueNESTest
 			inesHeader.prg_rom->size = prgRom.size();
 			inesHeader.chr_rom = new chr_rom_data_t();
 			cart->mapper->initialize(inesHeader);
-			cpu->PowerOn();
+			cpu->PowerCycle();
 			cpu->SetPC(0x8000);
 		}
 
