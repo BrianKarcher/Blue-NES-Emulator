@@ -115,7 +115,7 @@ void Nes::clock() {
 }
 
 bool Nes::frameReady() {
-	return ppu_->isFrameComplete();
+	return ppu_->isFrameTicked();
 }
 
 void Nes::Serialize(Serializer& serializer) {

@@ -459,8 +459,17 @@ void PPU::get_palette(uint8_t paletteIndex, std::array<uint32_t, 4>& colors)
 	colors[3] = m_nesPalette[paletteTable[paletteAddr + 3] & 0x3F];
 }
 
+// The difference between FrameComplete and FrameTick is that FrameComplete marks we are in VBlank.
+// FrameComplete cannot be modified outside of RendererLoopy - it is a rendering state.
+// FrameTick is an event that informs the caller that a frame is complete. The caller will reset this event flag
+// once handled. The caller, upon receiving this event, will do things like sending the audio buffer to the audio
+// device, and other tasks in preparation for the next frame.
 bool PPU::isFrameComplete() {
 	return renderer->isFrameComplete();
+}
+
+bool PPU::isFrameTicked() {
+	return renderer->m_frameTick;
 }
 
 void PPU::setFrameComplete(bool complete) {

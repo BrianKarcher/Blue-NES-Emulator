@@ -12,6 +12,7 @@
 #include "Serializer.h"
 #include <fstream>
 #include "DebuggerContext.h"
+#include "RendererLoopy.h"
 
 EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     dbgCtx = ctx.debugger_context;
@@ -175,13 +176,14 @@ int EmulatorCore::runFrame() {
 	if (!context.is_running) return 0;
     
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-    nes.ppu_->setFrameComplete(false);
+    //nes.ppu_->setFrameComplete(false);
+    nes.ppu_->renderer->m_frameTick = false;
 
     // Submit the exact samples generated this frame
     // Check audio queue to prevent unbounded growth
     size_t queuedSamples = audioBackend.GetQueuedSampleCount();
     const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-    while (nes.audioBuffer.size() < 735) {
+    while (nes.audioBuffer.size() > 0 && nes.audioBuffer.size() < 735) {
         // Not enough samples generated - pad with last value
 		nes.audioBuffer.push_back(nes.audioBuffer[nes.audioBuffer.size() - 1]);
     }

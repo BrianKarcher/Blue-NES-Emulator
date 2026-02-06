@@ -97,6 +97,7 @@ public:
     void setMapper(A12Mapper* mapper) {
         m_mapper = mapper;
     }
+    bool m_frameTick = false;
 
     void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);

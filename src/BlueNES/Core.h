@@ -109,6 +109,7 @@ private:
 	void DrawGameCentered();
 
 	void PollControllerState();
+	bool PollSDLEvents();
 	bool isPaused;
 	std::string lastOpenedPath = ".";
 

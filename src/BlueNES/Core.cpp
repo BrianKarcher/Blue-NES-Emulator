@@ -252,49 +252,14 @@ void Core::DrawGameCentered() {
     ImGui::Image((void*)(intptr_t)nes_texture, displaySize);
 }
 
-void Core::RunMessageLoop()
-{
-    MSG msg;
-    bool done = false;
+/// <summary>
+///
+/// </summary>
+/// <returns>Returns true if application should shut down.</returns>
+bool Core::PollSDLEvents() {
+    SDL_Event event;
+    bool shutdown = false;
 
-    int cpuCycleDebt = 0;
-    const int RENDER_TIMEOUT_MS = 16;
-    static int titleUpdateDelay = 60;
-    HACCEL hAccel = LoadAccelerators(HINST_THISCOMPONENT, MAKEINTRESOURCE(IDR_ACCELERATOR1));
-    
-    float ticksPerSec = (float)SDL_GetPerformanceFrequency();
-	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
-    int frameCount = 0;
-    while (!done) {
-
-
-        // TODO IMPLEMENT THESE!
-
-        //case ID_FILE_EXIT:
-        //    PostQuitMessage(0);
-        //    break;
-        //case ID_FILE_CLOSE:
-        //{
-        //    CommandQueue::Command cmd;
-        //    cmd.type = CommandQueue::CommandType::CLOSE;
-        //    pMain->context.command_queue.Push(cmd);
-        //    pMain->isPlaying = false;
-        //    //InvalidateRect(hwnd, NULL, FALSE);
-        //    pMain->updateMenu();
-        //    //pMain->emulator.stop();
-        //    pMain->ClearFrame();
-        //}
-        //break;
-        //case ID_NES_POWER:
-        //{
-        //    CommandQueue::Command cmd;
-        //    cmd.type = CommandQueue::CommandType::RESET;
-        //    pMain->context.command_queue.Push(cmd);
-        //    pMain->isPlaying = true;
-        //}
-
-
-        SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
             switch (event.type) {
@@ -325,10 +290,20 @@ void Core::RunMessageLoop()
                         debuggerUI.OpenGoToAddressDialog();
 					}
                 } break;
-                }
+                    case SDLK_PERIOD: {
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::POWER;
+                        context.command_queue.Push(cmd);
             } break;
+                    case SDLK_COMMA: {
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::RESET;
+                        context.command_queue.Push(cmd);
+                    } break;
+                }; // /switch
+            } break; // / case SDL_KEYDOWN
             case SDL_QUIT:
-                done = true;
+                shutdown = true;
                 break;
             case SDL_CONTROLLERDEVICEADDED:
             {
@@ -350,8 +325,29 @@ void Core::RunMessageLoop()
                 break;
             }
         }
+    return shutdown;
+}
 
-        if (done) {
+void Core::RunMessageLoop()
+{
+    bool shutdown = false;
+
+    int cpuCycleDebt = 0;
+    const int RENDER_TIMEOUT_MS = 16;
+    static int titleUpdateDelay = 60;
+    
+    float ticksPerSec = (float)SDL_GetPerformanceFrequency();
+	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
+    int frameCount = 0;
+
+    // Create a local buffer for the UI thread
+    std::vector<uint32_t> ui_frame_buffer;
+    ui_frame_buffer.resize(256 * 240);
+    int ui_fps = 0;
+
+    while (!shutdown) {
+        shutdown = PollSDLEvents();
+        if (shutdown) {
             break;
         }
 
@@ -388,7 +384,7 @@ void Core::RunMessageLoop()
                             context.command_queue.Push(cmd);
                         }
                     ImGui::Separator();
-                    if (ImGui::MenuItem("Exit")) done = true;
+                    if (ImGui::MenuItem("Exit")) shutdown = true;
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Emulation")) {
@@ -533,7 +529,7 @@ void Core::RunMessageLoop()
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
-            ImGui::Text("FPS: %d", (int)context.current_fps.load(std::memory_order_relaxed));
+            ImGui::Text("FPS: %d, UI FPS %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps);
             // Display the texture (casting the GLuint to a void*)
             // We use viewportPanelSize to make the game scale with the window
             DrawGameCentered();

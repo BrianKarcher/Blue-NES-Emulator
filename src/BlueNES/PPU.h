@@ -154,6 +154,7 @@ public:
 	}
 	void setBuffer(uint32_t* buf) { buffer = buf; }
 	void UpdateState();
+	bool isFrameTicked();
 
 	void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
