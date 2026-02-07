@@ -173,11 +173,11 @@ int EmulatorCore::runFrame() {
 	while (!nes.frameReady() && context.is_running) {
         nes.clock();
 	}
+    nes.ppu_->renderer->m_frameTick = false;
 	if (!context.is_running) return 0;
     
     //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
     //nes.ppu_->setFrameComplete(false);
-    nes.ppu_->renderer->m_frameTick = false;
 
     // Submit the exact samples generated this frame
     // Check audio queue to prevent unbounded growth

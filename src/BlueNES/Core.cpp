@@ -47,7 +47,7 @@ bool Core::init()
 
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    //SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // 2. Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -259,42 +259,42 @@ void Core::DrawGameCentered() {
 bool Core::PollSDLEvents() {
     SDL_Event event;
     bool shutdown = false;
-
-        while (SDL_PollEvent(&event)) {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            switch (event.type) {
+    
+    while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        switch (event.type) {
             case SDL_KEYDOWN: {
                 switch (event.key.keysym.sym) {
-                case SDLK_ESCAPE: {
-                    CommandQueue::Command cmd;
-                    bool newPauseState = !isPaused;
-                    cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
-                    context.command_queue.Push(cmd);
-                    isPaused = newPauseState;
-                } break;
-                case SDLK_F11: {
-                    // Toggle Fullscreen on Alt+Enter
-                    bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
-                    SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
-                } break;
-                case SDLK_F5: {
-                    _dbgCtx->is_paused.store(false);
-                } break;
-                case SDLK_F10: {
-                    _dbgCtx->step_requested.store(true);
-                    Sleep(10);
-                    debuggerUI.GoTo(_dbgCtx->lastState.pc);
-                } break;
-                case SDLK_g: {
-                    if (SDL_GetModState() & KMOD_CTRL) {
-                        debuggerUI.OpenGoToAddressDialog();
-					}
-                } break;
+                    case SDLK_ESCAPE: {
+                        CommandQueue::Command cmd;
+                        bool newPauseState = !isPaused;
+                        cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
+                        context.command_queue.Push(cmd);
+                        isPaused = newPauseState;
+                    } break;
+                    case SDLK_F11: {
+                        // Toggle Fullscreen on Alt+Enter
+                        bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
+                        SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+                    } break;
+                    case SDLK_F5: {
+                        _dbgCtx->is_paused.store(false);
+                    } break;
+                    case SDLK_F10: {
+                        _dbgCtx->step_requested.store(true);
+                        Sleep(10);
+                        debuggerUI.GoTo(_dbgCtx->lastState.pc);
+                    } break;
+                    case SDLK_g: {
+                        if (SDL_GetModState() & KMOD_CTRL) {
+                            debuggerUI.OpenGoToAddressDialog();
+                        }
+                    } break;
                     case SDLK_PERIOD: {
                         CommandQueue::Command cmd;
                         cmd.type = CommandQueue::CommandType::POWER;
                         context.command_queue.Push(cmd);
-            } break;
+                    } break;
                     case SDLK_COMMA: {
                         CommandQueue::Command cmd;
                         cmd.type = CommandQueue::CommandType::RESET;
@@ -323,8 +323,8 @@ bool Core::PollSDLEvents() {
 
             default:
                 break;
-            }
         }
+    }
     return shutdown;
 }
 
@@ -341,14 +341,55 @@ void Core::RunMessageLoop()
     int frameCount = 0;
 
     // Create a local buffer for the UI thread
-    std::vector<uint32_t> ui_frame_buffer;
-    ui_frame_buffer.resize(256 * 240);
+    //std::vector<uint32_t> ui_frame_buffer;
+    //ui_frame_buffer.resize(256 * 240);
     int ui_fps = 0;
-
+    const uint32_t* prev_frame_data = nullptr;
+	uint32_t dupCount = 0;
     while (!shutdown) {
         shutdown = PollSDLEvents();
         if (shutdown) {
             break;
+        }
+
+        if (isPlaying && !isPaused) {
+            // Wait for the Core (The "Sleep" phase)
+            // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
+            // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
+            const uint32_t* frame_data = context.WaitForNewFrame(20);
+
+            //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
+            //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
+            //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
+            if (prev_frame_data == frame_data) {
+                // No new frame, likely the Core is still busy. We can choose to render the previous frame again or skip rendering.
+                // For now, let's just skip rendering to save CPU/GPU resources.
+				//continue;
+                dupCount++;
+            }
+			prev_frame_data = frame_data;
+            if (frame_data) {
+                // 5. Rendering
+                RenderFrame(frame_data);
+                if (titleUpdateDelay-- <= 0) {
+                    titleUpdateDelay = 60;
+                }
+            }
+        }
+        else {
+            // If paused, don't burn CPU! 
+            // Let the OS have the thread for a few milliseconds.
+            SDL_Delay(16);
+        }
+
+        frameCount++;
+        uint64_t currentTick = SDL_GetPerformanceCounter();
+        if (currentTick > nextFrameTime) {
+            nextFrameTime = currentTick + (uint64_t)(ticksPerSec);
+        //    //std::string title = "BlueOrb NES Emulator - FPS (UI): " + std::to_string((int)frameCount);
+        //    //SDL_SetWindowTitle(window, title.c_str());
+            ui_fps = frameCount;
+            frameCount = 0;
         }
 
         // Start the Dear ImGui frame
@@ -486,29 +527,6 @@ void Core::RunMessageLoop()
             debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
             hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
 
-            if (isPlaying && !isPaused) {
-                // Wait for the Core (The "Sleep" phase)
-                // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
-                // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
-                const uint32_t* frame_data = context.WaitForNewFrame(20);
-
-                //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
-                //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-                //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
-                if (frame_data) {
-                    // 5. Rendering
-                    RenderFrame(frame_data);
-                    if (titleUpdateDelay-- <= 0) {
-                        titleUpdateDelay = 60;
-                    }
-                }
-            }
-            else {
-                // If paused, don't burn CPU! 
-                // Let the OS have the thread for a few milliseconds.
-                SDL_Delay(16);
-            }
-
             //if (Update) {
             //    Update();
             //}
@@ -529,26 +547,18 @@ void Core::RunMessageLoop()
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
-            ImGui::Text("FPS: %d, UI FPS %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps);
+            ImGui::Text("FPS: %d, UI FPS %d, dup %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps, dupCount);
             // Display the texture (casting the GLuint to a void*)
             // We use viewportPanelSize to make the game scale with the window
             DrawGameCentered();
             ImGui::End();
         }
 
-		frameCount++;
-        uint64_t currentTick = SDL_GetPerformanceCounter();
-        if (currentTick > nextFrameTime) {
-            nextFrameTime = currentTick + (uint64_t)(ticksPerSec);
-            std::string title = "BlueOrb NES Emulator - FPS (UI): " + std::to_string((int)frameCount);
-            SDL_SetWindowTitle(window, title.c_str());
-            frameCount = 0;
-		}
   //      if (currentTick < nextFrameTime) {
   //          uint64_t waitTicks = nextFrameTime - currentTick;
   //          uint32_t waitMs = (uint32_t)((waitTicks * 1000) / ticksPerSec);
-  //          if (waitMs > 0) {
-  //              SDL_Delay(waitMs);
+  //          if (waitMs > 1) {
+  //              SDL_Delay(waitMs - 1);
   //          }
   //          // Busy-wait for the remaining time (if any)
   //          while (SDL_GetPerformanceCounter() < nextFrameTime) {}

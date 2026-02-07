@@ -321,6 +321,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
         if (m_scanline == 241 && dot == 1) {
             m_ppu->m_ppuStatus |= PPUSTATUS_VBLANK;
             m_frameComplete = true;
+            // Inform EmulatorCore of frame completion.
             m_frameTick = true;
             if (m_ppu->m_ppuCtrl & NMI_ENABLE) {
                 m_bus->cpu.setNMI(true);
@@ -391,7 +392,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
         m_ppu->m_ppuStatus &= 0x1F; // Clear VBlank, sprite 0 hit, and sprite overflow
         m_frameComplete = false;
         m_bus->cpu.setNMI(false);
-    }
+        }
 
     // 5. Odd frame skip
     if (preRenderLine && dot == 339 && (_frameCount & 0x01) && rendering) {
