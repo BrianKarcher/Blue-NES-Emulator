@@ -257,7 +257,7 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
 						uint8_t red = (nesColor >> 16) & 0xFF;
 						uint8_t green = (nesColor >> 8) & 0xFF;
 						uint8_t blue = nesColor & 0xFF;
-                        ImVec4 color {(float)red, (float)green, (float)blue, (float)1.0f};
+                        ImVec4 color {(float)red / 0xFF, (float)green / 0xFF, (float)blue / 0xFF, (float)1.0f};
 
                         // 3. Draw a color square
                         ImGui::ColorButton("##color", color, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 40));
