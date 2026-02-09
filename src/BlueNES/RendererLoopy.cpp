@@ -202,6 +202,9 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
         uint8_t pixel = get_pixel();
         bgPaletteIndex = m_ppu->paletteTable[pixel];
         bgOpaque = pixel != 0;
+        if (ppumask & PPUMASK_GRAYSCALE) {
+            bgPaletteIndex &= 0x30; // Grayscale mode: only use bits 4 and 5 for color
+        }
         bgColor = m_nesPalette[bgPaletteIndex];
     }
 
@@ -219,7 +222,11 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
         const auto& spr = spriteLineBuffer[x];
         if (spr.x != 255) {  // There's a sprite pixel here
             uint8_t palIdx = spr.palette + 4;
-            uint32_t sprColor = m_nesPalette[m_ppu->paletteTable[0x10 + (spr.palette << 2) + spr.colorIndex]];
+            uint8_t sprIdx = m_ppu->paletteTable[0x10 + (spr.palette << 2) + spr.colorIndex];
+            if (ppumask & PPUMASK_GRAYSCALE) {
+                sprIdx &= 0x30; // Grayscale mode: only use bits 4 and 5 for color
+            }
+            uint32_t sprColor = m_nesPalette[sprIdx];
 
             if (spr.isZero && bgOpaque && !hasSprite0HitBeenSet && x < 255) {
                 hasSprite0HitBeenSet = true;
