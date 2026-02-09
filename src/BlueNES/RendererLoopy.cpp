@@ -194,10 +194,11 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
     
-    uint8_t bgPaletteIndex = 0;
-    uint32_t bgColor = 0;
+    uint8_t bgPaletteIndex = m_ppu->paletteTable[0];
+    uint32_t bgColor = m_nesPalette[bgPaletteIndex];
     bool bgOpaque = false;
-    if (bgEnabled()) {
+    // Determine whether or not to show the background in the leftmost 8 pixels of the screen.
+    if (bgEnabled() && (dot > 8 || (ppumask & PPUMASK_BACKGRONDLEFT) == 1)) {
         uint8_t pixel = get_pixel();
         bgPaletteIndex = m_ppu->paletteTable[pixel];
         bgOpaque = pixel != 0;
@@ -212,7 +213,7 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
 	bool spriteIsZero = false;
 
     uint32_t finalColor = bgColor;
-    if (spriteEnabled()) {
+    if (spriteEnabled() && (dot > 8 || (ppumask & PPUMASK_SPRITELEFT) == 1)) {
         bool useSprite = false;
 
         const auto& spr = spriteLineBuffer[x];
