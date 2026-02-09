@@ -180,11 +180,14 @@ uint8_t RendererLoopy::get_pixel() {
     return (palette << 2) | pixel;
 }
 
-void RendererLoopy::renderPixelBlack(uint32_t* buffer) {
+void RendererLoopy::renderPixelBackground(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
 
-    buffer[y * 256 + x] = 0xFF000000;
+    //buffer[y * 256 + x] = 0xFF000000;
+    uint8_t bgPaletteIndex = m_ppu->paletteTable[0];
+    uint32_t bgColor = m_nesPalette[bgPaletteIndex];
+    buffer[y * 256 + x] = bgColor;
 }
 
 void RendererLoopy::renderPixel(uint32_t* buffer) {
@@ -381,9 +384,8 @@ void RendererLoopy::clock(uint32_t* buffer) {
 	}
     else {
         // Rendering is OFF
-        if (visibleScanline && dot <= 256) renderPixelBlack(buffer);
+        if (visibleScanline && dot <= 256) renderPixelBackground(buffer);
     }
-
     
     // 4. Pre-render Line specific state clear
     if (preRenderLine && dot == 1) {
