@@ -190,6 +190,28 @@ void RendererLoopy::renderPixelBackground(uint32_t* buffer) {
     buffer[y * 256 + x] = bgColor;
 }
 
+inline void RendererLoopy::ApplyColorEmphasis(uint32_t& finalColor)
+{
+    // 4. Color Emphasis Implementation
+    // Bits 5, 6, 7 of PPUMASK: R, G, B (NTSC)
+    if (ppumask & 0xE0) {
+        // Extract RGB components (assuming 0xRRGGBB or 0xBBGGRR format)
+        // Adjust shifts based on your m_nesPalette format
+        uint8_t r = (finalColor >> 16) & 0xFF;
+        uint8_t g = (finalColor >> 8) & 0xFF;
+        uint8_t b = finalColor & 0xFF;
+
+        // Emphasis factor (standard NTSC attenuation is ~0.746)
+        const float factor = 0.75f;
+
+        if (ppumask & 0x20) { g = (uint8_t)(g * factor); b = (uint8_t)(b * factor); } // Red: Darken G, B
+        if (ppumask & 0x40) { r = (uint8_t)(r * factor); b = (uint8_t)(b * factor); } // Green: Darken R, B
+        if (ppumask & 0x80) { r = (uint8_t)(r * factor); g = (uint8_t)(g * factor); } // Blue: Darken R, G
+
+        finalColor = (r << 16) | (g << 8) | b;
+    }
+}
+
 void RendererLoopy::renderPixel(uint32_t* buffer) {
     int x = dot - 1; // visible pixel x [0..255]
     int y = m_scanline; // pixel y [0..239]
@@ -240,24 +262,7 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
 
 	uint32_t finalColor = m_nesPalette[finalIdx];
 
-    // 4. Color Emphasis Implementation
-    // Bits 5, 6, 7 of PPUMASK: R, G, B (NTSC)
-    if (ppumask & 0xE0) {
-        // Extract RGB components (assuming 0xRRGGBB or 0xBBGGRR format)
-        // Adjust shifts based on your m_nesPalette format
-        uint8_t r = (finalColor >> 16) & 0xFF;
-        uint8_t g = (finalColor >> 8) & 0xFF;
-        uint8_t b = finalColor & 0xFF;
-
-        // Emphasis factor (standard NTSC attenuation is ~0.746)
-        const float factor = 0.75f;
-
-        if (ppumask & 0x20) { g = (uint8_t)(g * factor); b = (uint8_t)(b * factor); } // Red: Darken G, B
-        if (ppumask & 0x40) { r = (uint8_t)(r * factor); b = (uint8_t)(b * factor); } // Green: Darken R, B
-        if (ppumask & 0x80) { r = (uint8_t)(r * factor); g = (uint8_t)(g * factor); } // Blue: Darken R, G
-
-        finalColor = (r << 16) | (g << 8) | b;
-    }
+    ApplyColorEmphasis(finalColor);
 
     buffer[y * 256 + x] = finalColor;
 }

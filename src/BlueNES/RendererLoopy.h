@@ -138,6 +138,7 @@ private:
 
     void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
     uint8_t get_pixel();
+    inline void ApplyColorEmphasis(uint32_t& finalColor);
     void renderPixel(uint32_t* buffer);
     void renderPixelBackground(uint32_t* buffer);
 
