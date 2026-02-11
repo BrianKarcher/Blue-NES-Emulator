@@ -389,10 +389,12 @@ void PPU::UpdateState() {
 	dbgContext->ppuState.scanline = renderer->m_scanline;
 	dbgContext->ppuState.dot = renderer->dot;
 	dbgContext->ppuState.bgPatternTableAddr = GetBackgroundPatternTableBase();
+	dbgContext->ppuState.spritePatternTableAddr = GetSpritePatternTableBase(0); // Pass 0 just to get the base address for 8x8 sprites
 	dbgContext->ppuState.scrollX = GetScrollX();
 	dbgContext->ppuState.scrollY = GetScrollY();
 	dbgContext->ppuState.mirrorMode = bus->cart.mapper->GetMirrorMode();
 	memcpy(dbgContext->ppuState.palette.data(), paletteTable.data(), 32);
+	memcpy(dbgContext->ppuState.oam.data(), oam.data(), 256);
 	int nametableCount = bus->cart.mapper->GetMirrorMode() == MapperBase::MirrorMode::FOUR_SCREEN ? 4 : 2;
 	memcpy(dbgContext->ppuState.nametables.data(), bus->cart.mapper->_vram.data(), 0x400 * nametableCount);
 	// TODO - CHR memory read may be slow depending on mapper implementation

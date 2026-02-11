@@ -6,6 +6,15 @@
 #include "imgui.h"
 #include "DebuggerContext.h"
 
+void PPUViewer::CreateTexture(GLuint& id, int width, int height) {
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
 bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     _core = core;
     _cartridge = core->emulator.GetCartridge();
@@ -13,23 +22,18 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     _sharedContext = sharedCtx;
     _dbgContext = _sharedContext->debugger_context;
     nt = new std::array<std::array<uint32_t, 256 * 240>, 4>();
+	_oam = new std::array<uint32_t, 64 * 64>();
+	_sprites = new std::array<uint32_t, 256 * 240>();
     for (int i = 0; i < 4; i++) {
-        glGenTextures(1, &ntTextures[i]);
-        glBindTexture(GL_TEXTURE_2D, ntTextures[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        CreateTexture(ntTextures[i], 256, 240);
     }
 
     for (int i = 0; i < 4; i++) {
-        glGenTextures(1, &chr_textures[i]);
-        glBindTexture(GL_TEXTURE_2D, chr_textures[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        CreateTexture(chr_textures[i], 128, 128);
     }
+
+    CreateTexture(oam_texture, 64, 64);
+    CreateTexture(sprite_texture, 256, 240);
 
     return true;
 }
@@ -237,6 +241,12 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
                 ImGui::EndTabItem();
             }
 
+            // Tab 3: OAM Viewer
+            if (ImGui::BeginTabItem("OAM")) {
+                DrawOAMViewer();
+                ImGui::EndTabItem();
+            }
+
             if (ImGui::BeginTabItem("Palette")) {
                 // There are 8 palettes total: 4 for Background, 4 for Sprites
                 // Each palette has 4 colors (but the first is always the shared backdrop)
@@ -384,4 +394,77 @@ void PPUViewer::get_palette_index_from_attribute(uint8_t attributeByte, int tile
         }
         break;
     }
+}
+
+void PPUViewer::DrawOAMViewer() {
+    ImGui::Text("OAM (Object Attribute Memory) - 64 Sprites");
+    ImGui::Separator();
+
+    // Clear the OAM buffer
+    _oam->fill(0xFF000000);
+    int spriteHeight = (_dbgContext->ppuState.ctrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
+
+    // Render all 64 sprites to the OAM buffer (8x8 grid of 8x8 pixel tiles = 64x64)
+    for (int spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
+        // OAM addresses: $0000-$00FF
+        // Each sprite is 4 bytes: Y, Tile Index, Attributes, X
+        uint16_t oamAddr = spriteIdx * 4;
+        
+        uint8_t yPos = _dbgContext->ppuState.oam[oamAddr];           // Y coordinate
+        uint8_t tileIdx = _dbgContext->ppuState.oam[oamAddr + 1];   // Tile index
+        uint8_t attributes = _dbgContext->ppuState.oam[oamAddr + 2]; // Attributes
+        uint8_t xPos = _dbgContext->ppuState.oam[oamAddr + 3];       // X coordinate
+
+        // Extract attributes
+        uint8_t paletteIdx = (attributes & 0x03) + 4;      // Sprite palettes are 4-7
+        bool flipH = (attributes & 0x40) != 0;
+        bool flipV = (attributes & 0x80) != 0;
+        bool priority = (attributes & 0x20) != 0;
+
+        // Grid position (8x8 grid of sprites, each sprite rendered as 8x8 pixels)
+        int gridX = (spriteIdx % 8) * 8;
+        int gridY = (spriteIdx / 8) * 8;
+
+        // Get sprite pattern table (depends on PPUCTRL bit 3)
+        uint16_t spritePatternTableAddr = _dbgContext->ppuState.spritePatternTableAddr;
+        uint16_t tileAddr = spritePatternTableAddr + (tileIdx * 16);
+
+        // Render the tile to the OAM buffer
+        std::array<uint32_t, 4> palette;
+        _ppu->get_palette(paletteIdx, palette);
+
+        for (int row = 0; row < 8; row++) {
+            int actualRow = flipV ? (7 - row) : row;
+            uint8_t byte1 = _dbgContext->ppuState.chrMemory[tileAddr + actualRow];
+            uint8_t byte2 = _dbgContext->ppuState.chrMemory[tileAddr + actualRow + 8];
+
+            for (int col = 0; col < 8; col++) {
+                int actualCol = flipH ? (7 - col) : col;
+                
+                uint8_t bit0 = (byte1 >> (7 - actualCol)) & 1;
+                uint8_t bit1 = (byte2 >> (7 - actualCol)) & 1;
+                uint8_t colorIdx = (bit1 << 1) | bit0;
+
+                uint32_t color = 0xFF000000; // Transparent by default
+                if (colorIdx != 0) {
+                    color = palette[colorIdx] | 0xFF000000;
+                }
+
+                int pixelX = gridX + col;
+                int pixelY = gridY + row;
+                
+                if (pixelX < 64 && pixelY < 64) {
+                    (*_oam)[pixelY * 64 + pixelX] = color;
+                }
+            }
+        }
+    }
+
+    // Update the texture with the rendered OAM data
+    glBindTexture(GL_TEXTURE_2D, oam_texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 64, 64, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, _oam->data());
+
+    // Display the OAM texture (64x64 pixels, scaled up for visibility)
+    ImGui::Image((void*)(intptr_t)oam_texture, ImVec2(512, 512));
+    ImGui::Text("8x8 grid of sprite tiles from OAM");
 }

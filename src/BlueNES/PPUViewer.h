@@ -20,12 +20,16 @@ public:
 private:
 	GLuint ntTextures[4] = { 0, 0, 0, 0 };
 	GLuint chr_textures[4] = { 0, 0, 0, 0 };
+	GLuint oam_texture = 0;
+	GLuint sprite_texture = 0;
 	//void PPURenderToBackBuffer();
 
+	void CreateTexture(GLuint& id, int width, int height);
 	uint16_t GetBaseNametableAddress();
 	void DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x, float y);
 	void UpdateCHRTexture(int bank, uint8_t palette_idx);
 	void DrawCHRViewer();
+	void DrawOAMViewer();
 	
 	void UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data);
 	void renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable);
@@ -34,6 +38,8 @@ private:
 		int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 
 	std::array<std::array<uint32_t, 256 * 240>, 4> *nt;
+	std::array<uint32_t, 64 * 64> *_oam;
+	std::array<uint32_t, 256 * 240> *_sprites;
 	Core* _core;
 	Cartridge* _cartridge;
 	PPU* _ppu;
