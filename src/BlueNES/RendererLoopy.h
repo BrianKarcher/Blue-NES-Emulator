@@ -119,6 +119,7 @@ private:
         uint8_t palette;     // Lower 2 bits of attributes
         bool    behindBg;    // Priority bit
         bool    isZero;      // Is this sprite 0?
+		bool	valid;       // Is this a valid sprite pixel (used for sprite 0 hit detection)
     };
 
 	std::array<SpriteRenderData, 256> spriteLineBuffer;  // Places all sprites for current scanline so we only calculate it once

@@ -240,7 +240,7 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
         bool useSprite = false;
 
         const auto& spr = spriteLineBuffer[x];
-        if (spr.x != 255) {  // There's a sprite pixel here
+        if (spr.valid) {  // There's a sprite pixel here
             uint8_t palIdx = spr.palette + 4;
             uint8_t sprIdx = m_ppu->paletteTable[0x10 + (spr.palette << 2) + spr.colorIndex];
             if (ppumask & PPUMASK_GRAYSCALE) {
@@ -403,7 +403,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
         else if (dot == 257) {
             ppuCopyX();
             evaluateSprites(m_scanline, secondaryOAM);
-            spriteLineBuffer.fill({ 255, 0, 0, false, false });  // 255 = no sprite
+            spriteLineBuffer.fill({ 255, 0, 0, false, false, false });  // 255 = no sprite
             prepareSpriteLine(m_scanline);
         }
         else if (dot >= 258 && dot <= 320) {
@@ -577,7 +577,8 @@ void RendererLoopy::prepareSpriteLine(int y) {
                         color,
                         palette,
                         behind,
-                        s.isSprite0 && color != 0
+                        s.isSprite0 && color != 0,
+                        true
                     };
                 }
             }
