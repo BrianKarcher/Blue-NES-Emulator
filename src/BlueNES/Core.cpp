@@ -228,7 +228,7 @@ void Core::DrawGameCentered() {
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
     // NES target aspect ratio (4:3)
-    float targetAR = 4.0f / 3.0f;
+    float targetAR = 8.0f / 7.0f;
     float windowAR = windowSize.x / windowSize.y;
 
     ImVec2 displaySize;

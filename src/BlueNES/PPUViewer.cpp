@@ -403,6 +403,9 @@ void PPUViewer::DrawOAMViewer() {
     // Clear the OAM buffer
     _oam->fill(0xFF000000);
     int spriteHeight = (_dbgContext->ppuState.ctrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
+    if (spriteHeight == 16) {
+		return; // For simplicity, we only handle 8x8 sprites in this viewer for now. 8x16 sprites require more complex handling.
+    }
 
     // Render all 64 sprites to the OAM buffer (8x8 grid of 8x8 pixel tiles = 64x64)
     for (int spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
