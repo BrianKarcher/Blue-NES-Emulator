@@ -502,6 +502,10 @@ void Core::RunMessageLoop()
                 ImGui::Text("PPU Flags:");
                 ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
                 ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
+                bool bgLeft = (_dbgCtx->ppuState.mask & PPUMASK_BACKGRONDLEFT) != 0;
+                ImGui::Checkbox("Background Mask", &bgLeft);
+                bool spLeft = (_dbgCtx->ppuState.mask & PPUMASK_SPRITELEFT) != 0;
+                ImGui::Checkbox("Sprite Mask", &spLeft);
 
                 if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
                     _dbgCtx->hit_breakpoint.store(false);

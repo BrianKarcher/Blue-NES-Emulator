@@ -219,7 +219,7 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
     uint8_t bgPaletteIndex = m_ppu->paletteTable[0];
     bool bgOpaque = false;
     // Determine whether or not to show the background in the leftmost 8 pixels of the screen.
-    if (bgEnabled() && (dot > 8 || (ppumask & PPUMASK_BACKGRONDLEFT) == 1)) {
+    if (bgEnabled() && (dot > 8 || (ppumask & PPUMASK_BACKGRONDLEFT) != 0)) {
         uint8_t pixel = get_pixel();
         bgPaletteIndex = m_ppu->paletteTable[pixel];
         bgOpaque = pixel != 0;
@@ -236,7 +236,7 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
 	bool spriteIsZero = false;
 
     uint8_t finalIdx = bgPaletteIndex;
-    if (spriteEnabled() && (dot > 8 || (ppumask & PPUMASK_SPRITELEFT) == 1)) {
+    if (spriteEnabled() && (dot > 8 || (ppumask & PPUMASK_SPRITELEFT) != 0)) {
         bool useSprite = false;
 
         const auto& spr = spriteLineBuffer[x];
