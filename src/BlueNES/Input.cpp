@@ -13,14 +13,6 @@ void Input::OpenFirstController() {
         if (SDL_IsGameController(i)) {
 			SDL_GameController* controller = SDL_GameControllerOpen(i);
 			controllers.push_back(controller);
-    //        if (controller) {
-    //            SDL_Joystick* joy = SDL_GameControllerGetJoystick(controller);
-    //            //controllerInstanceID = SDL_JoystickInstanceID(joy);
-    //            //printf("Controller opened: %s\n",
-    //            //    SDL_GameControllerName(controller));
-				//controllers.push_back(controller);
-    //        }
-    //        return;
         }
     }
 }

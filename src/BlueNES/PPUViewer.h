@@ -22,7 +22,6 @@ private:
 	GLuint chr_textures[4] = { 0, 0, 0, 0 };
 	GLuint oam_texture = 0;
 	GLuint sprite_texture = 0;
-	//void PPURenderToBackBuffer();
 
 	void CreateTexture(GLuint& id, int width, int height);
 	uint16_t GetBaseNametableAddress();

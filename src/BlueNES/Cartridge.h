@@ -7,10 +7,6 @@
 #include "MapperBase.h"
 #include "INESLoader.h"
 #include <filesystem>
-//#include "7z.h"
-//#include "7zAlloc.h"
-//#include "7zCrc.h"
-//#include "7zFile.h"
 
 #ifdef _DEBUG
 #define LOG(...) dbg(__VA_ARGS__)
@@ -45,7 +41,6 @@ public:
 private:
 	Bus* m_bus;
 	CPU& cpu;
-	//std::string GetFileName(const CSzArEx* db, UInt32 index);
 	std::vector<uint8_t> ReadNesFromZip(const std::string& zipPath);
 	std::vector<uint8_t> LoadFileToBuffer(const std::string& path);
 	void loadSRAM();

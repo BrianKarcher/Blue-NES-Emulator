@@ -12,7 +12,6 @@
 #include <chrono>
 
 CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
-	//buildMap();
 	init_cpu();
 }
 

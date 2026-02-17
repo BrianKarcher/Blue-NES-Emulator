@@ -18,9 +18,7 @@ EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     dbgCtx = ctx.debugger_context;
     // Initialize audio backend
     if (!audioBackend.Initialize(44100, 1)) {  // 44.1kHz, mono
-        // Handle error - audio failed to initialize
 		throw std::runtime_error("Failed to initialize audio backend");
-        //MessageBox(nullptr, L"Failed to initialize audio!", L"Error", MB_OK);
     }
     m_paused = true;
 
@@ -73,9 +71,6 @@ void EmulatorCore::run() {
     QueryPerformanceCounter(&frameEnd_li);
     nextFrameUpdateTime = frameEnd_li.QuadPart + ticksPerFrame;
 
-    //using clock = std::chrono::high_resolution_clock;
-    //using namespace std::chrono;
-
     int frameCount = 0;
     int audioCycleCounter = 0;
 
@@ -94,23 +89,16 @@ void EmulatorCore::run() {
 
 		dbgCtx->UpdateSnapshot(nes.bus_->ramMapper.cpuRAM.data(), nullptr);
 
-        // 1. Advance the target time *before* checking the difference
-        //    This maintains the fixed-time step clock.
-        //    If we are slow, this means nextFrameUpdateTime is now in the past.
         long long targetTime = nextFrameUpdateTime;
         nextFrameUpdateTime += ticksPerFrame;
 
-        // 2. Get current time (actual time frame execution finished)
+        // Get current time (actual time frame execution finished)
         LARGE_INTEGER currentFrame_li;
         QueryPerformanceCounter(&currentFrame_li);
         long long currentTime = currentFrame_li.QuadPart;
 
 #ifdef FPS_CAP
-        // 3. Calculate remaining time (Wait time = Target Time - Current Time)
-        //    If positive: we finished early, so wait.
-        //    If zero/negative: we finished on time or late, so don't wait.
         long long time_to_wait_ticks = targetTime - currentTime;
-        //std::this_thread::sleep_for(milliseconds(500));
         if (time_to_wait_ticks > 0) { // If more than 1ms to wait
 
             // Convert remaining ticks to milliseconds for Sleep()
@@ -175,9 +163,6 @@ int EmulatorCore::runFrame() {
 	}
     nes.ppu_->renderer->m_frameTick = false;
 	if (!context.is_running) return 0;
-    
-    //OutputDebugStringW((L"CPU Cycles this frame: " + std::to_wstring(cpu.cyclesThisFrame) + L"\n").c_str());
-    //nes.ppu_->setFrameComplete(false);
 
     // Submit the exact samples generated this frame
     // Check audio queue to prevent unbounded growth
@@ -194,10 +179,7 @@ int EmulatorCore::runFrame() {
         // Clear audio buffer for next frame
         nes.audioBuffer.clear();
     }
-    else {
-        // Audio queue is too large - skip this frame's audio to catch up
-        //OutputDebugStringW(L"Audio queue overflow - dropping frame\n");
-    }
+
     return cycleCount;
 }
 
@@ -253,12 +235,6 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         UpdateNextFrameTime();
         break;
     case CommandQueue::CommandType::STEP_FRAME:
-        //if (m_paused) {
-        //    m_core.StepFrame(m_frameBuffer.GetWriteBuffer(),
-        //        m_audioBuffer,
-        //        m_inputState);
-        //    m_frameBuffer.SwapBuffers();
-        //}
         break;
     case CommandQueue::CommandType::ADD_CONTROLLER:
         nes.input_->OpenFirstController();
@@ -292,7 +268,6 @@ void EmulatorCore::CreateSaveState() {
         LOG(L"Failed to open save state file for writing: %s\n", stateFilePath.c_str());
         return;
 	}
-    //LOG(L"Save state created, size: %zu bytes\n", sizeof(SaveState));
 }
 
 void EmulatorCore::LoadState() {
@@ -306,5 +281,4 @@ void EmulatorCore::LoadState() {
     Serializer serializer;
     serializer.StartDeserialization(is);
     nes.Deserialize(serializer);
-	//LOG(L"Save state loaded, size: %zu bytes\n", sizeof(SaveState));
 }

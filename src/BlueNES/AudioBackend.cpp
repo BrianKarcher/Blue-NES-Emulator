@@ -23,9 +23,6 @@ bool AudioBackend::Initialize(int sampleRate, int channels)
     m_sampleRate = sampleRate;
     m_channels = channels;
 
-    // Initialize COM (required for XAudio2)
-    //CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-
     // Create XAudio2 instance
     HRESULT hr = XAudio2Create(&m_xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
     if (FAILED(hr)) {

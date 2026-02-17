@@ -47,7 +47,7 @@ bool Core::init()
 
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(0); // Enable vsync
 
     // 2. Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -141,33 +141,6 @@ COLORREF ToColorRef(uint32_t argb)
     return RGB(r, g, b); // RGB macro gives 0x00BBGGRR format
 }
 
-void Core::DrawPalette(HWND wnd, HDC hdc)
-{
-    //RECT clientRect;
-    //GetClientRect(wnd, &clientRect);
-
-    //int width = clientRect.right - clientRect.left;
-    //int height = clientRect.bottom - clientRect.top;
-
-    //int cols = 4; // Number of colors per row
-    //int rows = 8; // Total rows (32 colors / 4 per row)
-    //int cellWidth = width / cols;
-    //int cellHeight = height / rows;
-
-    //for (int i = 0; i < 32; ++i)
-    //{
-    //    int x = (i % cols) * cellWidth;
-    //    int y = (i / cols) * cellHeight;
-
-    //    uint8_t paletteIndex = emulator.nes.ppu.paletteTable[i];
-    //    uint32_t color = m_nesPalette[paletteIndex & 0x3F];
-    //    HBRUSH brush = CreateSolidBrush(ToColorRef(color));
-    //    RECT rect = { x, y, x + cellWidth, y + cellHeight };
-    //    FillRect(hdc, &rect, brush);
-    //    DeleteObject(brush);
-    //}
-}
-
 bool Core::ClearFrame()
 {
     // Clear screen
@@ -179,42 +152,9 @@ bool Core::ClearFrame()
 
 bool Core::RenderFrame(const uint32_t* frame_data)
 {
-    // 1. Update the texture with your emulator's pixel buffer
     // Assuming 'ppu_buffer' is a uint32_t array[256 * 240] 
     glBindTexture(GL_TEXTURE_2D, nes_texture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, frame_data);
-
-    // Update texture with NES framebuffer
-    //SDL_UpdateTexture(
-    //    nesTexture,
-    //    nullptr,
-    //    frame_data,
-    //    256 * sizeof(uint32_t)
-    //);
-
-    //// Clear screen
-    //SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    //SDL_RenderClear(renderer);
-
-    //// Scale to window automatically
-    //SDL_Rect dstRect{ 0, 0, 0, 0 };
-    //SDL_GetWindowSizeInPixels(window, (int*)&dstRect.w, (int*)&dstRect.h);
-
-    //if (SDL_RenderCopy(renderer, nesTexture, nullptr, &dstRect) != 0) {
-    //    printf("SDL_RenderCopy failed: %s\n", SDL_GetError());
-    //}
-
-    //SDL_RenderPresent(renderer);
-
-    //ppu.framebuffer.fill(0xff0f0f0f);
-    // Copy back buffer to bitmap
-    //SetDIBits(hdcMem, hBitmap, 0, 240, ppu.get_back_buffer().data(), &bmi, DIB_RGB_COLORS);
-    //// Stretch blit to window (3x scale)
-    //RECT clientRect;
-    //GetClientRect(m_hwnd, &clientRect);
-    //StretchBlt(hdc, 0, 0, clientRect.right, clientRect.bottom,
-    //    hdcMem, 0, 0, 256, 240, SRCCOPY);
-    //ReleaseDC(m_hwnd, hdc);
     return true;
 }
 
@@ -227,7 +167,8 @@ void Core::DrawGameCentered() {
     // Get the current window (or viewport) size
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
-    // NES target aspect ratio (4:3)
+    // NES target aspect ratio (8:7)
+	// TODO - Allow user to choose between 8:7 and 4:3 aspect ratios in settings
     float targetAR = 8.0f / 7.0f;
     float windowAR = windowSize.x / windowSize.y;
 
@@ -253,7 +194,7 @@ void Core::DrawGameCentered() {
 }
 
 /// <summary>
-///
+/// Poll for events through SDL
 /// </summary>
 /// <returns>Returns true if application should shut down.</returns>
 bool Core::PollSDLEvents() {
@@ -273,7 +214,6 @@ bool Core::PollSDLEvents() {
                         isPaused = newPauseState;
                     } break;
                     case SDLK_F11: {
-                        // Toggle Fullscreen on Alt+Enter
                         bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
                         SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
                     } break;
@@ -340,9 +280,6 @@ void Core::RunMessageLoop()
 	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
     int frameCount = 0;
 
-    // Create a local buffer for the UI thread
-    //std::vector<uint32_t> ui_frame_buffer;
-    //ui_frame_buffer.resize(256 * 240);
     int ui_fps = 0;
     const uint32_t* prev_frame_data = nullptr;
 	uint32_t dupCount = 0;
@@ -358,18 +295,11 @@ void Core::RunMessageLoop()
             // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
             const uint32_t* frame_data = context.WaitForNewFrame(20);
 
-            //OutputDebugStringW((L"CPU Cycles: " + std::to_wstring(cpuCyclesThisFrame) +
-            //    L", Audio Samples: " + std::to_wstring(audioBuffer.size()) +
-            //    L", Queued: " + std::to_wstring(queuedSamples) + L"\n").c_str());
             if (prev_frame_data == frame_data) {
-                // No new frame, likely the Core is still busy. We can choose to render the previous frame again or skip rendering.
-                // For now, let's just skip rendering to save CPU/GPU resources.
-				//continue;
                 dupCount++;
             }
 			prev_frame_data = frame_data;
             if (frame_data) {
-                // 5. Rendering
                 RenderFrame(frame_data);
                 if (titleUpdateDelay-- <= 0) {
                     titleUpdateDelay = 60;
@@ -386,8 +316,6 @@ void Core::RunMessageLoop()
         uint64_t currentTick = SDL_GetPerformanceCounter();
         if (currentTick > nextFrameTime) {
             nextFrameTime = currentTick + (uint64_t)(ticksPerSec);
-        //    //std::string title = "BlueOrb NES Emulator - FPS (UI): " + std::to_string((int)frameCount);
-        //    //SDL_SetWindowTitle(window, title.c_str());
             ui_fps = frameCount;
             frameCount = 0;
         }
@@ -397,7 +325,7 @@ void Core::RunMessageLoop()
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // 4. EMULATOR UI
+        // EMULATOR UI
         {
             // Main Menu Bar
             if (ImGui::BeginMainMenuBar()) {
@@ -407,10 +335,7 @@ void Core::RunMessageLoop()
 						config.path = lastOpenedPath;
                         config.sidePaneWidth = 200.0f;
                         config.flags = ImGuiFileDialogFlags_Modal | ImGuiFileDialogFlags_HideColumnType | ImGuiFileDialogFlags_ShowDevicesButton;
-						//config.title = "Select NES ROM";
-						//config.filters = { ".nes" };
 
-                        // Arguments: Key, Title, Filter, Path
                         ImGuiFileDialog::Instance()->OpenDialog("ChooseRomKey", "Select NES ROM", "ROM files{.nes,.zip,.7z},.nes,.zip,.7z,All files{.*}", config);
                     }
                         ImGui::Separator();
@@ -473,17 +398,11 @@ void Core::RunMessageLoop()
                     LoadGame(filePathName);
                     isPaused = false;
                     updateMenu();
-                    // Load the ROM into your emulator
-                    // MyEmulator.Load(filePathName);
                 }
 
-                // Close the dialog
                 ImGuiFileDialog::Instance()->Close();
             }
 
-            // In a real emulator, you'd render your NES PPU buffer to an OpenGL texture
-            // and display it here using ImGui::Image()
-            //ImGui::Button("Mock NES Screen (256x240)", ImVec2(512, 480));
             // Get the size of the current window to scale the image
             ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 
@@ -513,7 +432,6 @@ void Core::RunMessageLoop()
                 }
 
                 bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
-                //if (ImGui::Button(is_running ? "Pause" : "Resume")) is_running = !is_running;
                 if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
                     bool newPause = !isDebugPause;
                     if (newPause) {
@@ -531,20 +449,6 @@ void Core::RunMessageLoop()
             debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
             hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
 
-            //if (Update) {
-            //    Update();
-            //}
-
-            //if (ppuOpen) {
-            //    // 1. Generate the pixels from PPU VRAM into a temporary buffer
-            //    // You can use the logic from your old Win32 'renderNametable' here
-            //    auto nt0_pixels = ppu.DebugRenderNametable(0);
-            //    auto nt1_pixels = ppu.DebugRenderNametable(1);
-
-            //    // 2. Send those pixels to the GPU
-            //    ppuViewer.UpdateTexture(0, nt0_pixels);
-            //    ppuViewer.UpdateTexture(1, nt1_pixels);
-            //}
 			ppuViewer.Draw("PPU Viewer", &_uiWindows.ppuOpen);
 
             // NES Display Window
@@ -552,12 +456,12 @@ void Core::RunMessageLoop()
             ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
             ImGui::Text("FPS: %d, UI FPS %d, dup %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps, dupCount);
-            // Display the texture (casting the GLuint to a void*)
-            // We use viewportPanelSize to make the game scale with the window
+
             DrawGameCentered();
             ImGui::End();
         }
 
+        // Timing restriction. I'm playing with this to get perfect 60 FPS, it's commented out for now.
   //      if (currentTick < nextFrameTime) {
   //          uint64_t waitTicks = nextFrameTime - currentTick;
   //          uint32_t waitMs = (uint32_t)((waitTicks * 1000) / ticksPerSec);
@@ -575,18 +479,6 @@ void Core::RunMessageLoop()
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
-
-        //if (timeSinceStart >= 0.25) {
-        //    //ppuViewer.DrawNametables();
-
-        //    // Updates the hex window
-        //    // TODO - Make this more efficient by only updating changed areas
-        //    // and also in real time rather than once per second
-        //    InvalidateRect(hHexDrawArea, nullptr, TRUE);
-        //    double fps = frameCount / timeSinceStart;
-        //    frameStartTime = currentTime;
-        //    frameCount = 0;
-        //}
     }
     emulator.stop();
     // Cleanup

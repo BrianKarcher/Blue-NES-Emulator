@@ -48,22 +48,10 @@
     <ClCompile Include="HexViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="APU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AudioBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Input.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PPUold.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RendererSlow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RendererWithReg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PPUViewer.cpp">
@@ -72,16 +60,10 @@
     <ClCompile Include="RendererLoopy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MainWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Nes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EmulatorCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MemoryMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioMapper.cpp">
@@ -194,18 +176,6 @@
     <ClInclude Include="Input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PPUold.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RendererSlow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RendererWithReg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PPUViewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -213,9 +183,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="A12Mapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MainWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Nes.h">

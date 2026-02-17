@@ -301,7 +301,7 @@ private:
 	};
 
 	// Policy: Zero Page (e.g., LDA $nn)
-// Cycles: 3 total (T0: Opcode, T1: Fetch Address, T2: Read/Write)
+	// Cycles: 3 total (T0: Opcode, T1: Fetch Address, T2: Read/Write)
 	struct Mode_ZeroPage {
 		static bool step(CPU& cpu) {
 			switch (cpu.cycle_state) {
@@ -2142,36 +2142,8 @@ private:
 	// Define a function pointer type for our micro-op handlers
 	typedef void (*InstructionHandler)(CPU&);
 
-	// Template function
-	//template <typename T>
-	//T multiply(const T& a, const T& b) {
-	//	return a * b;
-	//}
-
-	//void LDA_AbsX(CPU& cpu) {
-	//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
-	//}
-
-	//void LDA_ZP(CPU& cpu) {
-	//	run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);
-	//	run_instruction<Mode_ZeroPage<Op_LDA::is_write>, Op_LDA, Op_LDA>(cpu);
-	//}
-
 	// The Lookup Table
-	InstructionHandler opcode_table[258]; // = { &LDA_AbsX };
-    
-  //  void init_cpu() {
-		////opcode_table[0xBD] = &LDA_AbsX;
-
-  //      // Use a lambda with explicit capture of 'this' to fix the error  
-  //      //(*opcode_table[0xBD])(CPU&) = [this](CPU& cpu) {
-  //      //    this->run_instruction<Mode_AbsoluteX<Op_LDA::is_write>, Op_LDA>(cpu);  
-  //      //};  
-
-  //      //opcode_table[0x9D] = [this](CPU& cpu) {  
-  //      //    this->run_instruction<Mode_AbsoluteX<Op_STA::is_write>, Op_STA>(cpu);  
-  //      //};  
-  //  }
+	InstructionHandler opcode_table[258];
 
 	OpenBusMapper& openBus;
 	DebuggerContext& dbgCtx;
@@ -2221,8 +2193,6 @@ private:
 	inline void SetBreak(bool condition);
 	inline uint16_t ReadIndirectIndexed();
 	int nmiCount = 0;
-	//inline void ExtractAbsolute(uint8_t& loByte, uint8_t& hiByte);
-	//bool debug = false;
 
 	bool isFrozen = false;
 	int count = 0;

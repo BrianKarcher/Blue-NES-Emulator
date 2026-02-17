@@ -1,6 +1,5 @@
 #pragma once
 #include <Windows.h>
-// C RunTime Header Files:
 #include <malloc.h>
 #include <memory.h>
 #include <wchar.h>
@@ -22,7 +21,6 @@
 #include <SDL_opengl.h>
 #include <stdio.h>
 #include "HexViewer.h"
-//#include "7zTypes.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -76,13 +74,11 @@ public:
 
 	void (*Update)();
 	// Hex dump window
-	// Example buffer: replace these with your emulator memory pointer and size.
 	uint8_t* g_buffer;
 	size_t g_bufferSize;
 	void UpdateScrollInfo(HWND hwnd);
 	void RecalcLayout(HWND hwnd);
 	void DrawHexDump(HDC hdc, RECT const& rc);
-	void DrawPalette(HWND wnd, HDC hdc);
 	HFONT hFont = nullptr;
 	HDC memDC = nullptr;
 	HBITMAP memBitmap = nullptr;

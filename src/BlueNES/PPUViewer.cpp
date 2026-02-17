@@ -10,7 +10,6 @@ void PPUViewer::CreateTexture(GLuint& id, int width, int height) {
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 240, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
@@ -41,8 +40,6 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
 void PPUViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) {
     glBindTexture(GL_TEXTURE_2D, ntTextures[index]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, data.data());
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
     glBindTexture(GL_TEXTURE_2D, 0); // Unbind to avoid state bleeding
 }
 
@@ -229,19 +226,16 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
         if (ImGui::BeginTabBar("PPUViews")) {
 
-            // Tab 1: Nametables
             if (ImGui::BeginTabItem("Nametables")) {
                 DrawNametables();
                 ImGui::EndTabItem();
             }
 
-            // Tab 2: CHR ROM / Pattern Tables
             if (ImGui::BeginTabItem("CHR Viewer")) {
                 DrawCHRViewer();
                 ImGui::EndTabItem();
             }
 
-            // Tab 3: OAM Viewer
             if (ImGui::BeginTabItem("OAM")) {
                 DrawOAMViewer();
                 ImGui::EndTabItem();
@@ -257,13 +251,12 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
 
                     for (int j = 0; j < 4; j++) {
                         ImGui::PushID((i * 4) + j); // Unique ID for each row of buttons
-                        // 1. Read the palette index from PPU VRAM ($3F00 range)
+                        // Read the palette index from PPU VRAM ($3F00 range)
                         uint16_t addr = 0x3F00 + (i * 4) + j;
                         uint8_t colorIndex = _ppu->PeekVRAM(addr) & 0x3F; // Mask to 64 colors
 
-                        // 2. Convert NES color index to RGB (using your system palette array)
+                        // Convert NES color index to RGB (using your system palette array)
 						uint32_t nesColor = m_nesPalette[colorIndex];
-                        //uint32_t nesColor = 0x5C007E;
 						uint8_t red = (nesColor >> 16) & 0xFF;
 						uint8_t green = (nesColor >> 8) & 0xFF;
 						uint8_t blue = nesColor & 0xFF;
@@ -289,15 +282,8 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
 
 void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable)
 {
-    // Clear back buffer
-    // m_backBuffer.fill(0xFF000000);
-
-    // Nametable starts at 0x2000 in VRAM
-    // TODO : Support multiple nametables and mirroring
-    //const uint16_t nametableAddr = 0x2000;
     const uint16_t nametableAddr = physicalTable * 0x400;
 
-    // TODO: For now, we just render the nametable directly without scrolling or attribute tables
     std::array<uint32_t, 4> palette;
     // Render the 32x30 tile nametable
     for (int row = 0; row < 30; row++) {

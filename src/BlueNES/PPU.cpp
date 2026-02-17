@@ -4,8 +4,6 @@
 #include <WinUser.h>
 #include "Bus.h"
 #include "Core.h"
-#include "RendererWithReg.h"
-#include "RendererSlow.h"
 #include "RendererLoopy.h"
 #include "A12Mapper.h"
 #include "MapperBase.h"

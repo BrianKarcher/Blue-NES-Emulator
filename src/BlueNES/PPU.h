@@ -116,15 +116,9 @@ public:
 	void setMapper(A12Mapper* mapper) {
 		m_mapper = mapper;
 	}
-	
-	//void render_frame();
-	
+		
 	void set_hwnd(HWND hwnd);
-	// For testing, may create a window and render CHR-ROM data
-	//void render_chr_rom();
-	//void render_tile(int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors);
 
-	//void OAMDMA(uint8_t* cpuMemory, uint16_t page);
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
 	Bus* bus;
@@ -171,12 +165,7 @@ private:
 	uint32_t* buffer;
 	bool is_failure = false;
 
-	// register v in hardware PPU
-	//uint16_t vramAddr = 0; // Current VRAM address (15 bits)
-	// register t in hardware PPU
-	//uint16_t tempVramAddr = 0; // Temporary VRAM address (15 bits)
 	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
-	//int scrollY; // Fine Y scrolling (0-239)
 
 	void write_vram(uint16_t addr, uint8_t value);
 	void performDMA(uint8_t page);

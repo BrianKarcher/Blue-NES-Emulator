@@ -29,7 +29,6 @@ uint8_t HexReadPPU(HexViewer hexViewer, uint16_t addr) {
         }
         return hexViewer._dbgCtx->ppuState.palette[paletteAddr];
     }
-    //return core->emulator.nes.ppu.ReadVRAM(val);
     return 0;
 }
 

@@ -32,7 +32,5 @@ inline void ReadController2Mapper::write(uint16_t address, uint8_t value) {
 }
 
 void ReadController2Mapper::register_memory(Bus& bus) {
-	// TODO!!!!!!!! SPLIT READ/WRITE!!!!!!!
-	// 4017 READ is for controller 2, but 4017 WRITE is for the APU frame counter
 	bus.ReadRegisterAdd(0x4017, 0x4017, this);
 }

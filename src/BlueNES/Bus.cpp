@@ -11,7 +11,6 @@
 
 Bus::Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
-    // This may not be needed
     ramMapper.cpuRAM.fill(0);
 	readMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
 	writeMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
@@ -35,10 +34,8 @@ inline uint8_t Bus::RandomByte() {
 }
 
 void Bus::PowerCycle() {
+	// TODO - Include support for randomizing RAM on power cycle, or zero.
 	ramMapper.cpuRAM.fill(0xFF);
-	/*for (auto& byte : ramMapper.cpuRAM) {
-		byte = RandomByte();
-	}*/
 }
 
 void Bus::ReadRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {

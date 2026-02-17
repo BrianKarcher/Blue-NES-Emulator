@@ -18,8 +18,6 @@ class DebuggerUI
 public:
 	DebuggerUI(HINSTANCE hInst, Core& core, ImGuiIO& io);
 	void ComputeDisplayMap();
-	//void FocusPC(uint16_t pc);
-	//void StepInto();
 	void DrawScrollableDisassembler(bool* debuggerOpen);
 	void OpenGoToAddressDialog();
 	void GoTo();
@@ -29,26 +27,6 @@ private:
 	ImGuiIO& io;
 	uint16_t contextMenuAddr = 0;
 	uint8_t *log;
-	//const char* instSt[256] = {
-	////  0      1	  2 	 3      4      5      6	     7      8	   9      A      B      C      D      E      F
-	//	"BRK", "ORA", "DMP", "DMP", "DMP", "ORA", "ASL", "DMP", "PHP", "ORA", "ASL", "DMP", "DMP", "ORA", "ASL", "DMP", // 0
-	//	"BPL", "ORA", "DMP", "DMP", "DMP", "ORA", "ASL", "DMP", "CLC", "ORA", "DMP", "DMP", "DMP", "ORA", "ASL", "DMP", // 1
-	//	"JSR", "AND", "DMP", "DMP", "BIT", "AND", "ROL", "DMP", "PLP", "AND", "ROL", "DMP", "BIT", "AND", "ROL", "DMP", // 2
-	//	"BMI", "AND", "DMP", "DMP", "DMP", "AND", "ROL", "DMP", "SEC", "AND", "DMP", "DMP", "DMP", "AND", "ROL", "DMP", // 3
-	//	"RTI", "EOR", "DMP", "DMP", "DMP", "EOR", "LSR", "DMP", "PHA", "EOR", "LSR", "DMP", "JMP", "EOR", "LSR", "DMP", // 4
-	//	"BVC", "EOR", "DMP", "DMP", "DMP", "EOR", "LSR", "DMP", "CLI", "EOR", "DMP", "DMP", "DMP", "EOR", "LSR", "DMP", // 5
-	//	"RTS", "ADC", "DMP", "DMP", "DMP", "ADC", "ROR", "DMP", "PLA", "ADC", "ROR", "DMP", "JMP", "ADC", "ROR", "DMP", // 6
-	//	"BVS", "ADC", "DMP", "DMP", "DMP", "ADC", "ROR", "DMP", "SEI", "ADC", "DMP", "DMP", "DMP", "ADC", "ROR", "DMP", // 7
-	//	"DMP", "STA", "DMP", "DMP", "STY", "STA", "STX", "DMP", "DEY", "DMP", "TXA", "DMP", "STY", "STA", "STX", "DMP", // 8
-	//	"BCC", "STA", "DMP", "DMP", "STY", "STA", "STX", "DMP", "TYA", "STA", "TXS", "DMP", "DMP", "STA", "DMP", "DMP", // 9
-	//	"LDY", "LDA", "LDX", "DMP", "LDY", "LDA", "LDX", "DMP", "TAY", "LDA", "TAX", "DMP", "LDY", "LDA", "LDX", "DMP", // A
-	//	"BCS", "LDA", "DMP", "DMP", "LDY", "LDA", "LDX", "DMP", "CLV", "LDA", "TSX", "DMP", "LDY", "LDA", "LDX", "DMP", // B
-	//	"CPY", "CMP", "DMP", "DMP", "CPY", "CMP", "DEC", "DMP", "INY", "CMP", "DEX", "DMP", "CPY", "CMP", "DEC", "DMP", // C
-	//	"BNE", "CMP", "DMP", "DMP", "DMP", "CMP", "DEC", "DMP", "CLD", "CMP", "DMP", "DMP", "DMP", "CMP", "DEC", "DMP", // D
-	//	"CPX", "SBC", "DMP", "DMP", "CPX", "SBC", "INC", "DMP", "INX", "SBC", "NOP", "DMP", "CPX", "SBC", "INC", "DMP", // E
-	//	"BEQ", "SBC", "DMP", "DMP", "DMP", "SBC", "INC", "DMP", "SED", "SBC", "DMP", "DMP", "DMP", "SBC", "INC", "DMP", // F
-
-	//};
 
 		// The op code info are organized as a struct of lists because it makes it more likely to be
 	// added into L1/2 cache.
@@ -71,27 +49,6 @@ private:
 			"CPX","SBC","DMP","DMP","CPX","SBC","INC","DMP","INX","SBC","NOP","DMP","CPX","SBC","INC","DMP", // E
 			"BEQ","SBC","DMP","DMP","DMP","SBC","INC","DMP","SED","SBC","DMP","DMP","DMP","SBC","INC","DMP"  // F
 	};
-
-	//typedef void (CPU::* OpFunc)(void);
-//OpFunc _opcodeTable[256] = {
-//	//      0          1		  2          3          4          5          6          7          8		   9          A          B          C          D          E          F
-//	&CPU::BRK,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::PHP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL, &CPU::DMP, // 0
-//	&CPU::BPL,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP,& CPU::CLC,& CPU::ORA,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ORA,& CPU::ASL,& CPU::DMP, // 1
-//	&CPU::JSR,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::PLP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::BIT,& CPU::AND,& CPU::ROL,& CPU::DMP, // 2
-//	&CPU::BMI,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP,& CPU::SEC,& CPU::AND,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::AND,& CPU::ROL,& CPU::DMP, // 3
-//	&CPU::RTI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::PHA,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::JMP_ABS,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 4
-//	&CPU::BVC,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP,& CPU::CLI,& CPU::EOR,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::EOR,& CPU::LSR,& CPU::DMP, // 5
-//	&CPU::RTS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::PLA,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::JMP_IND,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 6
-//	&CPU::BVS,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP,& CPU::SEI,& CPU::ADC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::ADC,& CPU::ROR,& CPU::DMP, // 7
-//	&CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::DEY,& CPU::DMP,& CPU::TXA,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP, // 8
-//	&CPU::BCC,& CPU::STA,& CPU::DMP,& CPU::DMP,& CPU::STY,& CPU::STA,& CPU::STX,& CPU::DMP,& CPU::TYA,& CPU::STA,& CPU::TXS,& CPU::DMP,& CPU::DMP,& CPU::STA,& CPU::DMP,& CPU::DMP, // 9
-//	&CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::TAY,& CPU::LDA,& CPU::TAX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // A
-//	&CPU::BCS,& CPU::LDA,& CPU::DMP,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP,& CPU::CLV,& CPU::LDA,& CPU::TSX,& CPU::DMP,& CPU::LDY,& CPU::LDA,& CPU::LDX,& CPU::DMP, // B
-//	&CPU::CPY,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::INY,& CPU::CMP,& CPU::DEX,& CPU::DMP,& CPU::CPY,& CPU::CMP,& CPU::DEC,& CPU::DMP, // C
-//	&CPU::BNE,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP,& CPU::CLD,& CPU::CMP,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::CMP,& CPU::DEC,& CPU::DMP, // D
-//	&CPU::CPX,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::INX,& CPU::SBC,& CPU::NOP,& CPU::DMP,& CPU::CPX,& CPU::SBC,& CPU::INC,& CPU::DMP, // E
-//	&CPU::BEQ,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP,& CPU::SED,& CPU::SBC,& CPU::DMP,& CPU::DMP,& CPU::DMP,& CPU::SBC,& CPU::INC,& CPU::DMP  // F
-//};
 
 	uint8_t _opcodeBytes[256] = {
 		// 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 
