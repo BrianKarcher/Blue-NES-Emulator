@@ -21,6 +21,12 @@ SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 SDL_Texture* nesTexture = nullptr;
 
+PFNGLGENBUFFERSPROC glGenBuffers = nullptr;
+PFNGLBINDBUFFERPROC glBindBuffer = nullptr;
+PFNGLBUFFERDATAPROC glBufferData = nullptr;
+PFNGLMAPBUFFERRANGEPROC glMapBufferRange = nullptr;
+PFNGLUNMAPBUFFERPROC glUnmapBuffer = nullptr;
+
 bool Core::init()
 {
     // Setup SDL
@@ -46,6 +52,11 @@ bool Core::init()
     }
 
     gl_context = SDL_GL_CreateContext(window);
+    glGenBuffers = (PFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers");
+    glBindBuffer = (PFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer");
+    glBufferData = (PFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData");
+    glMapBufferRange = (PFNGLMAPBUFFERRANGEPROC)SDL_GL_GetProcAddress("glMapBufferRange");
+    glUnmapBuffer = (PFNGLUNMAPBUFFERPROC)SDL_GL_GetProcAddress("glUnmapBuffer");
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(0); // Enable vsync
 
@@ -70,7 +81,16 @@ bool Core::init()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     // Initialize with empty data (256x240 pixels, RGBA format)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	// Format match allows DMA from CPU to GPU without conversion, which is faster.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, 240, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+
+    // Create the PBO
+    glGenBuffers(1, &pbo);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    // Allocate memory for the buffer. GL_STREAM_DRAW is optimized for per-frame updates.
+	int DATA_SIZE = 256 * 240 * sizeof(uint32_t); // Size of one frame in bytes
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, DATA_SIZE, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     std::ifstream config("config.ini");
     if (config.is_open()) {
@@ -152,9 +172,21 @@ bool Core::ClearFrame()
 
 bool Core::RenderFrame(const uint32_t* frame_data)
 {
-    // Assuming 'ppu_buffer' is a uint32_t array[256 * 240] 
+    // --- 1. UPDATE TEXTURE VIA PBO ---
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    void* ptr = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, 256 * 240 * sizeof(uint32_t),
+        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+    if (ptr) {
+        memcpy(ptr, frame_data, 256 * 240 * sizeof(uint32_t));
+        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+    }
+
     glBindTexture(GL_TEXTURE_2D, nes_texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, frame_data);
+    // 'NULL' tells OpenGL to read from the bound PBO offset 0
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240,
+        GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    // Assuming 'ppu_buffer' is a uint32_t array[256 * 240] 
     return true;
 }
 

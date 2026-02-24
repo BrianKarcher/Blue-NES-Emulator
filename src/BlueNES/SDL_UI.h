@@ -17,17 +17,6 @@
 #include "SharedContext.h"
 #include "DebuggerUI.h"
 
-template<class Interface>
-inline void SafeRelease(
-	Interface** ppInterfaceToRelease
-)
-{
-	if (*ppInterfaceToRelease != NULL)
-	{
-		(*ppInterfaceToRelease)->Release();
-		(*ppInterfaceToRelease) = NULL;
-	}
-}
 
 #ifndef Assert
 #if defined( DEBUG ) || defined( _DEBUG )

@@ -208,7 +208,7 @@ inline void RendererLoopy::ApplyColorEmphasis(uint32_t& finalColor)
         if (ppumask & 0x40) { r = (uint8_t)(r * factor); b = (uint8_t)(b * factor); } // Green: Darken R, B
         if (ppumask & 0x80) { r = (uint8_t)(r * factor); g = (uint8_t)(g * factor); } // Blue: Darken R, G
 
-        finalColor = (r << 16) | (g << 8) | b;
+        finalColor = (0xFF << 24) | (r << 16) | (g << 8) | b;
     }
 }
 

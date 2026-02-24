@@ -96,6 +96,7 @@ public:
 	//PPUViewer ppuViewer;
 private:
 	GLuint nes_texture;
+	GLuint pbo;
 	HMENU hMenu;
 	Bus* _bus;
 	DebuggerContext* _dbgCtx;
