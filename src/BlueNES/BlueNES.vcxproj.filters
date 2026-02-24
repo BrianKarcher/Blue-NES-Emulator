@@ -138,6 +138,9 @@
     <ClCompile Include="DxROM.cpp">
       <Filter>Mappers</Filter>
     </ClCompile>
+    <ClCompile Include="SDL_UI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -295,6 +298,9 @@
     </ClInclude>
     <ClInclude Include="DxROM.h">
       <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="SDL_UI.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

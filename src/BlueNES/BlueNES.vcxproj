@@ -167,6 +167,7 @@
     <ClCompile Include="NROM.cpp" />
     <ClCompile Include="PPUViewer.cpp" />
     <ClCompile Include="RendererLoopy.cpp" />
+    <ClCompile Include="SDL_UI.cpp" />
     <ClCompile Include="Serializer.cpp" />
     <ClCompile Include="SharedContext.cpp" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -216,6 +217,7 @@
     <ClInclude Include="RAMMapper.h" />
     <ClInclude Include="RendererLoopy.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SDL_UI.h" />
     <ClInclude Include="Serializer.h" />
     <ClInclude Include="SharedContext.h" />
     <ClInclude Include="thirdparty\imgui\backends\imgui_impl_opengl3.h" />
