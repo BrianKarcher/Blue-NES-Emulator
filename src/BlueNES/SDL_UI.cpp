@@ -21,6 +21,8 @@ bool SDL_UI::init_sdl(HWND wnd)
         return false;
     }
 
+    SDL_GL_SetSwapInterval(0); // Disable vsync
+
     window = SDL_CreateWindowFrom((void*)wnd);
 
     if (!window)

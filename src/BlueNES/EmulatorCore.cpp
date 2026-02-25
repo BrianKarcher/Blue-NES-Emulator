@@ -35,7 +35,10 @@ EmulatorCore::EmulatorCore(SharedContext& ctx) : context(ctx), nes(ctx) {
     freq = freq_li.QuadPart;
 
     // Target frame rate
-    const double targetFps = 60.0;
+    //const double targetFps = 60.0988;
+    // My monitor runs at 60 FPS, any FPS above that will cause it go to out of sync.
+    // TODO - Make this configurable.
+    const double targetFps = 60;
     ticksPerFrame = static_cast<long long>(freq / targetFps);
 }
 
@@ -153,6 +156,9 @@ inline void EmulatorCore::dbg(const wchar_t* fmt, ...) {
 }
 
 int EmulatorCore::runFrame() {
+    // Reset frame tick from previous frame
+    nes.ppu_->renderer->m_frameTick = false;
+    
     // Ensure the audio buffer is clear before starting the frame
     nes.audioBuffer.clear();
 	nes.cpu_->cyclesThisFrame = 0;
@@ -161,7 +167,6 @@ int EmulatorCore::runFrame() {
 	while (!nes.frameReady() && context.is_running) {
         nes.clock();
 	}
-    nes.ppu_->renderer->m_frameTick = false;
 	if (!context.is_running) return 0;
 
     // Submit the exact samples generated this frame

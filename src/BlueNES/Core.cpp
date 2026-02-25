@@ -304,10 +304,6 @@ void Core::RunMessageLoop()
 {
     bool shutdown = false;
 
-    int cpuCycleDebt = 0;
-    const int RENDER_TIMEOUT_MS = 16;
-    static int titleUpdateDelay = 60;
-    
     float ticksPerSec = (float)SDL_GetPerformanceFrequency();
 	uint64_t nextFrameTime = SDL_GetPerformanceCounter() + (uint64_t)(ticksPerSec);
     int frameCount = 0;
@@ -315,11 +311,14 @@ void Core::RunMessageLoop()
     int ui_fps = 0;
     const uint32_t* prev_frame_data = nullptr;
 	uint32_t dupCount = 0;
+    
     while (!shutdown) {
         shutdown = PollSDLEvents();
         if (shutdown) {
             break;
         }
+
+        bool got_new_frame = false;
 
         if (isPlaying && !isPaused) {
             // Wait for the Core (The "Sleep" phase)
@@ -333,13 +332,11 @@ void Core::RunMessageLoop()
 			prev_frame_data = frame_data;
             if (frame_data) {
                 RenderFrame(frame_data);
-                if (titleUpdateDelay-- <= 0) {
-                    titleUpdateDelay = 60;
-                }
+                got_new_frame = true;
             }
         }
         else {
-            // If paused, don't burn CPU! 
+            // If paused or no game running, don't burn CPU! 
             // Let the OS have the thread for a few milliseconds.
             SDL_Delay(16);
         }
@@ -352,6 +349,7 @@ void Core::RunMessageLoop()
             frameCount = 0;
         }
 
+        // ALWAYS render ImGui to keep UI responsive, even when no game is loaded
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
@@ -493,24 +491,18 @@ void Core::RunMessageLoop()
             ImGui::End();
         }
 
-        // Timing restriction. I'm playing with this to get perfect 60 FPS, it's commented out for now.
-  //      if (currentTick < nextFrameTime) {
-  //          uint64_t waitTicks = nextFrameTime - currentTick;
-  //          uint32_t waitMs = (uint32_t)((waitTicks * 1000) / ticksPerSec);
-  //          if (waitMs > 1) {
-  //              SDL_Delay(waitMs - 1);
-  //          }
-  //          // Busy-wait for the remaining time (if any)
-  //          while (SDL_GetPerformanceCounter() < nextFrameTime) {}
-		//}
-
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-		//glViewport(0, 0, 800, 600);
         glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        SDL_GL_SwapWindow(window);
+        
+        // Only swap buffers when:
+        // 1. A game is running AND we got a new frame from emulator (sync to 60 FPS)
+        // 2. No game is running (swap at UI frame rate for responsiveness)
+        if (!isPlaying || isPaused || got_new_frame) {
+            SDL_GL_SwapWindow(window);
+        }
     }
     emulator.stop();
     // Cleanup

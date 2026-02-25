@@ -1,5 +1,6 @@
 #pragma once
 #include <mutex>
+#include <condition_variable>
 #include <cstdint>
 #include <vector>
 #include "CommandQueue.h"
