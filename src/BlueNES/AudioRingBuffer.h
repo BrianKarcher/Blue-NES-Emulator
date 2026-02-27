@@ -58,6 +58,28 @@ public:
         return (std::min)(GetAvailableRead(), m_capacity - read_idx);
     }
 
+    size_t Read(T* destination, size_t count) {
+        size_t available = GetAvailableRead();
+        size_t read_count = (std::min)(count, available);
+
+        if (read_count == 0) return 0;
+
+        size_t read_idx = m_read.load(std::memory_order_relaxed);
+
+        // Read in two chunks if wrapping is needed
+        size_t first_chunk = (std::min)(read_count, m_capacity - read_idx);
+        std::copy_n(m_buffer.data() + read_idx, first_chunk, destination);
+
+        if (read_count > first_chunk) {
+            // Copy the "wrapped" part from the beginning of the ring buffer
+            std::copy_n(m_buffer.data(), read_count - first_chunk, destination + first_chunk);
+        }
+
+        // Atomically update the read pointer
+        m_read.store((read_idx + read_count) & (m_capacity - 1), std::memory_order_release);
+        return read_count;
+    }
+
     // Consumer (XAudio2 Backend) - Advance the read pointer
     void AdvanceRead(size_t count) {
         m_read.store((m_read.load(std::memory_order_relaxed) + count) & (m_capacity - 1), std::memory_order_release);

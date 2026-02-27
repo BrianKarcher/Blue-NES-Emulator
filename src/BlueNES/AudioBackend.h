@@ -4,6 +4,7 @@
 #include <xaudio2.h>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
 
 #pragma comment(lib, "xaudio2.lib")
 
@@ -13,6 +14,7 @@ public:
     ~AudioBackend();
 
     bool Initialize(int sampleRate = 44100, int channels = 1);
+    void resetBuffer();
     void Shutdown();
 
     // Submit audio samples (Producer side)
@@ -25,15 +27,21 @@ public:
     bool IsInitialized() const { return m_initialized; }
 
     // SAMPLES_PER_CHUNK is the size of the small XAudio2 chunks
-    static const int SAMPLES_PER_CHUNK = 2048;
+    // One frame's worth of data. Needed for frame synchronization.
+    static const int SAMPLES_PER_CHUNK = 735;
     // The total size of the circular buffer (Must be power of 2)
-    static const int RING_BUFFER_CAPACITY = SAMPLES_PER_CHUNK * 8; // e.g., 16384 samples
-
-    void resetBuffer() {
-        m_ringBuffer.Reset();
-	}
+    static const int RING_BUFFER_CAPACITY = 8192;
 
 private:
+    std::mutex m_submissionMutex;
+    std::condition_variable m_audioCV;
+
+    struct AudioChunk {
+        // This is the stable buffer XAudio2 will read from
+        float data[SAMPLES_PER_CHUNK];
+        int index;
+    };
+
     // XAudio2 voice callback
     class VoiceCallback : public IXAudio2VoiceCallback {
     public:
@@ -69,16 +77,7 @@ private:
     // Audio buffer management
     AudioRingBuffer<float> m_ringBuffer; // The single continuous buffer
 
-    // The fixed size XAudio2 submission chunks (used for context pointers)
-    struct AudioChunk {
-        int index; // Index used for tracking, or can be a chunk copy if ring buffer wasn't big enough
-    };
-    static const int CHUNK_COUNT = 3; // Number of chunks XAudio2 will have queued
+    static const int CHUNK_COUNT = 4; // Number of chunks XAudio2 will have queued
     AudioChunk m_chunks[CHUNK_COUNT];
     int m_currentChunkIndex = 0;
-
-    // No more m_queueMutex needed for sample submission! (Ring Buffer is lock-free)
-    // A separate mutex for XAudio2 submission might still be required if called from multiple threads,
-    // but typically the core only calls SubmitSamples, and the callback only calls TrySubmitChunk.
-    std::mutex m_submissionMutex;
 };

@@ -76,6 +76,7 @@ void EmulatorCore::run() {
 
     int frameCount = 0;
     int audioCycleCounter = 0;
+    audioBackend.resetBuffer();
 
     while (context.is_running) {
         processCommands();
@@ -99,32 +100,6 @@ void EmulatorCore::run() {
         LARGE_INTEGER currentFrame_li;
         QueryPerformanceCounter(&currentFrame_li);
         long long currentTime = currentFrame_li.QuadPart;
-
-#ifdef FPS_CAP
-        long long time_to_wait_ticks = targetTime - currentTime;
-        if (time_to_wait_ticks > 0) { // If more than 1ms to wait
-
-            // Convert remaining ticks to milliseconds for Sleep()
-            // Use integer math to avoid floating rounding issues.
-            long long remainingMs = (time_to_wait_ticks * 1000) / freq;
-
-            // Sleep for most of the remaining time (if enough to be worthwhile).
-            // Subtract 1 ms to avoid oversleeping due to Sleep granularity.
-            if (remainingMs > 1) {
-                Sleep(static_cast<DWORD>(remainingMs - 1));
-            }
-
-            // Busy-wait the final tiny interval for precision
-            while (true) {
-                LARGE_INTEGER now_li;
-                QueryPerformanceCounter(&now_li);
-                if (now_li.QuadPart >= nextFrameUpdateTime) break;
-                // Optionally call YieldProcessor() or std::this_thread::yield()
-                // to avoid hammering the CPU too hard:
-                YieldProcessor(); // on x86 this is a PAUSE; on MSVC resolves to intrinsic
-            }
-        }
-#endif
 
         if (currentTime >= nextFpsUpdateTime) {
 			// Update FPS once per second
@@ -173,16 +148,11 @@ int EmulatorCore::runFrame() {
     // Check audio queue to prevent unbounded growth
     size_t queuedSamples = audioBackend.GetQueuedSampleCount();
     const size_t MAX_QUEUED_SAMPLES = 4410; // ~100ms of audio (44100 / 10)
-    while (nes.audioBuffer.size() > 0 && nes.audioBuffer.size() < 735) {
-        // Not enough samples generated - pad with last value
-		nes.audioBuffer.push_back(nes.audioBuffer[nes.audioBuffer.size() - 1]);
-    }
+
     LOG(L"Cycles this frame %d, Samples this frame: %d\n", nes.cpu_->cyclesThisFrame, nes.audioBuffer.size());
     int cycleCount = nes.audioBuffer.size();
     if (!nes.audioBuffer.empty()) {
         audioBackend.SubmitSamples(nes.audioBuffer.data(), nes.audioBuffer.size());
-        // Clear audio buffer for next frame
-        nes.audioBuffer.clear();
     }
 
     return cycleCount;

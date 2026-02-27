@@ -3,14 +3,14 @@
 #include "Core.h"
 #include "SDL_UI.h"
 
-#define CORE
+#define IMGUI
 
 int main(int argc, char* argv[]) {
     HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if (FAILED(hr)) {
         // Handle error
     }
-#ifdef CORE
+#ifdef IMGUI
     Core core;
     if (core.Initialize() == S_OK && core.CreateWindows() == S_OK)
     {

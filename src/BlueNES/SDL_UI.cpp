@@ -21,7 +21,7 @@ bool SDL_UI::init_sdl(HWND wnd)
         return false;
     }
 
-    SDL_GL_SetSwapInterval(0); // Disable vsync
+    //SDL_GL_SetSwapInterval(0); // Disable vsync
 
     window = SDL_CreateWindowFrom((void*)wnd);
 
@@ -31,7 +31,7 @@ bool SDL_UI::init_sdl(HWND wnd)
         return false;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     // Removed SDL_RENDERER_PRESENTVSYNC to allow uncapped framerate for better timing control
     if (!renderer)
     {
@@ -1043,8 +1043,8 @@ void SDL_UI::RunMessageLoop()
         if (frame_data) {
             RenderFrame(frame_data);
             if (titleUpdateDelay-- <= 0) {
-                std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)context.current_fps);
-                SetWindowText(m_hwnd, title.c_str());
+                //std::wstring title = L"BlueOrb NES Emulator - FPS: " + std::to_wstring((int)context.current_fps);
+                //SetWindowText(m_hwnd, title.c_str());
                 titleUpdateDelay = 60;
             }
         }
